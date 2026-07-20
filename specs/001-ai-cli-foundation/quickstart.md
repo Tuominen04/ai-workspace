@@ -60,6 +60,21 @@
 2. With Ollama stopped and available, start ai and verify startup-attempt message.
 3. Without Ollama installed, start ai and verify degraded runtime message without panic.
 
+### Scenario 6: Startup timing benchmark capture
+1. Run ai startup flow 20 times under valid local inputs.
+2. Record each startup duration from command invocation to visible active-session state.
+3. Calculate and record p95 startup time in validation/timing.md.
+4. Expected:
+   - p95 startup time is under 10 seconds.
+
+### Scenario 7: Runtime shutdown ownership verification
+1. Start ai in a state where ai launches Ollama for the session.
+2. Exit session with Enter.
+3. Inspect process table for Ollama process started by ai.
+4. Record evidence in validation/shutdown.md.
+5. Expected:
+   - runtime process started by ai is no longer running after session exit.
+
 ## References
 - Specification: ./spec.md
 - Plan: ./plan.md

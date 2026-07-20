@@ -52,3 +52,17 @@
 - Runtime target is local Ollama.
 - If already running, reuse and report status.
 - If missing or unavailable, report degraded runtime state without crashing command startup logic by default.
+
+## Runtime Message Contract (v0.1)
+- `runtime.reused`: emitted when Ollama is already running and reused.
+- `runtime.started`: emitted when ai starts Ollama for the current session.
+- `runtime.unavailable`: emitted when Ollama is missing or startup fails; session continues in degraded mode.
+
+Message contract rules:
+- Prefix token must be stable (`runtime.reused`, `runtime.started`, `runtime.unavailable`).
+- Human-readable detail follows the prefix and may vary by environment.
+- `runtime.unavailable` does not force process failure if the rest of session startup succeeds.
+
+## Exit Code Contract (v0.1)
+- `0`: clean session close or successful non-interactive command execution.
+- Non-zero: invalid input, unrecoverable filesystem/setup failure, or explicit pre-session cancellation.

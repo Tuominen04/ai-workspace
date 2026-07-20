@@ -79,7 +79,7 @@ clear runtime status messaging and clean shutdown behavior.
 2. **Given** runtime is not active but can be started, **When** I start `ai`, **Then**
   runtime startup is attempted and status is shown.
 3. **Given** runtime is unavailable, **When** I start `ai`, **Then** the session does not
-  crash and reports that runtime could not be started.
+  crash, reports a defined runtime-unavailable message, and continues in degraded mode.
 
 ---
 
@@ -119,6 +119,8 @@ clear runtime status messaging and clean shutdown behavior.
   configured root paths and discovered projects.
 - **FR-013**: The system MUST support an initialization command that creates the default
   workspace directory structure when it does not yet exist.
+- **FR-014**: The system MUST implement a user-visible runtime status message contract
+  for reused, started, and unavailable runtime states.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -142,6 +144,8 @@ clear runtime status messaging and clean shutdown behavior.
   clear, actionable error message.
 - **SC-004**: In 100% of user-initiated exits, the session shutdown returns terminal
   control without leaving runtime processes started by the session.
+- **SC-005**: Runtime states (reused, started, unavailable) are displayed with contract
+  message prefixes that remain stable across v0.1 releases.
 
 ## Assumptions
 

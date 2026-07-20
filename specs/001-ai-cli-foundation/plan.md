@@ -16,12 +16,6 @@ external runtime dependencies beyond local system tools.
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
-
 **Language/Version**: Rust 2021 edition
 
 **Primary Dependencies**: Rust standard library only for v0.1

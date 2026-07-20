@@ -12,8 +12,8 @@
 
 **Purpose**: Initialize repository-level CLI project files and planning artifacts required for v0.1 execution.
 
-- [ ] T001 Create Rust package manifest for ai binary in Cargo.toml
-- [ ] T002 Create module export surface in src/lib.rs
+- [ ] T001 Verify or adjust Rust package manifest baseline for ai binary in Cargo.toml
+- [ ] T002 Verify or adjust module export baseline in src/lib.rs
 - [ ] T003 [P] Create feature planning artifacts in specs/001-ai-cli-foundation/research.md
 - [ ] T004 [P] Create feature data model in specs/001-ai-cli-foundation/data-model.md
 - [ ] T005 [P] Create CLI contract in specs/001-ai-cli-foundation/contracts/cli.md
@@ -100,10 +100,14 @@
 **Purpose**: Final consistency and validation across all delivered stories.
 
 - [ ] T031 [P] Update contributor guidance for docs-first and architecture workflow in CONTRIBUTING.md
-- [ ] T032 [P] Update workspace instructions and file-scoped instructions in .github/copilot-instructions.md
-- [ ] T033 Run full quickstart validation scenarios in specs/001-ai-cli-foundation/quickstart.md
-- [ ] T034 Run cargo fmt and cargo test to verify build health in Cargo.toml
-- [ ] T035 Review implementation against constitution constraints in .specify/memory/constitution.md
+- [ ] T032 [P] Update workspace-wide instruction policy in .github/copilot-instructions.md
+- [ ] T033 [P] Update documentation instruction scope in .github/instructions/docs.instructions.md
+- [ ] T034 [P] Update Rust instruction scope in .github/instructions/rust.instructions.md
+- [ ] T035 Run full quickstart validation scenarios in specs/001-ai-cli-foundation/quickstart.md
+- [ ] T036 Capture startup timing benchmark (20 repeated runs, p95) in specs/001-ai-cli-foundation/validation/timing.md
+- [ ] T037 Verify runtime shutdown ownership and post-exit process state in specs/001-ai-cli-foundation/validation/shutdown.md
+- [ ] T038 Run cargo fmt and cargo test to verify build health in Cargo.toml
+- [ ] T039 Review implementation against constitution constraints in .specify/memory/constitution.md
 
 ---
 
@@ -136,7 +140,7 @@
 - User Story 1: T015 and T017 can run in parallel after T014 starts
 - User Story 2: T024 can run in parallel with T020-T023
 - User Story 3: T026 and T027 can run in parallel after T025 skeleton exists
-- Phase 6: T031 and T032 can run in parallel
+- Phase 6: T031, T032, T033, and T034 can run in parallel
 
 ---
 
