@@ -1,0 +1,11 @@
+[package]
+name = "ai-workspace"
+version = "0.1.0"
+edition = "2021"
+description = "Local-first AI workspace manager for Fedora"
+
+[[bin]]
+name = "ai"
+path = "src/main.rs"
+
+[dependencies]
