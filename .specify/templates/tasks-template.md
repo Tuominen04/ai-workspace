@@ -25,6 +25,11 @@ description: "Task list template for feature implementation"
 - **Web app**: `backend/src/`, `frontend/src/`
 - **Mobile**: `api/src/`, `ios/src/` or `android/src/`
 - Paths shown below assume single project - adjust based on plan.md structure
+- Tasks should preserve the filesystem source of truth, local-first behavior, and the
+  layered architecture described in the constitution.
+- Include documentation update tasks whenever behavior, scope, or architecture changes.
+- Ask for clarification before adding tasks that depend on unresolved permissions,
+  runtime selection, or cross-project access.
 
 <!--
   ============================================================================

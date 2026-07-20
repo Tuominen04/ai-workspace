@@ -1,50 +1,81 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+- Version change: template placeholder -> 1.0.0
+- Modified principles: template placeholders -> I. Filesystem First; II. Local, Fedora, and User Controlled; III. Documentation-First Spec-Gated Work; IV. Layered and Replaceable Architecture; V. Minimal, Explicit Technology Choices
+- Added sections: Workspace, Data, and Permission Constraints; Development Workflow and Quality Gates
+- Removed sections: none
+- Templates updated: ✅ .specify/templates/plan-template.md; ✅ .specify/templates/tasks-template.md; ✅ CONTRIBUTING.md
+- Deferred items: none
+-->
+
+# AI Workspace Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Filesystem First
+The filesystem is the source of truth for project state, workspace knowledge, and user
+data. Avoid hidden state outside the filesystem unless an external dependency requires
+it. Base knowledge is shared; project knowledge stays within the project; temporary
+session state must remain temporary.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Local, Fedora, and User Controlled
+Default to local-first, offline-capable behavior on Fedora-native tooling. Do not add
+cloud dependencies unless the user explicitly asks. Keep permissions explicit,
+temporary, and revocable. Never assume write access or broader scope than the user has
+granted.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Documentation-First Spec-Gated Work
+New capabilities start with a spec or equally clear written intent. Documentation comes
+before implementation, and ambiguous decisions must be resolved by asking the user
+instead of guessing. Each meaningful feature should move as one focused pull request.
+Specs, plans, and tasks must remain the primary planning artifacts.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Layered and Replaceable Architecture
+Respect the existing layered architecture. Keep business logic out of the user
+interface, and keep workspace, context-building, search, permissions, project, and
+runtime responsibilities separated. Major components must remain replaceable without
+forcing broad rewrites. If a change alters architecture, update `ARCHITECTURE.md` and
+record the decision in `DECISIONS.md`.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Minimal, Explicit Technology Choices
+Prefer Rust for implementation, Markdown for knowledge, TOML for configuration, and
+Podman plus Fedora-native workflows for runtime concerns. Keep runtime and UI choices
+behind replaceable interfaces. Choose the simplest implementation that satisfies the
+repository's local-first and modular goals.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Workspace, Data, and Permission Constraints
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+- Projects must remain isolated from one another.
+- Shared base knowledge is allowed; cross-project knowledge leakage is not.
+- Resources are read-only by default unless the user grants a narrower write scope.
+- Temporary permissions must expire with the session and must not become hidden
+	persistent grants.
+- Prefer portable, filesystem-backed layouts over proprietary or opaque storage.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Development Workflow and Quality Gates
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+- Start with a spec when creating new capabilities.
+- Update docs alongside behavior changes.
+- Keep implementation slices small enough to review and revert independently.
+- Plan and task artifacts must reflect the constitution before implementation begins.
+- Any architecture change must include documentation updates and an explicit decision
+	record.
+- Questions that affect behavior, scope, permissions, or architecture must be asked,
+	not guessed.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes conflicting workflow habits, task templates, and ad hoc
+preferences. Amendments require a written rationale, a semantic version bump, and any
+needed updates to dependent templates or guidance documents.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+All plans, specs, tasks, and reviews must check for compliance with this constitution.
+When the work touches behavior, scope, permissions, or architecture, unresolved
+decisions must be marked `NEEDS CLARIFICATION` or asked explicitly before proceeding.
+
+Versioning policy:
+- MAJOR: incompatible principle removals or redefinitions.
+- MINOR: new principles or materially expanded governance.
+- PATCH: clarifications, wording updates, or non-semantic refinements.
+
+**Version**: 1.0.0 | **Ratified**: 2026-07-20 | **Last Amended**: 2026-07-20

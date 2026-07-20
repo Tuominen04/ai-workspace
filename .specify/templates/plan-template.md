@@ -40,7 +40,18 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- Filesystem remains the source of truth; no hidden state outside the filesystem.
+- Work stays local-first and Fedora-native unless the feature explicitly requires
+  otherwise.
+- New behavior must be preceded by documentation or clear written intent.
+- Questions affecting behavior, scope, permissions, or architecture must be resolved
+  before planning continues.
+- Architecture changes require an update to `ARCHITECTURE.md` and a matching decision
+  in `DECISIONS.md`.
+- Plans must keep runtime, workspace, permissions, search, project, and UI boundaries
+  separate.
+- If the feature introduces multiple meaningful deliverables, split them into
+  independently testable user stories.
 
 ## Project Structure
 

@@ -1,9 +1,7 @@
-TODO
+# Contribution Rules
 
-Esimerkiksi:
-
-Kaikki uudet ominaisuudet alkavat speksistä.
-Ensin dokumentaatio, sitten toteutus.
-Yksi ominaisuus per pull request.
-Uusi ominaisuus ei saa rikkoa arkkitehtuuria.
-Jos arkkitehtuuria muutetaan, päivitä myös ARCHITECTURE.md ja lisää merkintä DECISIONS.md:hen.
+- All new features start with a spec or clear written intent.
+- Documentation comes before implementation.
+- Keep pull requests focused on one meaningful feature.
+- Do not introduce changes that break the existing architecture.
+- If architecture changes, update `ARCHITECTURE.md` and record the decision in `DECISIONS.md`.
