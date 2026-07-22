@@ -55,6 +55,14 @@ impl WorkspacePaths {
     pub fn base_knowledge_path(&self) -> &Path {
         &self.base
     }
+
+    pub fn workspace_config_file(&self) -> PathBuf {
+        self.config.join("workspace.toml")
+    }
+
+    pub fn project_metadata_file(&self, project_root: &Path, metadata_filename: &str) -> PathBuf {
+        project_root.join(metadata_filename)
+    }
 }
 
 fn home_dir() -> Result<PathBuf> {

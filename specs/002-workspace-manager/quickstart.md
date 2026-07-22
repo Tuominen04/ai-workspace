@@ -84,3 +84,19 @@
 - Research: `./research.md`
 - Data model: `./data-model.md`
 - CLI contract: `./contracts/cli.md`
+
+## Implementation Validation Notes
+
+Validated on 2026-07-22 using `AI_WORKSPACE_HOME=/tmp/ai-workspace-v02-test`.
+
+- `cargo test` passed.
+- `ai init` created workspace layout and bootstrapped `Config/workspace.toml`.
+- `ai config show` displayed workspace configuration and default project directories.
+- `ai validate` returned PASS for a healthy workspace.
+- `ai project create --name demo-project --description "Demo workspace"` succeeded.
+- `ai project show demo-project` displayed metadata and managed paths.
+- Duplicate create attempt was rejected with a clear error.
+- With missing `workspace.toml`, `ai config show` failed and `ai validate` reported
+   `WS-CONFIG-MISSING`.
+- With missing project metadata, enforcement gate blocked `ai project show` and
+   `ai project create` until the issue was fixed.

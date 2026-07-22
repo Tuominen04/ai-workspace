@@ -1,4 +1,5 @@
 pub mod app;
+pub mod config;
 pub mod context;
 pub mod error;
 pub mod paths;

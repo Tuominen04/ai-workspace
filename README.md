@@ -22,15 +22,15 @@ The filesystem is the source of truth.
 
 ## Core Principles
 
-* Local-first
-* Fedora-first
-* User-controlled
-* Project isolation
-* Explicit permissions
-* Simplicity over features
-* Documentation before implementation
-* Modular architecture
-* Replaceable components
+- Local-first
+- Fedora-first
+- User-controlled
+- Project isolation
+- Explicit permissions
+- Simplicity over features
+- Documentation before implementation
+- Modular architecture
+- Replaceable components
 
 ---
 
@@ -48,12 +48,12 @@ The application asks which workspace should be opened.
 
 The system automatically:
 
-* loads the Base knowledge
-* loads the selected project knowledge
-* verifies available resources
-* applies temporary permissions
-* starts the required services
-* opens the preferred user interface
+- loads the Base knowledge
+- loads the selected project knowledge
+- verifies available resources
+- applies temporary permissions
+- starts the required services
+- opens the preferred user interface
 
 When the session ends, temporary permissions disappear automatically.
 
@@ -63,16 +63,16 @@ When the session ends, temporary permissions disappear automatically.
 
 The completed system should support:
 
-* Multiple isolated projects
-* Shared Base knowledge
-* Local LLM execution
-* Temporary resource permissions
-* Read-only project understanding
-* Optional future write workflows
-* Multiple simultaneous workspaces
-* Future multi-agent support
-* Replaceable UI
-* Replaceable LLM backend
+- Multiple isolated projects
+- Shared Base knowledge
+- Local LLM execution
+- Temporary resource permissions
+- Read-only project understanding
+- Optional future write workflows
+- Multiple simultaneous workspaces
+- Future multi-agent support
+- Replaceable UI
+- Replaceable LLM backend
 
 No cloud services are required.
 
@@ -104,12 +104,12 @@ Base contains permanent knowledge shared across every project.
 
 Examples:
 
-* Fedora
-* Linux
-* Development
-* Common principles
-* User identity
-* User preferences
+- Fedora
+- Linux
+- Development
+- Common principles
+- User identity
+- User preferences
 
 Base should change rarely.
 
@@ -141,10 +141,10 @@ Projects may reference external resources.
 
 Examples:
 
-* Git repository
-* Documentation
-* PDFs
-* API specifications
+- Git repository
+- Documentation
+- PDFs
+- API specifications
 
 Resources are read-only by default.
 
@@ -174,19 +174,19 @@ After closing the workspace they disappear automatically.
 
 The AI should:
 
-* explain
-* reason
-* review
-* teach
-* plan
-* document
+- explain
+- reason
+- review
+- teach
+- plan
+- document
 
 The AI should not automatically:
 
-* edit files
-* execute commands
-* modify Git repositories
-* install software
+- edit files
+- execute commands
+- modify Git repositories
+- install software
 
 Future versions may support these actions only after explicit user approval.
 
@@ -198,9 +198,9 @@ The source of truth is always the filesystem.
 
 Never:
 
-* internal databases
-* hidden memory
-* proprietary storage
+- internal databases
+- hidden memory
+- proprietary storage
 
 Project knowledge lives inside project directories.
 
@@ -271,21 +271,21 @@ Create a working local workspace launcher.
 
 Features:
 
-* CLI
-* Workspace selection
-* Start Ollama
-* Start UI
-* Stop services
-* Base knowledge
-* Project knowledge
+- CLI
+- Workspace selection
+- Start Ollama
+- Start UI
+- Stop services
+- Base knowledge
+- Project knowledge
 
 This phase intentionally avoids:
 
-* RAG
-* agents
-* indexing
-* automation
-* editing files
+- RAG
+- agents
+- indexing
+- automation
+- editing files
 
 ---
 
@@ -293,11 +293,11 @@ This phase intentionally avoids:
 
 Add:
 
-* Project creation
-* Resource management
-* Session permissions
-* Configuration
-* Logging
+- Project creation
+- Resource management
+- Session permissions
+- Configuration
+- Logging
 
 ---
 
@@ -305,10 +305,10 @@ Add:
 
 Introduce:
 
-* Intelligent document loading
-* Context builder
-* Search
-* Efficient prompt construction
+- Intelligent document loading
+- Context builder
+- Search
+- Efficient prompt construction
 
 The AI should no longer load everything.
 
@@ -322,9 +322,9 @@ Improve usability.
 
 Possible interfaces:
 
-* CLI
-* TUI
-* GTK desktop application
+- CLI
+- TUI
+- GTK desktop application
 
 The backend should remain unchanged.
 
@@ -334,13 +334,13 @@ The backend should remain unchanged.
 
 Possible future additions:
 
-* Multi-agent workflows
-* Knowledge suggestions
-* Automatic documentation drafts
-* Git integration
-* Code review
-* MCP integrations
-* Local automation
+- Multi-agent workflows
+- Knowledge suggestions
+- Automatic documentation drafts
+- Git integration
+- Code review
+- MCP integrations
+- Local automation
 
 These are optional and should never complicate the earlier phases.
 
@@ -350,10 +350,10 @@ These are optional and should never complicate the earlier phases.
 
 This project is not intended to become:
 
-* another chat client
-* another IDE
-* another code editor
-* another cloud AI service
+- another chat client
+- another IDE
+- another code editor
+- another cloud AI service
 
 Its responsibility is managing local AI workspaces.
 
@@ -365,11 +365,11 @@ Every early design decision should support future migration.
 
 Examples:
 
-* CLI can later become a TUI.
-* TUI can later become GTK.
-* Open WebUI can later be replaced.
-* Ollama can later be replaced.
-* Search implementation can later evolve into RAG.
+- CLI can later become a TUI.
+- TUI can later become GTK.
+- Open WebUI can later be replaced.
+- Ollama can later be replaced.
+- Search implementation can later evolve into RAG.
 
 Core business logic should never depend on a specific frontend or AI provider.
 
@@ -379,10 +379,30 @@ Core business logic should never depend on a specific frontend or AI provider.
 
 The project is successful when a user can:
 
-* launch one command
-* select a workspace
-* immediately begin working with a project-aware local AI
-* know exactly what information the AI can access
-* close the session knowing no unnecessary services remain running
+- launch one command
+- select a workspace
+- immediately begin working with a project-aware local AI
+- know exactly what information the AI can access
+- close the session knowing no unnecessary services remain running
 
 The system should feel like a natural extension of Fedora rather than another web application.
+
+---
+
+## Workspace Manager Commands (v0.2)
+
+The v0.2 workspace-manager layer adds explicit commands for configuration,
+project creation, project inspection, and validation:
+
+```text
+ai config show
+ai project create --name NAME [--description TEXT]
+ai project show PROJECT
+ai validate
+```
+
+Validation behavior is safety-first:
+
+- `ai validate` reports actionable workspace and project issues.
+- `ai project create` and `ai project show` are enforcement-gated and refuse to
+    continue while blocking validation issues exist.

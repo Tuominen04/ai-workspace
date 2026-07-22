@@ -1,5 +1,12 @@
 # Rust
 target/
+debug/
+release/
+*.rs.bk
+*.rlib
+*.prof*
+*.log
+.env*
 
 # Specify
 .specify/feature.json

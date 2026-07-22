@@ -12,10 +12,10 @@
 
 **Purpose**: Prepare command, module, and dependency scaffolding for workspace manager capabilities.
 
-- [ ] T001 Add TOML parsing and serialization dependency entries in Cargo.toml
-- [ ] T002 Create configuration module scaffold in src/config.rs
-- [ ] T003 Wire configuration module export in src/lib.rs
-- [ ] T004 Extend command enum and help text scaffolding for workspace-manager commands in src/app.rs
+- [X] T001 Add TOML parsing and serialization dependency entries in Cargo.toml
+- [X] T002 Create configuration module scaffold in src/config.rs
+- [X] T003 Wire configuration module export in src/lib.rs
+- [X] T004 Extend command enum and help text scaffolding for workspace-manager commands in src/app.rs
 
 ---
 
@@ -25,17 +25,17 @@
 
 **CRITICAL**: Complete this phase before starting user story implementation.
 
-- [ ] T005 Implement workspace configuration model and read/write helpers in src/config.rs
-- [ ] T006 [P] Add configuration and validation error variants in src/error.rs
-- [ ] T007 [P] Add workspace-config and project-metadata path helpers in src/paths.rs
-- [ ] T008 Implement project metadata structs and load/save helpers in src/workspace.rs
-- [ ] T009 Implement reusable project name validation and normalization rules in src/workspace.rs
-- [ ] T010 Implement shared validation domain types for issues and results in src/workspace.rs
-- [ ] T011 [P] Add shared UI render helpers for config, project metadata, and validation results in src/ui.rs
-- [ ] T012 Connect foundational command handlers and dispatch plumbing in src/session.rs and src/app.rs
-- [ ] T034 Implement default workspace configuration bootstrap during init/first-run with deterministic overwrite rules in src/config.rs and src/session.rs
-- [ ] T035 Implement permission error handling contract and user-facing messages for create/show/validate flows in src/error.rs, src/session.rs, and src/ui.rs
-- [ ] T037 Implement blocking validation-gate primitives and reusable pre-action check helper in src/workspace.rs and src/session.rs
+- [X] T005 Implement workspace configuration model and read/write helpers in src/config.rs
+- [X] T006 [P] Add configuration and validation error variants in src/error.rs
+- [X] T007 [P] Add workspace-config and project-metadata path helpers in src/paths.rs
+- [X] T008 Implement project metadata structs and load/save helpers in src/workspace.rs
+- [X] T009 Implement reusable project name validation and normalization rules in src/workspace.rs
+- [X] T010 Implement shared validation domain types for issues and results in src/workspace.rs
+- [X] T011 [P] Add shared UI render helpers for config, project metadata, and validation results in src/ui.rs
+- [X] T012 Connect foundational command handlers and dispatch plumbing in src/session.rs and src/app.rs
+- [X] T034 Implement default workspace configuration bootstrap during init/first-run with deterministic overwrite rules in src/config.rs and src/session.rs
+- [X] T035 Implement permission error handling contract and user-facing messages for create/show/validate flows in src/error.rs, src/session.rs, and src/ui.rs
+- [X] T037 Implement blocking validation-gate primitives and reusable pre-action check helper in src/workspace.rs and src/session.rs
 
 **Checkpoint**: Foundation complete. User stories can now proceed independently.
 
@@ -49,13 +49,13 @@
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Implement ai project create argument parsing in src/app.rs
-- [ ] T014 [P] [US1] Implement default project directory creation helper for Knowledge, Specs, Resources, and Session in src/workspace.rs
-- [ ] T015 [P] [US1] Implement project metadata file creation with defaults in src/workspace.rs
-- [ ] T016 [US1] Implement create-project workflow with duplicate checks and failure-safe behavior in src/workspace.rs
-- [ ] T017 [US1] Connect project-create command flow in src/session.rs
-- [ ] T018 [US1] Render project-create success and failure output in src/ui.rs
-- [ ] T038 [US1] Enforce pre-action validation gate for ai project create with blocking-issue refusal messaging in src/session.rs and src/ui.rs
+- [X] T013 [US1] Implement ai project create argument parsing in src/app.rs
+- [X] T014 [P] [US1] Implement default project directory creation helper for Knowledge, Specs, Resources, and Session in src/workspace.rs
+- [X] T015 [P] [US1] Implement project metadata file creation with defaults in src/workspace.rs
+- [X] T016 [US1] Implement create-project workflow with duplicate checks and failure-safe behavior in src/workspace.rs
+- [X] T017 [US1] Connect project-create command flow in src/session.rs
+- [X] T018 [US1] Render project-create success and failure output in src/ui.rs
+- [X] T038 [US1] Enforce pre-action validation gate for ai project create with blocking-issue refusal messaging in src/session.rs and src/ui.rs
 
 **Checkpoint**: User Story 1 is independently functional and demonstrable.
 
@@ -69,14 +69,14 @@
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Implement ai config show argument parsing in src/app.rs
-- [ ] T020 [P] [US2] Implement workspace config load and display preparation in src/config.rs
-- [ ] T021 [US2] Implement ai project show argument parsing in src/app.rs
-- [ ] T022 [P] [US2] Implement project metadata inspection loader in src/workspace.rs
-- [ ] T023 [US2] Connect config-show and project-show command handlers in src/session.rs
-- [ ] T024 [US2] Render workspace configuration and project metadata views in src/ui.rs
-- [ ] T036 [US2] Ensure inspection commands reflect user-maintained on-disk definition edits without AI-driven writes in src/config.rs, src/workspace.rs, and src/session.rs
-- [ ] T039 [US2] Enforce pre-action validation gate for ai project show with blocking-issue refusal messaging in src/session.rs and src/ui.rs
+- [X] T019 [US2] Implement ai config show argument parsing in src/app.rs
+- [X] T020 [P] [US2] Implement workspace config load and display preparation in src/config.rs
+- [X] T021 [US2] Implement ai project show argument parsing in src/app.rs
+- [X] T022 [P] [US2] Implement project metadata inspection loader in src/workspace.rs
+- [X] T023 [US2] Connect config-show and project-show command handlers in src/session.rs
+- [X] T024 [US2] Render workspace configuration and project metadata views in src/ui.rs
+- [X] T036 [US2] Ensure inspection commands reflect user-maintained on-disk definition edits without AI-driven writes in src/config.rs, src/workspace.rs, and src/session.rs
+- [X] T039 [US2] Enforce pre-action validation gate for ai project show with blocking-issue refusal messaging in src/session.rs and src/ui.rs
 
 **Checkpoint**: User Story 2 is independently functional and demonstrable.
 
@@ -90,12 +90,12 @@
 
 ### Implementation for User Story 3
 
-- [ ] T025 [US3] Implement ai validate argument parsing in src/app.rs
-- [ ] T026 [US3] Implement workspace-level validation checks for layout and workspace config in src/workspace.rs
-- [ ] T027 [P] [US3] Implement per-project metadata and required-directory validation checks in src/workspace.rs
-- [ ] T028 [US3] Connect validation command flow and exit semantics in src/session.rs
-- [ ] T029 [US3] Render actionable validation reports in src/ui.rs
-- [ ] T040 [US3] Render explicit gated-command guidance in validation output (which commands are blocked and how to clear issues) in src/ui.rs
+- [X] T025 [US3] Implement ai validate argument parsing in src/app.rs
+- [X] T026 [US3] Implement workspace-level validation checks for layout and workspace config in src/workspace.rs
+- [X] T027 [P] [US3] Implement per-project metadata and required-directory validation checks in src/workspace.rs
+- [X] T028 [US3] Connect validation command flow and exit semantics in src/session.rs
+- [X] T029 [US3] Render actionable validation reports in src/ui.rs
+- [X] T040 [US3] Render explicit gated-command guidance in validation output (which commands are blocked and how to clear issues) in src/ui.rs
 
 **Checkpoint**: User Story 3 is independently functional and demonstrable.
 
@@ -105,10 +105,10 @@
 
 **Purpose**: Final alignment, documentation, and execution-readiness checks across stories.
 
-- [ ] T030 [P] Align workspace-manager command contract details with delivered behavior in specs/002-workspace-manager/contracts/cli.md
-- [ ] T031 [P] Update user-facing command documentation for workspace-manager features in README.md and docs/workspace.md
-- [ ] T032 Run quickstart scenarios and record implementation validation notes in specs/002-workspace-manager/quickstart.md
-- [ ] T033 Perform final code cleanup and formatting in src/app.rs, src/session.rs, src/workspace.rs, src/config.rs, src/ui.rs, src/error.rs, and src/paths.rs
+- [X] T030 [P] Align workspace-manager command contract details with delivered behavior in specs/002-workspace-manager/contracts/cli.md
+- [X] T031 [P] Update user-facing command documentation for workspace-manager features in README.md and docs/workspace.md
+- [X] T032 Run quickstart scenarios and record implementation validation notes in specs/002-workspace-manager/quickstart.md
+- [X] T033 Perform final code cleanup and formatting in src/app.rs, src/session.rs, src/workspace.rs, src/config.rs, src/ui.rs, src/error.rs, and src/paths.rs
 
 ---
 

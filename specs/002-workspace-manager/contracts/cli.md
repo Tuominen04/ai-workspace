@@ -15,6 +15,9 @@
 - Purpose: Create the expected top-level local workspace layout.
 - v0.2 impact:
   - Ensures `Config/` exists so workspace configuration can be stored visibly.
+  - Bootstraps `Config/workspace.toml` when it is missing.
+  - Uses deterministic overwrite behavior: existing `workspace.toml` is preserved
+    unless an explicit overwrite flow is introduced.
   - Leaves existing project data untouched when rerun.
 
 ### ai status

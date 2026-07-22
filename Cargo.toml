@@ -1,7 +1,7 @@
 [package]
 name = "ai-workspace"
-version = "0.1.0"
-edition = "2021"
+version = "0.2.0"
+edition = "2024"
 description = "Local-first AI workspace manager for Fedora"
 
 [[bin]]
@@ -9,3 +9,5 @@ name = "ai"
 path = "src/main.rs"
 
 [dependencies]
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
