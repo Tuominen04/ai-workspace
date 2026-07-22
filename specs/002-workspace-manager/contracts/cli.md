@@ -102,6 +102,11 @@
 - Validation is read-only.
 - Validation reports concrete filesystem paths and actionable messages.
 - Validation failure must not leave partially created project data.
+- Enforcement-gate policy: commands that depend on healthy workspace definitions
+  (at minimum `ai project create` and `ai project show`) MUST run a pre-action
+  blocking check and refuse to continue when blocking validation issues exist.
+- `ai validate` always runs and reports findings; it is the command used to
+  diagnose and clear blocking issues before retrying gated actions.
 
 ## Exit Code Contract
 

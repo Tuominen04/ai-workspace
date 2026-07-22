@@ -33,6 +33,9 @@
 - [ ] T010 Implement shared validation domain types for issues and results in src/workspace.rs
 - [ ] T011 [P] Add shared UI render helpers for config, project metadata, and validation results in src/ui.rs
 - [ ] T012 Connect foundational command handlers and dispatch plumbing in src/session.rs and src/app.rs
+- [ ] T034 Implement default workspace configuration bootstrap during init/first-run with deterministic overwrite rules in src/config.rs and src/session.rs
+- [ ] T035 Implement permission error handling contract and user-facing messages for create/show/validate flows in src/error.rs, src/session.rs, and src/ui.rs
+- [ ] T037 Implement blocking validation-gate primitives and reusable pre-action check helper in src/workspace.rs and src/session.rs
 
 **Checkpoint**: Foundation complete. User stories can now proceed independently.
 
@@ -52,6 +55,7 @@
 - [ ] T016 [US1] Implement create-project workflow with duplicate checks and failure-safe behavior in src/workspace.rs
 - [ ] T017 [US1] Connect project-create command flow in src/session.rs
 - [ ] T018 [US1] Render project-create success and failure output in src/ui.rs
+- [ ] T038 [US1] Enforce pre-action validation gate for ai project create with blocking-issue refusal messaging in src/session.rs and src/ui.rs
 
 **Checkpoint**: User Story 1 is independently functional and demonstrable.
 
@@ -71,6 +75,8 @@
 - [ ] T022 [P] [US2] Implement project metadata inspection loader in src/workspace.rs
 - [ ] T023 [US2] Connect config-show and project-show command handlers in src/session.rs
 - [ ] T024 [US2] Render workspace configuration and project metadata views in src/ui.rs
+- [ ] T036 [US2] Ensure inspection commands reflect user-maintained on-disk definition edits without AI-driven writes in src/config.rs, src/workspace.rs, and src/session.rs
+- [ ] T039 [US2] Enforce pre-action validation gate for ai project show with blocking-issue refusal messaging in src/session.rs and src/ui.rs
 
 **Checkpoint**: User Story 2 is independently functional and demonstrable.
 
@@ -89,6 +95,7 @@
 - [ ] T027 [P] [US3] Implement per-project metadata and required-directory validation checks in src/workspace.rs
 - [ ] T028 [US3] Connect validation command flow and exit semantics in src/session.rs
 - [ ] T029 [US3] Render actionable validation reports in src/ui.rs
+- [ ] T040 [US3] Render explicit gated-command guidance in validation output (which commands are blocked and how to clear issues) in src/ui.rs
 
 **Checkpoint**: User Story 3 is independently functional and demonstrable.
 
@@ -138,18 +145,18 @@
 
 ## Parallel Example: User Story 1
 
-- [ ] T014 [P] [US1] Implement default project directory creation helper for Knowledge, Specs, Resources, and Session in src/workspace.rs
-- [ ] T015 [P] [US1] Implement project metadata file creation with defaults in src/workspace.rs
+- T014 [P] [US1] Implement default project directory creation helper for Knowledge, Specs, Resources, and Session in src/workspace.rs
+- T015 [P] [US1] Implement project metadata file creation with defaults in src/workspace.rs
 
 ## Parallel Example: User Story 2
 
-- [ ] T020 [P] [US2] Implement workspace config load and display preparation in src/config.rs
-- [ ] T022 [P] [US2] Implement project metadata inspection loader in src/workspace.rs
+- T020 [P] [US2] Implement workspace config load and display preparation in src/config.rs
+- T022 [P] [US2] Implement project metadata inspection loader in src/workspace.rs
 
 ## Parallel Example: User Story 3
 
-- [ ] T026 [US3] Implement workspace-level validation checks for layout and workspace config in src/workspace.rs
-- [ ] T027 [P] [US3] Implement per-project metadata and required-directory validation checks in src/workspace.rs
+- T026 [US3] Implement workspace-level validation checks for layout and workspace config in src/workspace.rs
+- T027 [P] [US3] Implement per-project metadata and required-directory validation checks in src/workspace.rs
 
 ---
 

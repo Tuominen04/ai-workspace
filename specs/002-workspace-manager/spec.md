@@ -38,6 +38,9 @@ starting structure and metadata.
 As a user, I can view and maintain workspace metadata and configuration so I
 understand how projects are defined and how the workspace behaves.
 
+For v0.2, maintenance means user-managed filesystem edits to visible definition
+files. AI Workspace commands only read and inspect those definitions.
+
 **Why this priority**: Metadata and configuration make the workspace understandable,
 portable, and user-controlled, which are core project principles.
 
@@ -125,6 +128,12 @@ failure for each problem found.
   or modifying projects.
 - **FR-014**: The system MUST leave existing project data unchanged when validation or
   project creation fails.
+- **FR-015**: The system MUST reflect user-maintained edits to workspace
+  configuration and project metadata files during inspection commands without
+  requiring AI-driven write operations.
+- **FR-016**: The system MUST enforce a validation gate for workspace-manager
+  actions so commands that depend on a healthy workspace do not proceed when
+  blocking validation issues are present.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -148,7 +157,8 @@ failure for each problem found.
 - **SC-003**: In 100% of duplicate-name or invalid-definition creation attempts, the
   system prevents partial project creation and returns a clear corrective message.
 - **SC-004**: In 100% of validation runs against malformed workspace definitions, the
-  system identifies each blocking issue before later workspace actions continue.
+  system identifies each blocking issue and later gated workspace actions are
+  prevented from continuing until blocking issues are resolved.
 - **SC-005**: A user can inspect workspace configuration and project metadata for any
   managed project in under 30 seconds.
 
@@ -165,3 +175,5 @@ failure for each problem found.
   marketplace or multiple project archetypes.
 - Validation focuses on filesystem-visible definitions and project readiness, not on
   runtime health or permission grants introduced in later phases.
+- Users maintain workspace definitions directly via filesystem-visible files;
+  command surfaces in v0.2 are read/inspect for those definitions.
