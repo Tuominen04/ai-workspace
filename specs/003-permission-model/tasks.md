@@ -15,7 +15,7 @@
 - [ ] T001 Add permission command scaffolding for grant, view, and revoke in src/app.rs
 - [ ] T002 Add permission-output rendering scaffolding in src/ui.rs
 - [ ] T003 Wire permission command dispatch entry points in src/session.rs
-- [ ] T004 Align initial permission command surface documentation in specs/003-permission-model/contracts/cli.md
+- [ ] T004 Align permission command surface and help text for grant/view/revoke in src/app.rs
 
 ---
 
@@ -26,9 +26,9 @@
 **CRITICAL**: Complete this phase before starting any user story.
 
 - [ ] T005 Define permission domain structs and enums in src/workspace.rs
-- [ ] T006 [P] Implement canonical-path and approved-root helper functions in src/paths.rs
+- [ ] T006 [P] Implement canonical-path and local-path validation helper functions in src/paths.rs
 - [ ] T007 [P] Add permission-specific error variants and mappings in src/error.rs
-- [ ] T008 Implement session permission set load/save helpers in src/workspace.rs
+- [ ] T008 Implement session permission set load/save helpers using Projects/{project}/Session/permissions.toml in src/workspace.rs
 - [ ] T009 Implement local structured permission event helper utilities in src/workspace.rs
 - [ ] T010 [P] Define permission viewer query types for sorting, paging, and filtering in src/workspace.rs
 - [ ] T011 Wire permission-event logging integration points in src/session.rs
@@ -47,7 +47,7 @@
 ### Implementation for User Story 1
 
 - [ ] T013 [US1] Implement ai permission grant argument parsing and input checks in src/app.rs
-- [ ] T014 [P] [US1] Implement grant validation for local existence and approved-root boundaries in src/workspace.rs
+- [ ] T014 [P] [US1] Implement grant validation for local existence and local-boundary rules in src/workspace.rs
 - [ ] T015 [P] [US1] Implement canonicalized idempotent upsert for temporary grants in src/workspace.rs
 - [ ] T016 [US1] Implement grant workflow orchestration and error mapping in src/session.rs
 - [ ] T017 [US1] Emit structured grant and deny events for grant attempts in src/session.rs and src/workspace.rs
@@ -103,10 +103,11 @@
 **Purpose**: Finalize documentation, verification, and cleanup across all stories.
 
 - [ ] T034 [P] Update permission behavior documentation in README.md and docs/permissions.md
-- [ ] T035 [P] Align implementation-facing docs with final behavior in specs/003-permission-model/contracts/cli.md and specs/003-permission-model/data-model.md
+- [ ] T035 [P] Align implementation-facing docs with final behavior in specs/003-permission-model/contracts/cli.md, specs/003-permission-model/data-model.md, and specs/003-permission-model/spec.md
 - [ ] T036 Run quickstart scenarios and record implementation validation notes in specs/003-permission-model/quickstart.md
 - [ ] T037 Run full test suite for regression verification in tests/workspace_tests.rs and tests/config_tests.rs
 - [ ] T038 Final cleanup and consistency pass in src/app.rs, src/session.rs, src/workspace.rs, src/paths.rs, src/ui.rs, and src/error.rs
+- [ ] T041 Run and record usability evidence for SC-001 and SC-004 in specs/003-permission-model/quickstart.md
 
 ---
 

@@ -14,7 +14,7 @@
   - grantedAt: timestamp
   - source: `system-default` or `user-grant`
 - Validation rules:
-  - `canonicalPath` must resolve to a local path under approved local roots.
+  - `canonicalPath` must resolve to a local existing path.
   - Only one `PermissionGrant` may exist per `sessionId + canonicalPath` pair.
   - `default` grants are immutable during session runtime.
   - `temporary` grants may transition between active and unavailable.
@@ -32,6 +32,7 @@
 - Fields:
   - sessionId: session identifier
   - workspaceId: selected workspace/project reference
+  - artifactPath: `Projects/<project>/Session/permissions.toml`
   - defaultGrants: list of `PermissionGrant`
   - temporaryGrants: list of `PermissionGrant`
   - createdAt: timestamp

@@ -7,7 +7,7 @@
 - Purpose: Grant temporary session access to one local filesystem path.
 - Behavior:
   - Resolves and canonicalizes the requested path.
-  - Validates that path exists and is within approved local roots.
+  - Validates that path exists and is local.
   - Applies idempotent behavior: duplicate canonical path grants keep one active entry.
   - Emits a local structured event for grant or deny outcomes.
 - Exit behavior:
@@ -46,10 +46,17 @@
 
 ## Permission Validation Contract
 
-- Allowed grant scope is limited to approved local roots.
+- Allowed grant scope is limited to explicit local path grants.
 - Non-existent paths are denied with actionable messaging.
 - Paths that become unreachable transition to unavailable status and are blocked for
   access attempts until reachable again.
+
+## Session State Storage Contract
+
+- Active session permission state is stored in
+  `Projects/<project>/Session/permissions.toml`.
+- The artifact is updated on grant/revoke operations and
+  removed at session termination.
 
 ## Logging Contract
 

@@ -34,7 +34,7 @@
 
 ### Scenario 3: Deny out-of-bound path
 
-1. Run a grant for a path outside approved local roots.
+1. Run a grant for a non-local or inaccessible path.
 2. Expected:
    - Command fails with actionable boundary-violation output.
    - Path does not appear as an active permission.
@@ -87,6 +87,18 @@
 3. Expected:
    - Each action emits exactly one corresponding event.
    - Events include path, session context, event type, and timestamp fields.
+
+### Scenario 9: Usability evidence for success criteria
+
+1. Run a small usability check with at least 10 participants or equivalent internal
+   trial runs.
+2. Measure:
+   - time to complete a valid temporary grant flow
+   - first-attempt correctness when identifying effective AI access scope from viewer
+3. Record measured values and pass/fail verdict for SC-001 and SC-004 in this file.
+4. Expected:
+   - Evidence table is present and reproducible.
+   - Results explicitly state whether SC-001 and SC-004 thresholds were met.
 
 ## References
 
