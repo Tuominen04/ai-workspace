@@ -1,6 +1,7 @@
 # Data Model: AI CLI Foundation v0.1
 
 ## Entity: WorkspaceRoot
+
 - Description: Top-level user-owned directory for AI Workspace runtime and knowledge layout.
 - Fields:
   - rootPath: absolute path
@@ -15,6 +16,7 @@
   - projectsPath must exist or be creatable.
 
 ## Entity: ProjectWorkspace
+
 - Description: A discovered project directory under Projects used for user session targeting.
 - Fields:
   - name: directory name
@@ -24,6 +26,7 @@
   - path must be a directory.
 
 ## Entity: ContextSnapshot
+
 - Description: Base-only AI-readable context file inventory for current session.
 - Fields:
   - baseFiles: list of relative markdown file paths discovered under Base
@@ -32,6 +35,7 @@
   - File type limited to markdown for v0.1.
 
 ## Entity: RuntimeStatus
+
 - Description: Session-visible local runtime state.
 - Fields:
   - running: boolean
@@ -42,6 +46,7 @@
   - running false must include actionable detail.
 
 ## Entity: SessionState
+
 - Description: Active CLI workspace session context.
 - Fields:
   - selectedProject: ProjectWorkspace

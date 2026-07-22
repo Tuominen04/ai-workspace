@@ -47,6 +47,7 @@ external runtime dependencies beyond local system tools.
 - User story decomposition for independent testing: PASS
 
 Post-Design Re-Check (after Phase 1 artifacts):
+
 - research.md created and aligns with constitution constraints: PASS
 - data-model.md preserves filesystem-first and Base-only context policy: PASS
 - contracts/cli.md preserves explicit command and runtime boundaries: PASS
@@ -100,5 +101,5 @@ workspace orchestration, runtime lifecycle, context policy, and UI output separa
 > **Fill ONLY if Constitution Check has violations that must be justified**
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
+| -- | -- | -- |
 | None | N/A | N/A |
