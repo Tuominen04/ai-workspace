@@ -8,6 +8,16 @@
 
 **Input**: User description: "v0.3 permissions scope from roadmap and README"
 
+## Clarifications
+
+### Session 2026-07-22
+
+- Q: How should duplicate temporary path grants be handled within one session? -> A: Duplicate grants are idempotent after canonical path normalization and only one active grant entry is kept.
+- Q: What local path boundary policy should temporary grants use? -> A: Grants are allowed only under approved local roots (selected project, Base, and user-approved temporary roots).
+- Q: How should the system handle a granted path that becomes unavailable during an active session? -> A: Keep the grant record visible, mark it unavailable, and block access attempts until the path is reachable again.
+- Q: How should the permission viewer handle large active permission sets? -> A: Use deterministic sorting with paging and path search/filter.
+- Q: What observability behavior should v0.3 include for permission events? -> A: Log grant, deny, revoke, and unavailable-path status changes in local structured logs.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Grant Temporary Access (Priority: P1)
@@ -57,10 +67,10 @@ As a workspace user, I can end a session knowing temporary permissions are remov
 
 ### Edge Cases
 
-- What happens when the same path is granted more than once in a session?
-- How does the system handle a granted path that becomes unavailable during an active session?
-- What happens when a user attempts to grant access outside allowed local filesystem boundaries?
-- How does the permission viewer behave when the active permission set is very large?
+- Granting the same canonical path more than once should not create duplicate active permission entries.
+- A granted path that becomes unavailable during a session must remain visible with an unavailable status, and access attempts must fail safely until it is reachable again.
+- Requests outside approved local roots must be rejected and the viewer must not show them as active grants.
+- Large active permission sets must remain navigable through deterministic sorting, paging, and path search/filter.
 
 ## Requirements *(mandatory)*
 
@@ -69,7 +79,7 @@ As a workspace user, I can end a session knowing temporary permissions are remov
 - **FR-001**: The system MUST maintain two permission categories for each session: default permissions and temporary session permissions.
 - **FR-002**: The system MUST include Base and the selected project in default permissions for every active session.
 - **FR-003**: The system MUST allow users to grant temporary access to explicit filesystem paths for the current session.
-- **FR-004**: The system MUST validate that each requested temporary path is local and exists before granting access.
+- **FR-004**: The system MUST validate that each requested temporary path is local, exists, and is within approved local roots before granting access.
 - **FR-005**: The system MUST reject invalid permission requests and provide an actionable error message describing why the request was blocked.
 - **FR-006**: The system MUST provide a permission viewer that displays all active permissions and clearly distinguishes default versus temporary grants.
 - **FR-007**: The system MUST reflect permission state changes in the viewer within the same user interaction flow.
@@ -77,12 +87,20 @@ As a workspace user, I can end a session knowing temporary permissions are remov
 - **FR-009**: The system MUST start each new session with no temporary permissions carried over from prior sessions.
 - **FR-010**: The system MUST preserve project isolation by preventing permissions granted for one project session from becoming active in another project session.
 - **FR-011**: The system MUST present permission information in user-readable terms that make current AI access scope explicit.
+- **FR-012**: The system MUST treat duplicate temporary grants for the same canonical path as idempotent and maintain exactly one active grant entry for that path.
+- **FR-013**: The system MUST reject temporary grant requests outside approved local roots and return an actionable boundary-violation message.
+- **FR-014**: The system MUST retain granted-path records in the permission viewer with an unavailable status when a path becomes unreachable during a session.
+- **FR-015**: The system MUST block data access attempts against unavailable granted paths until reachability is restored.
+- **FR-016**: The permission viewer MUST present active permissions in a deterministic sort order and support paging when result volume exceeds one view.
+- **FR-017**: The permission viewer MUST support path-based search or filtering across active permissions.
+- **FR-018**: The system MUST write local structured log events for permission grant, deny, revoke, and unavailable-path status-change actions.
 
 ### Key Entities *(include if feature involves data)*
 
-- **Permission Grant**: A record of allowed access with attributes for path, permission category (default or temporary), grant time, and active state.
+- **Permission Grant**: A record of allowed access with attributes for path, permission category (default or temporary), grant time, and current status (active or unavailable).
 - **Session Permission Set**: The complete set of active permissions for one session, including immutable defaults and revocable temporary grants.
 - **Permission View**: A user-facing representation of active permissions grouped by category and current validity status.
+- **Permission Event Log**: A local structured record of permission lifecycle events, including grant, deny, revoke, and status transitions.
 
 ## Success Criteria *(mandatory)*
 
@@ -93,10 +111,12 @@ As a workspace user, I can end a session knowing temporary permissions are remov
 - **SC-003**: 100% of invalid permission requests are rejected with a clear reason and suggested correction.
 - **SC-004**: 95% of users can correctly identify current AI access scope from the permission viewer on first attempt.
 - **SC-005**: 100% of session handoffs between different projects preserve project isolation with no cross-project temporary permission leakage.
+- **SC-006**: 100% of permission grant, deny, revoke, and unavailable-path status changes generate one local structured log event each.
 
 ## Assumptions
 
 - Permission grants are scoped to local filesystem paths and do not include remote or cloud resources in v0.3.
 - Default permissions remain limited to Base and the selected project for the active session.
+- Approved local roots are limited to selected project, Base, and explicitly user-approved temporary roots for that session.
 - Write access behavior remains unchanged from earlier phases; this feature focuses on visibility and control of access scope.
 - Permission management is initiated by explicit user action and never auto-expands scope without a user request.

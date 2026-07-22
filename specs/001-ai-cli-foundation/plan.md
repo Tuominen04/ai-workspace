@@ -16,7 +16,7 @@ external runtime dependencies beyond local system tools.
 
 ## Technical Context
 
-**Language/Version**: Rust 2021 edition
+**Language/Version**: Rust 2024 edition
 
 **Primary Dependencies**: Rust standard library only for v0.1
 

@@ -16,7 +16,7 @@ than redefining architecture.
 
 ## Technical Context
 
-**Language/Version**: Rust 2021 edition
+**Language/Version**: Rust 2024 edition
 
 **Primary Dependencies**: Rust standard library plus minimal TOML serialization
 support for user-visible configuration and metadata files
