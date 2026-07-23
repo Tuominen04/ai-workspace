@@ -4,7 +4,12 @@ use crate::error::{AppError, Result};
 use crate::paths::WorkspacePaths;
 use crate::runtime::RuntimeManager;
 use crate::ui;
-use crate::workspace::{create_project, discover_projects, inspect_project, validate_workspace};
+use crate::workspace::{
+    create_project, discover_projects, grant_temporary_permission, initialize_permission_session,
+    inspect_project, revoke_temporary_permission, terminate_permission_session,
+    validate_workspace, view_permissions as build_permission_view, PermissionViewOptions,
+    Project,
+};
 
 pub fn init_workspace(paths: &WorkspacePaths) -> Result<()> {
     paths.ensure_layout()?;
@@ -39,12 +44,17 @@ pub fn run_session(paths: &WorkspacePaths) -> Result<()> {
         .get(selection)
         .ok_or_else(|| AppError::InvalidSelection("workspace selection was out of range".to_string()))?;
 
+    let _ = initialize_permission_session(paths, selected_project)?;
+
     let context = build_context_snapshot(paths)?;
     let mut runtime = RuntimeManager::new();
     let runtime_status = runtime.ensure_ollama()?;
 
     ui::render_session_summary(&selected_project, &context, &runtime_status);
     ui::wait_for_exit()?;
+
+    let revoked = terminate_permission_session(paths, selected_project)?;
+    ui::render_permission_session_closed(selected_project, revoked);
 
     Ok(())
 }
@@ -98,4 +108,66 @@ fn enforce_validation_gate(paths: &WorkspacePaths, action: &str) -> Result<()> {
 
     ui::render_validation_gate_block(action, &result);
     Err(AppError::ValidationGateBlocked(action.to_string()))
+}
+
+pub fn grant_permission(paths: &WorkspacePaths, project: Option<&str>, path: &str) -> Result<()> {
+    paths.ensure_layout()?;
+    enforce_validation_gate(paths, "ai permission grant")?;
+    let config = load_workspace_config(paths)?;
+    let project = resolve_permission_project(paths, &config, project)?;
+    let result = grant_temporary_permission(paths, &project, path)?;
+    ui::render_permission_grant(&project, &result);
+    Ok(())
+}
+
+pub fn revoke_permission(paths: &WorkspacePaths, project: Option<&str>, path: &str) -> Result<()> {
+    paths.ensure_layout()?;
+    enforce_validation_gate(paths, "ai permission revoke")?;
+    let config = load_workspace_config(paths)?;
+    let project = resolve_permission_project(paths, &config, project)?;
+    let result = revoke_temporary_permission(paths, &project, path)?;
+    ui::render_permission_revoke(&project, &result);
+    Ok(())
+}
+
+pub fn view_permissions(
+    paths: &WorkspacePaths,
+    project: Option<&str>,
+    filter: Option<&str>,
+    page: usize,
+    page_size: usize,
+) -> Result<()> {
+    paths.ensure_layout()?;
+    enforce_validation_gate(paths, "ai permission view")?;
+    let config = load_workspace_config(paths)?;
+    let project = resolve_permission_project(paths, &config, project)?;
+    let snapshot = build_permission_view(
+        paths,
+        &project,
+        &PermissionViewOptions {
+            filter: filter.map(|value| value.to_string()),
+            page,
+            page_size,
+        },
+    )?;
+    ui::render_permission_view(&project, &snapshot);
+    Ok(())
+}
+
+fn resolve_permission_project(
+    paths: &WorkspacePaths,
+    config: &crate::config::WorkspaceConfig,
+    requested_project: Option<&str>,
+) -> Result<Project> {
+    if let Some(project_name) = requested_project {
+        let (project, _) = inspect_project(paths, config, project_name)?;
+        return Ok(project);
+    }
+
+    let projects = discover_projects(paths)?;
+    if projects.len() == 1 {
+        return Ok(projects[0].clone());
+    }
+
+    Err(AppError::MissingProjectContext)
 }

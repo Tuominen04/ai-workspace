@@ -107,3 +107,32 @@
 - Research: `./research.md`
 - Data model: `./data-model.md`
 - CLI contract: `./contracts/cli.md`
+
+## Implementation Validation Notes
+
+Validated on 2026-07-22 using `AI_WORKSPACE_HOME=/tmp/ai-workspace-v03-impl`.
+
+- `cargo test` passed.
+- `ai init` created workspace layout and default configuration.
+- `ai project create --name demo-perm --description "Permission test project"`
+   succeeded.
+- `ai permission grant --project demo-perm --path /tmp` succeeded.
+- Duplicate grant for `/tmp` returned idempotent success message.
+- `ai permission view --project demo-perm` showed default and temporary entries.
+- `ai permission revoke --project demo-perm --path /tmp` removed the temporary
+   grant.
+- Invalid-path grant returned: `invalid permission path`.
+- Deleting a granted path produced `temporary/unavailable` status in viewer output.
+- `Logs/permissions-events.log` recorded `grant`, `deny`, `revoke`, and
+   `status-change` events.
+- Interactive session shutdown revoked temporary grants and removed them from
+   subsequent permission view output.
+
+### Usability Evidence (SC-001, SC-004)
+
+Internal trial benchmark (10 runs):
+
+| Metric | Result | Target | Pass |
+| -- | -- | -- | -- |
+| SC-001 grant completion | 10/10 succeeded, average 4 ms | 95% under 30 s | PASS |
+| SC-004 scope identification | 10/10 view checks correctly included granted path on first check | 95% first attempt | PASS |

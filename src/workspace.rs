@@ -1,8 +1,10 @@
 use crate::config::WorkspaceConfig;
 use crate::error::{AppError, Result};
+use crate::paths::canonical_local_existing_path;
 use crate::paths::WorkspacePaths;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
@@ -58,6 +60,83 @@ pub struct ValidationResult {
     pub workspace_issues: Vec<ValidationIssue>,
     pub project_issues: Vec<ProjectValidation>,
     pub checked_projects: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PermissionCategory {
+    Default,
+    Temporary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PermissionStatus {
+    Active,
+    Unavailable,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PermissionGrant {
+    pub grant_id: String,
+    pub session_id: String,
+    pub canonical_path: String,
+    pub display_path: String,
+    pub category: PermissionCategory,
+    pub status: PermissionStatus,
+    pub granted_at: String,
+    pub source: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionPermissionSet {
+    pub session_id: String,
+    pub workspace_id: String,
+    pub artifact_path: String,
+    pub default_grants: Vec<PermissionGrant>,
+    pub temporary_grants: Vec<PermissionGrant>,
+    pub created_at: String,
+    pub terminated_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PermissionEvent {
+    pub event_id: String,
+    pub session_id: String,
+    pub event_type: String,
+    pub path: String,
+    pub category: String,
+    pub previous_status: Option<String>,
+    pub new_status: Option<String>,
+    pub reason_code: Option<String>,
+    pub occurred_at: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct PermissionViewOptions {
+    pub filter: Option<String>,
+    pub page: usize,
+    pub page_size: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct PermissionViewSnapshot {
+    pub session_id: String,
+    pub total_count: usize,
+    pub page: usize,
+    pub page_size: usize,
+    pub entries: Vec<PermissionGrant>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PermissionGrantResult {
+    pub grant: PermissionGrant,
+    pub created: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct PermissionRevokeResult {
+    pub revoked_path: String,
 }
 
 impl ValidationResult {
@@ -382,6 +461,367 @@ pub fn collect_markdown_files(root: &Path, max_depth: usize) -> Result<Vec<PathB
     collect_markdown_files_recursive(root, root, max_depth, &mut files)?;
     files.sort();
     Ok(files)
+}
+
+pub fn initialize_permission_session(paths: &WorkspacePaths, project: &Project) -> Result<SessionPermissionSet> {
+    if let Some(existing) = load_permission_set(paths, project)? {
+        return Ok(existing);
+    }
+
+    let now = unix_timestamp().to_string();
+    let session_id = format!("{}-{}", project.name, now);
+    let artifact = paths.project_permissions_file(&project.path);
+
+    let set = SessionPermissionSet {
+        session_id: session_id.clone(),
+        workspace_id: project.name.clone(),
+        artifact_path: artifact.display().to_string(),
+        default_grants: vec![
+            default_grant(&session_id, &paths.base, &now, "system-default"),
+            default_grant(&session_id, &project.path, &now, "system-default"),
+        ],
+        temporary_grants: Vec::new(),
+        created_at: now,
+        terminated_at: None,
+    };
+
+    save_permission_set(paths, project, &set)?;
+    Ok(set)
+}
+
+pub fn grant_temporary_permission(
+    paths: &WorkspacePaths,
+    project: &Project,
+    requested_path: &str,
+) -> Result<PermissionGrantResult> {
+    let mut set = initialize_permission_session(paths, project)?;
+    let canonical = match canonical_local_existing_path(requested_path) {
+        Ok(path) => path,
+        Err(error) => {
+            append_permission_event(
+                paths,
+                &PermissionEvent {
+                    event_id: generate_id("deny"),
+                    session_id: set.session_id.clone(),
+                    event_type: "deny".to_string(),
+                    path: requested_path.to_string(),
+                    category: "temporary".to_string(),
+                    previous_status: None,
+                    new_status: None,
+                    reason_code: Some("invalid-path".to_string()),
+                    occurred_at: unix_timestamp().to_string(),
+                },
+            )?;
+            return Err(error);
+        }
+    };
+    let canonical_str = canonical.display().to_string();
+    if let Some(existing) = set
+        .temporary_grants
+        .iter_mut()
+        .find(|grant| grant.canonical_path == canonical_str)
+    {
+        existing.status = PermissionStatus::Active;
+        let existing_grant = existing.clone();
+        save_permission_set(paths, project, &set)?;
+        append_permission_event(
+            paths,
+            &PermissionEvent {
+                event_id: generate_id("grant"),
+                session_id: set.session_id.clone(),
+                event_type: "grant".to_string(),
+                path: existing_grant.canonical_path.clone(),
+                category: "temporary".to_string(),
+                previous_status: None,
+                new_status: Some("active".to_string()),
+                reason_code: Some("idempotent".to_string()),
+                occurred_at: unix_timestamp().to_string(),
+            },
+        )?;
+        return Ok(PermissionGrantResult {
+            grant: existing_grant,
+            created: false,
+        });
+    }
+
+    let grant = PermissionGrant {
+        grant_id: generate_id("grant"),
+        session_id: set.session_id.clone(),
+        canonical_path: canonical_str.clone(),
+        display_path: requested_path.to_string(),
+        category: PermissionCategory::Temporary,
+        status: PermissionStatus::Active,
+        granted_at: unix_timestamp().to_string(),
+        source: "user-grant".to_string(),
+    };
+    set.temporary_grants.push(grant.clone());
+
+    save_permission_set(paths, project, &set)?;
+    append_permission_event(
+        paths,
+        &PermissionEvent {
+            event_id: generate_id("grant"),
+            session_id: set.session_id.clone(),
+            event_type: "grant".to_string(),
+            path: canonical_str,
+            category: "temporary".to_string(),
+            previous_status: None,
+            new_status: Some("active".to_string()),
+            reason_code: None,
+            occurred_at: unix_timestamp().to_string(),
+        },
+    )?;
+
+    Ok(PermissionGrantResult {
+        grant,
+        created: true,
+    })
+}
+
+pub fn revoke_temporary_permission(
+    paths: &WorkspacePaths,
+    project: &Project,
+    requested_path: &str,
+) -> Result<PermissionRevokeResult> {
+    let mut set = initialize_permission_session(paths, project)?;
+    let lookup = normalize_permission_lookup_path(requested_path)?;
+
+    let maybe_index = set.temporary_grants.iter().position(|grant| {
+        grant.canonical_path == lookup || grant.display_path == requested_path
+    });
+
+    let index = maybe_index.ok_or_else(|| AppError::PermissionGrantNotFound(requested_path.to_string()))?;
+    let removed = set.temporary_grants.remove(index);
+    save_permission_set(paths, project, &set)?;
+
+    append_permission_event(
+        paths,
+        &PermissionEvent {
+            event_id: generate_id("revoke"),
+            session_id: set.session_id,
+            event_type: "revoke".to_string(),
+            path: removed.canonical_path.clone(),
+            category: "temporary".to_string(),
+            previous_status: Some(permission_status_string(&removed.status)),
+            new_status: None,
+            reason_code: None,
+            occurred_at: unix_timestamp().to_string(),
+        },
+    )?;
+
+    Ok(PermissionRevokeResult {
+        revoked_path: removed.canonical_path,
+    })
+}
+
+pub fn view_permissions(
+    paths: &WorkspacePaths,
+    project: &Project,
+    options: &PermissionViewOptions,
+) -> Result<PermissionViewSnapshot> {
+    let mut set = initialize_permission_session(paths, project)?;
+    let mut status_events: Vec<PermissionEvent> = Vec::new();
+
+    for grant in &mut set.temporary_grants {
+        let is_available = PathBuf::from(&grant.canonical_path).exists();
+        let new_status = if is_available {
+            PermissionStatus::Active
+        } else {
+            PermissionStatus::Unavailable
+        };
+
+        if grant.status != new_status {
+            status_events.push(PermissionEvent {
+                event_id: generate_id("status-change"),
+                session_id: set.session_id.clone(),
+                event_type: "status-change".to_string(),
+                path: grant.canonical_path.clone(),
+                category: "temporary".to_string(),
+                previous_status: Some(permission_status_string(&grant.status)),
+                new_status: Some(permission_status_string(&new_status)),
+                reason_code: Some("availability-check".to_string()),
+                occurred_at: unix_timestamp().to_string(),
+            });
+            grant.status = new_status;
+        }
+    }
+
+    if !status_events.is_empty() {
+        save_permission_set(paths, project, &set)?;
+        for event in status_events {
+            append_permission_event(paths, &event)?;
+        }
+    }
+
+    let filter = options.filter.as_ref().map(|value| value.to_ascii_lowercase());
+    let mut all_entries: Vec<PermissionGrant> = set
+        .default_grants
+        .iter()
+        .chain(set.temporary_grants.iter())
+        .filter(|grant| {
+            if let Some(filter_value) = &filter {
+                let path = grant.canonical_path.to_ascii_lowercase();
+                let display = grant.display_path.to_ascii_lowercase();
+                return path.contains(filter_value) || display.contains(filter_value);
+            }
+            true
+        })
+        .cloned()
+        .collect();
+
+    all_entries.sort_by(|left, right| left.canonical_path.cmp(&right.canonical_path));
+
+    let total_count = all_entries.len();
+    let page = options.page.max(1);
+    let page_size = options.page_size.max(1);
+    let start = (page - 1) * page_size;
+    let end = (start + page_size).min(total_count);
+    let entries = if start >= total_count {
+        Vec::new()
+    } else {
+        all_entries[start..end].to_vec()
+    };
+
+    Ok(PermissionViewSnapshot {
+        session_id: set.session_id,
+        total_count,
+        page,
+        page_size,
+        entries,
+    })
+}
+
+pub fn ensure_permission_access(
+    paths: &WorkspacePaths,
+    project: &Project,
+    requested_path: &str,
+) -> Result<()> {
+    let set = initialize_permission_session(paths, project)?;
+    let lookup = normalize_permission_lookup_path(requested_path)?;
+
+    for grant in set.default_grants.iter().chain(set.temporary_grants.iter()) {
+        if grant.canonical_path == lookup || grant.display_path == requested_path {
+            if grant.status == PermissionStatus::Unavailable {
+                return Err(AppError::Message(format!(
+                    "permission exists but path is currently unavailable: {}",
+                    grant.canonical_path
+                )));
+            }
+            return Ok(());
+        }
+    }
+
+    Err(AppError::PermissionGrantNotFound(requested_path.to_string()))
+}
+
+pub fn terminate_permission_session(paths: &WorkspacePaths, project: &Project) -> Result<usize> {
+    let Some(set) = load_permission_set(paths, project)? else {
+        return Ok(0);
+    };
+
+    for grant in &set.temporary_grants {
+        append_permission_event(
+            paths,
+            &PermissionEvent {
+                event_id: generate_id("revoke"),
+                session_id: set.session_id.clone(),
+                event_type: "revoke".to_string(),
+                path: grant.canonical_path.clone(),
+                category: "temporary".to_string(),
+                previous_status: Some(permission_status_string(&grant.status)),
+                new_status: None,
+                reason_code: Some("session-end".to_string()),
+                occurred_at: unix_timestamp().to_string(),
+            },
+        )?;
+    }
+
+    let permissions_path = paths.project_permissions_file(&project.path);
+    if permissions_path.exists() {
+        fs::remove_file(&permissions_path).map_err(|error| map_path_error(&permissions_path, error))?;
+    }
+
+    Ok(set.temporary_grants.len())
+}
+
+fn load_permission_set(paths: &WorkspacePaths, project: &Project) -> Result<Option<SessionPermissionSet>> {
+    let permissions_path = paths.project_permissions_file(&project.path);
+    if !permissions_path.exists() {
+        return Ok(None);
+    }
+
+    let raw = fs::read_to_string(&permissions_path).map_err(|error| map_path_error(&permissions_path, error))?;
+    let parsed = toml::from_str::<SessionPermissionSet>(&raw).map_err(|error| {
+        AppError::Message(format!(
+            "invalid permission session artifact at {}: {error}",
+            permissions_path.display()
+        ))
+    })?;
+    Ok(Some(parsed))
+}
+
+fn save_permission_set(paths: &WorkspacePaths, project: &Project, set: &SessionPermissionSet) -> Result<()> {
+    let session_dir = project.path.join("Session");
+    fs::create_dir_all(&session_dir).map_err(|error| map_path_error(&session_dir, error))?;
+    let permissions_path = paths.project_permissions_file(&project.path);
+    let serialized = toml::to_string_pretty(set)
+        .map_err(|error| AppError::Message(format!("failed to serialize permission state: {error}")))?;
+    fs::write(&permissions_path, serialized).map_err(|error| map_path_error(&permissions_path, error))
+}
+
+fn append_permission_event(paths: &WorkspacePaths, event: &PermissionEvent) -> Result<()> {
+    fs::create_dir_all(&paths.logs).map_err(|error| map_path_error(&paths.logs, error))?;
+    let log_path = paths.logs.join("permissions-events.log");
+    let serialized = toml::to_string(event)
+        .map_err(|error| AppError::Message(format!("failed to serialize permission event: {error}")))?;
+
+    let mut file = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)
+        .map_err(|error| map_path_error(&log_path, error))?;
+
+    file.write_all(serialized.as_bytes())
+        .map_err(AppError::Io)?;
+    file.write_all(b"\n---\n").map_err(AppError::Io)
+}
+
+fn permission_status_string(status: &PermissionStatus) -> String {
+    match status {
+        PermissionStatus::Active => "active".to_string(),
+        PermissionStatus::Unavailable => "unavailable".to_string(),
+    }
+}
+
+fn default_grant(session_id: &str, path: &Path, now: &str, source: &str) -> PermissionGrant {
+    PermissionGrant {
+        grant_id: generate_id("default"),
+        session_id: session_id.to_string(),
+        canonical_path: path.display().to_string(),
+        display_path: path.display().to_string(),
+        category: PermissionCategory::Default,
+        status: PermissionStatus::Active,
+        granted_at: now.to_string(),
+        source: source.to_string(),
+    }
+}
+
+fn generate_id(prefix: &str) -> String {
+    format!("{prefix}-{}", unix_timestamp())
+}
+
+fn normalize_permission_lookup_path(input: &str) -> Result<String> {
+    let path = PathBuf::from(input);
+    if path.exists() {
+        return Ok(canonical_local_existing_path(input)?.display().to_string());
+    }
+
+    if path.is_absolute() {
+        return Ok(path.display().to_string());
+    }
+
+    let cwd = std::env::current_dir().map_err(AppError::Io)?;
+    Ok(cwd.join(path).display().to_string())
 }
 
 fn collect_markdown_files_recursive(

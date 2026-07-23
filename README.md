@@ -406,3 +406,21 @@ Validation behavior is safety-first:
 - `ai validate` reports actionable workspace and project issues.
 - `ai project create` and `ai project show` are enforcement-gated and refuse to
     continue while blocking validation issues exist.
+
+## Permission Commands (v0.3)
+
+The v0.3 permission layer adds explicit commands for temporary session grants,
+permission inspection, and manual revoke:
+
+```text
+ai permission grant [--project PROJECT] --path PATH
+ai permission view [--project PROJECT] [--filter TEXT] [--page N] [--page-size N]
+ai permission revoke [--project PROJECT] --path PATH
+```
+
+Permission behavior is explicit and session-scoped:
+
+- grants are idempotent by canonical path
+- invalid paths are denied with actionable errors
+- unreachable granted paths remain visible as unavailable
+- temporary grants are removed automatically at session end

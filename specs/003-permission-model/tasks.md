@@ -12,10 +12,10 @@
 
 **Purpose**: Prepare command and module scaffolding for permission features.
 
-- [ ] T001 Add permission command scaffolding for grant, view, and revoke in src/app.rs
-- [ ] T002 Add permission-output rendering scaffolding in src/ui.rs
-- [ ] T003 Wire permission command dispatch entry points in src/session.rs
-- [ ] T004 Align permission command surface and help text for grant/view/revoke in src/app.rs
+- [X] T001 Add permission command scaffolding for grant, view, and revoke in src/app.rs
+- [X] T002 Add permission-output rendering scaffolding in src/ui.rs
+- [X] T003 Wire permission command dispatch entry points in src/session.rs
+- [X] T004 Align permission command surface and help text for grant/view/revoke in src/app.rs
 
 ---
 
@@ -25,14 +25,14 @@
 
 **CRITICAL**: Complete this phase before starting any user story.
 
-- [ ] T005 Define permission domain structs and enums in src/workspace.rs
-- [ ] T006 [P] Implement canonical-path and local-path validation helper functions in src/paths.rs
-- [ ] T007 [P] Add permission-specific error variants and mappings in src/error.rs
-- [ ] T008 Implement session permission set load/save helpers using Projects/{project}/Session/permissions.toml in src/workspace.rs
-- [ ] T009 Implement local structured permission event helper utilities in src/workspace.rs
-- [ ] T010 [P] Define permission viewer query types for sorting, paging, and filtering in src/workspace.rs
-- [ ] T011 Wire permission-event logging integration points in src/session.rs
-- [ ] T012 Implement shared session lifecycle hooks for permission initialization and cleanup in src/session.rs and src/workspace.rs
+- [X] T005 Define permission domain structs and enums in src/workspace.rs
+- [X] T006 [P] Implement canonical-path and local-path validation helper functions in src/paths.rs
+- [X] T007 [P] Add permission-specific error variants and mappings in src/error.rs
+- [X] T008 Implement session permission set load/save helpers using Projects/{project}/Session/permissions.toml in src/workspace.rs
+- [X] T009 Implement local structured permission event helper utilities in src/workspace.rs
+- [X] T010 [P] Define permission viewer query types for sorting, paging, and filtering in src/workspace.rs
+- [X] T011 Wire permission-event logging integration points in src/session.rs
+- [X] T012 Implement shared session lifecycle hooks for permission initialization and cleanup in src/session.rs and src/workspace.rs
 
 **Checkpoint**: Foundation complete. User stories can now proceed.
 
@@ -46,12 +46,12 @@
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Implement ai permission grant argument parsing and input checks in src/app.rs
-- [ ] T014 [P] [US1] Implement grant validation for local existence and local-boundary rules in src/workspace.rs
-- [ ] T015 [P] [US1] Implement canonicalized idempotent upsert for temporary grants in src/workspace.rs
-- [ ] T016 [US1] Implement grant workflow orchestration and error mapping in src/session.rs
-- [ ] T017 [US1] Emit structured grant and deny events for grant attempts in src/session.rs and src/workspace.rs
-- [ ] T018 [US1] Render permission grant success and actionable deny output in src/ui.rs
+- [X] T013 [US1] Implement ai permission grant argument parsing and input checks in src/app.rs
+- [X] T014 [P] [US1] Implement grant validation for local existence and local-boundary rules in src/workspace.rs
+- [X] T015 [P] [US1] Implement canonicalized idempotent upsert for temporary grants in src/workspace.rs
+- [X] T016 [US1] Implement grant workflow orchestration and error mapping in src/session.rs
+- [X] T017 [US1] Emit structured grant and deny events for grant attempts in src/session.rs and src/workspace.rs
+- [X] T018 [US1] Render permission grant success and actionable deny output in src/ui.rs
 
 **Checkpoint**: User Story 1 is independently functional and demonstrable.
 
@@ -65,14 +65,14 @@
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Implement ai permission view option parsing for filter/page/page-size in src/app.rs
-- [ ] T020 [P] [US2] Implement deterministic permission sorting for viewer snapshots in src/workspace.rs
-- [ ] T021 [P] [US2] Implement permission pagination and path filtering in src/workspace.rs
-- [ ] T022 [US2] Implement unreachable-path status transition handling (active to unavailable) in src/workspace.rs
-- [ ] T023 [US2] Enforce blocked access checks for unavailable grants in src/workspace.rs
-- [ ] T024 [US2] Emit structured status-change events for unavailable and recovered grants in src/session.rs and src/workspace.rs
-- [ ] T025 [US2] Render permission viewer output with category and status grouping in src/ui.rs
-- [ ] T026 [US2] Wire permission view execution flow in src/session.rs
+- [X] T019 [US2] Implement ai permission view option parsing for filter/page/page-size in src/app.rs
+- [X] T020 [P] [US2] Implement deterministic permission sorting for viewer snapshots in src/workspace.rs
+- [X] T021 [P] [US2] Implement permission pagination and path filtering in src/workspace.rs
+- [X] T022 [US2] Implement unreachable-path status transition handling (active to unavailable) in src/workspace.rs
+- [X] T023 [US2] Enforce blocked access checks for unavailable grants in src/workspace.rs
+- [X] T024 [US2] Emit structured status-change events for unavailable and recovered grants in src/session.rs and src/workspace.rs
+- [X] T025 [US2] Render permission viewer output with category and status grouping in src/ui.rs
+- [X] T026 [US2] Wire permission view execution flow in src/session.rs
 
 **Checkpoint**: User Story 2 is independently functional and demonstrable.
 
@@ -86,13 +86,13 @@
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] Implement session-end temporary permission revocation orchestration in src/session.rs
-- [ ] T028 [P] [US3] Implement persistent temporary-grant purge on session termination in src/workspace.rs
-- [ ] T029 [P] [US3] Emit structured revoke events during automatic session cleanup in src/session.rs and src/workspace.rs
-- [ ] T030 [US3] Ensure new session initialization loads default-only permission state in src/session.rs and src/workspace.rs
-- [ ] T031 [US3] Enforce cross-project isolation of temporary permission state in src/workspace.rs
-- [ ] T032 [US3] Implement ai permission revoke command parsing and dispatch in src/app.rs and src/session.rs
-- [ ] T033 [US3] Render revoke and session-cleanup outcomes in src/ui.rs
+- [X] T027 [US3] Implement session-end temporary permission revocation orchestration in src/session.rs
+- [X] T028 [P] [US3] Implement persistent temporary-grant purge on session termination in src/workspace.rs
+- [X] T029 [P] [US3] Emit structured revoke events during automatic session cleanup in src/session.rs and src/workspace.rs
+- [X] T030 [US3] Ensure new session initialization loads default-only permission state in src/session.rs and src/workspace.rs
+- [X] T031 [US3] Enforce cross-project isolation of temporary permission state in src/workspace.rs
+- [X] T032 [US3] Implement ai permission revoke command parsing and dispatch in src/app.rs and src/session.rs
+- [X] T033 [US3] Render revoke and session-cleanup outcomes in src/ui.rs
 
 **Checkpoint**: User Story 3 is independently functional and demonstrable.
 
@@ -102,12 +102,12 @@
 
 **Purpose**: Finalize documentation, verification, and cleanup across all stories.
 
-- [ ] T034 [P] Update permission behavior documentation in README.md and docs/permissions.md
-- [ ] T035 [P] Align implementation-facing docs with final behavior in specs/003-permission-model/contracts/cli.md, specs/003-permission-model/data-model.md, and specs/003-permission-model/spec.md
-- [ ] T036 Run quickstart scenarios and record implementation validation notes in specs/003-permission-model/quickstart.md
-- [ ] T037 Run full test suite for regression verification in tests/workspace_tests.rs and tests/config_tests.rs
-- [ ] T038 Final cleanup and consistency pass in src/app.rs, src/session.rs, src/workspace.rs, src/paths.rs, src/ui.rs, and src/error.rs
-- [ ] T041 Run and record usability evidence for SC-001 and SC-004 in specs/003-permission-model/quickstart.md
+- [X] T034 [P] Update permission behavior documentation in README.md and docs/permissions.md
+- [X] T035 [P] Align implementation-facing docs with final behavior in specs/003-permission-model/contracts/cli.md, specs/003-permission-model/data-model.md, and specs/003-permission-model/spec.md
+- [X] T036 Run quickstart scenarios and record implementation validation notes in specs/003-permission-model/quickstart.md
+- [X] T037 Run full test suite for regression verification in tests/workspace_tests.rs and tests/config_tests.rs
+- [X] T038 Final cleanup and consistency pass in src/app.rs, src/session.rs, src/workspace.rs, src/paths.rs, src/ui.rs, and src/error.rs
+- [X] T041 Run and record usability evidence for SC-001 and SC-004 in specs/003-permission-model/quickstart.md
 
 ---
 

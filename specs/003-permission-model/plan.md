@@ -22,9 +22,9 @@ isolation.
 TOML support already used by workspace metadata/configuration, structured logging
 support already present in the codebase approach
 
-**Storage**: Local filesystem only; session-scoped permission state represented via
-workspace-visible session artifacts and runtime state constrained to the active
-session lifecycle
+**Storage**: Local filesystem only; session-scoped permission state stored in
+`Projects/<project>/Session/permissions.toml` and runtime state constrained to the
+active session lifecycle
 
 **Testing**: `cargo test` plus targeted unit/integration tests for grant validation,
 session cleanup, and viewer/logging behavior; manual CLI validation via quickstart
@@ -38,7 +38,7 @@ for typical local paths; permission view responses should render first page in u
 500 ms for up to 1,000 active grants
 
 **Constraints**: Local-first and offline-capable; no cloud dependencies; explicit
-and revocable temporary permissions; approved-root boundary enforcement; deterministic
+and revocable temporary permissions; local-path boundary enforcement; deterministic
 sorting and pagination for viewer scalability; temporary permissions auto-expire at
 session end
 

@@ -7,6 +7,13 @@ release/
 *.prof*
 *.log
 .env*
+.idea/
 
 # Specify
 .specify/feature.json
+
+# Universal
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp

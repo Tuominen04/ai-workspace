@@ -63,6 +63,19 @@ impl WorkspacePaths {
     pub fn project_metadata_file(&self, project_root: &Path, metadata_filename: &str) -> PathBuf {
         project_root.join(metadata_filename)
     }
+
+    pub fn project_permissions_file(&self, project_root: &Path) -> PathBuf {
+        project_root.join("Session").join("permissions.toml")
+    }
+}
+
+pub fn canonical_local_existing_path(input: &str) -> Result<PathBuf> {
+    let candidate = PathBuf::from(input);
+    if !candidate.exists() {
+        return Err(AppError::InvalidPermissionPath(input.to_string()));
+    }
+
+    std::fs::canonicalize(&candidate).map_err(|_| AppError::InvalidPermissionPath(input.to_string()))
 }
 
 fn home_dir() -> Result<PathBuf> {

@@ -15,6 +15,9 @@ pub enum AppError {
     ProjectNotFound(String),
     ValidationGateBlocked(String),
     PermissionDenied(PathBuf),
+    InvalidPermissionPath(String),
+    PermissionGrantNotFound(String),
+    MissingProjectContext,
 }
 
 impl fmt::Display for AppError {
@@ -42,6 +45,15 @@ impl fmt::Display for AppError {
                 f,
                 "permission denied while accessing {}",
                 path.display()
+            ),
+            Self::InvalidPermissionPath(path) => {
+                write!(f, "invalid permission path '{path}'")
+            }
+            Self::PermissionGrantNotFound(path) => {
+                write!(f, "no active temporary permission found for '{path}'")
+            }
+            Self::MissingProjectContext => f.write_str(
+                "permission command requires a project context; use --project PROJECT or keep only one project",
             ),
         }
     }

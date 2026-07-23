@@ -3,7 +3,11 @@ use crate::config::WorkspaceConfig;
 use crate::error::{AppError, Result};
 use crate::paths::WorkspacePaths;
 use crate::runtime::RuntimeStatus;
-use crate::workspace::{CreatedProject, Project, ProjectMetadata, ValidationIssue, ValidationResult, ValidationSeverity};
+use crate::workspace::{
+    CreatedProject, PermissionCategory, PermissionGrantResult, PermissionRevokeResult,
+    PermissionStatus, PermissionViewSnapshot, Project, ProjectMetadata, ValidationIssue,
+    ValidationResult, ValidationSeverity,
+};
 use std::io::{self, Write};
 
 pub fn render_startup_banner(paths: &WorkspacePaths) {
@@ -160,6 +164,56 @@ pub fn render_validation_gate_block(action: &str, result: &ValidationResult) {
         result.blocking_issue_count()
     );
     println!("Run `ai validate` to inspect and clear blocking issues first.");
+}
+
+pub fn render_permission_grant(project: &Project, result: &PermissionGrantResult) {
+    println!("Project: {}", project.name);
+    if result.created {
+        println!("Permission granted: {}", result.grant.canonical_path);
+    } else {
+        println!(
+            "Permission already active (idempotent): {}",
+            result.grant.canonical_path
+        );
+    }
+}
+
+pub fn render_permission_revoke(project: &Project, result: &PermissionRevokeResult) {
+    println!("Project: {}", project.name);
+    println!("Permission revoked: {}", result.revoked_path);
+}
+
+pub fn render_permission_view(project: &Project, snapshot: &PermissionViewSnapshot) {
+    println!("Project: {}", project.name);
+    println!("Session: {}", snapshot.session_id);
+    println!(
+        "Permissions: total={} page={} page_size={}",
+        snapshot.total_count, snapshot.page, snapshot.page_size
+    );
+
+    if snapshot.entries.is_empty() {
+        println!("No permissions in this view.");
+        return;
+    }
+
+    for grant in &snapshot.entries {
+        let category = match grant.category {
+            PermissionCategory::Default => "default",
+            PermissionCategory::Temporary => "temporary",
+        };
+        let status = match grant.status {
+            PermissionStatus::Active => "active",
+            PermissionStatus::Unavailable => "unavailable",
+        };
+        println!("- [{}][{}] {}", category, status, grant.canonical_path);
+    }
+}
+
+pub fn render_permission_session_closed(project: &Project, revoked_count: usize) {
+    println!(
+        "Session cleanup for project {}: revoked {} temporary permission(s).",
+        project.name, revoked_count
+    );
 }
 
 fn render_issue(issue: &ValidationIssue) {

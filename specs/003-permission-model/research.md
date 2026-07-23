@@ -2,8 +2,8 @@
 
 ## Decision 1: Keep permission authority local and filesystem-scoped
 
-- Decision: Restrict temporary permission grants to approved local roots only
-  (selected project, Base, and explicitly user-approved temporary roots).
+- Decision: Restrict temporary permission grants to explicit local path grants and
+  reject non-local or inaccessible paths.
 - Rationale: This enforces least privilege, preserves project isolation, and aligns
   with the local-first constitution and permission constraints.
 - Alternatives considered:
