@@ -28,6 +28,7 @@ pub fn run() -> Result<()> {
             session::revoke_permission(&paths, project.as_deref(), &path)
         }
         Command::Validate => session::validate_workspace_state(&paths),
+        Command::Version => print_version(),
         Command::Help => {
             print_help();
             Ok(())
@@ -51,6 +52,7 @@ enum Command {
     },
     PermissionRevoke { project: Option<String>, path: String },
     Validate,
+    Version,
     Help,
 }
 
@@ -67,6 +69,7 @@ fn parse_command(args: Vec<String>) -> Result<Command> {
         "project" => parse_project_command(&args[1..]),
         "permission" => parse_permission_command(&args[1..]),
         "-h" | "--help" | "help" => Ok(Command::Help),
+        "-V" | "--version" => Ok(Command::Version),
         other => Err(AppError::Message(format!(
             "unknown command '{other}'. Use 'ai --help' for usage."
         ))),
@@ -328,7 +331,7 @@ fn print_help() {
     println!("  ai status    Show discovered workspaces and root paths");
     println!("  ai validate  Validate workspace and project definitions");
     println!("  ai config show");
-    println!("              Show workspace configuration");
+    println!("Show workspace configuration");
     println!("  ai project create --name NAME [--description TEXT]");
     println!("              Create a managed project workspace");
     println!("  ai project show PROJECT");
@@ -339,8 +342,14 @@ fn print_help() {
     println!("              Show active default and temporary permissions");
     println!("  ai permission revoke [--project PROJECT] --path PATH");
     println!("              Revoke a temporary permission");
+    println!("  ai --version Show the ai binary version");
     println!("  ai --help    Show this help message");
     println!();
     println!("Environment:");
     println!("  AI_WORKSPACE_HOME  Override the default workspace root (~/AI)");
+}
+
+fn print_version() -> Result<()> {
+    println!("ai {}", env!("CARGO_PKG_VERSION"));
+    Ok(())
 }
