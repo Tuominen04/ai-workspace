@@ -55,12 +55,29 @@ pub fn render_session_summary(
     println!("Workspace: {}", project.name);
     println!("Project path: {}", project.path.display());
     println!("Runtime: {}", runtime.detail);
-    println!("AI-readable base files: {}", context.base_files.len());
+    println!("Base context files: {}", context.base_files.len());
+    println!("Project context files: {}", context.project_files.len());
+    println!("Session context files: {}", context.session_files.len());
+    println!("Total context sources: {}", context.source_count);
     println!("AI access policy: read-only base scope (~/AI/Base)");
 
     if !context.base_files.is_empty() {
         println!("Base context:");
         for file in &context.base_files {
+            println!("  - {}", file.display());
+        }
+    }
+
+    if !context.project_files.is_empty() {
+        println!("Project context:");
+        for file in &context.project_files {
+            println!("  - {}", file.display());
+        }
+    }
+
+    if !context.session_files.is_empty() {
+        println!("Session context:");
+        for file in &context.session_files {
             println!("  - {}", file.display());
         }
     }

@@ -46,7 +46,7 @@ pub fn run_session(paths: &WorkspacePaths) -> Result<()> {
 
     let _ = initialize_permission_session(paths, selected_project)?;
 
-    let context = build_context_snapshot(paths)?;
+    let context = build_context_snapshot(paths, Some(selected_project))?;
     let mut runtime = RuntimeManager::new();
     let runtime_status = runtime.ensure_ollama()?;
 

@@ -19,27 +19,44 @@
 
 ### Scenario 1: Base context appears by default
 
-1. Start a session for a project.
-2. Observe the startup summary.
-3. Expected: base knowledge files are listed and the summary clearly shows shared base context.
+1. Ensure the workspace is initialized and a project exists:
+   - `./target/debug/ai init`
+   - `./target/debug/ai project create --name demo-context`
+2. Start a session for that project:
+   - `./target/debug/ai`
+3. Observe the startup summary and look for the context section.
+4. Expected: base knowledge files are listed and the summary clearly shows shared base context.
 
 ### Scenario 2: Project context appears for the selected project
 
-1. Create a project with project-specific markdown files.
-2. Start a session for that project.
-3. Expected: the context summary includes the project's knowledge sources.
+1. Create or select the project and add a markdown file under its Knowledge directory:
+   - `printf '# Demo notes\n\nProject-specific context.\n' > ~/AI/Projects/demo-context/Knowledge/notes.md`
+   - `ls ~/AI/Projects/demo-context`
+2. Start a session for that project:
+   - `./target/debug/ai`
+3. Expected: the startup summary includes the project knowledge file and clearly shows project context in addition to the shared base context.
 
 ### Scenario 3: Switching projects changes the context
 
-1. Start a session for project A.
-2. Start a new session for project B.
-3. Expected: the context summary reflects project B rather than project A.
+1. Create or select two projects, for example `project-a` and `project-b`.
+   - `./target/debug/ai project create --name project-a`
+   - `./target/debug/ai project create --name project-b`
+2. Add distinct markdown content to each project's Knowledge directory.
+   - `printf '# Demo notes\n\nProject A -specific context.\n' > ~/AI/Projects/project-a/Knowledge/notes-a.md`
+   - `printf '# Demo notes\n\nProject B -specific context.\n' > ~/AI/Projects/project-b/Knowledge/notes-b.md`
+3. Start a session for project A:
+   - `./target/debug/ai`
+4. Start a new session for project B:
+   - `./target/debug/ai`
+5. Expected: the context summary reflects project B rather than project A.
 
 ### Scenario 4: Context stays bounded
 
-1. Add enough knowledge files to exceed the planned size limit.
-2. Start a session.
-3. Expected: the assembled context remains bounded and deterministic.
+1. Add 12 markdown files to a project's Knowledge directory so the total content exceeds the planned size limit.
+   - `for i in $(seq 1 12); do printf '# Note %s\n\nThis is test content.\n' "$i" > ~/AI/Projects/demo-context/Knowledge/note-$i.md; done`
+2. Start a session for that project:
+   - `./target/debug/ai`
+3. Expected: the assembled context remains bounded and deterministic, with only the selected subset of sources included.
 
 ## Verification Commands
 
