@@ -106,3 +106,21 @@ fn context_snapshot_stays_bounded_and_deterministic() {
 
     let _ = fs::remove_dir_all(&paths.root);
 }
+
+#[test]
+fn context_snapshot_as_system_prompt_wraps_assembled_content() {
+    let paths = test_paths("system-prompt");
+    paths.ensure_layout().expect("workspace layout should be created for test");
+
+    let base_dir = paths.base.join("Common");
+    fs::create_dir_all(&base_dir).expect("base directory should be created");
+    fs::write(base_dir.join("base.md"), "# Base knowledge").expect("base markdown should be written");
+
+    let snapshot = build_context_snapshot(&paths, None).expect("context snapshot should build");
+    let system_prompt = snapshot.as_system_prompt();
+
+    assert!(system_prompt.contains(&snapshot.assembled_content));
+    assert!(system_prompt.len() > snapshot.assembled_content.len());
+
+    let _ = fs::remove_dir_all(&paths.root);
+}

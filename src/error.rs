@@ -18,6 +18,7 @@ pub enum AppError {
     InvalidPermissionPath(String),
     PermissionGrantNotFound(String),
     MissingProjectContext,
+    RuntimeRequestFailed(String),
 }
 
 impl fmt::Display for AppError {
@@ -55,6 +56,9 @@ impl fmt::Display for AppError {
             Self::MissingProjectContext => f.write_str(
                 "permission command requires a project context; use --project PROJECT or keep only one project",
             ),
+            Self::RuntimeRequestFailed(reason) => {
+                write!(f, "request to the AI runtime failed: {reason}")
+            }
         }
     }
 }

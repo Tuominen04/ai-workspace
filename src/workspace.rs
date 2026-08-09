@@ -23,6 +23,15 @@ pub struct ProjectMetadata {
     pub specs_dir: String,
     pub resources_dir: String,
     pub session_dir: String,
+    #[serde(default)]
+    pub model: Option<String>,
+}
+
+pub fn resolve_model(config: &WorkspaceConfig, metadata: &ProjectMetadata) -> String {
+    metadata
+        .model
+        .clone()
+        .unwrap_or_else(|| config.default_model.clone())
 }
 
 #[derive(Debug, Clone)]
@@ -250,6 +259,7 @@ pub fn create_project(
             specs_dir: "Specs".to_string(),
             resources_dir: "Resources".to_string(),
             session_dir: "Session".to_string(),
+            model: None,
         };
 
         save_project_metadata(paths, &project_root, config.metadata_filename(), &metadata)?;

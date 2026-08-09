@@ -6,5 +6,8 @@ fn ai_version_flag_prints_package_version() {
     cmd.arg("--version");
     cmd.assert()
         .success()
-        .stdout(predicates::str::contains("ai 0.3.1"));
+        .stdout(predicates::str::contains(format!(
+            "ai {}",
+            env!("CARGO_PKG_VERSION")
+        )));
 }

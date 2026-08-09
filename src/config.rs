@@ -14,6 +14,12 @@ pub struct WorkspaceConfig {
 	pub config_path: String,
 	pub default_project_directories: Vec<String>,
 	pub project_metadata_file: String,
+	#[serde(default = "default_model_value")]
+	pub default_model: String,
+}
+
+fn default_model_value() -> String {
+	"qwen3.6:latest".to_string()
 }
 
 #[derive(Debug, Clone)]
@@ -38,6 +44,7 @@ impl WorkspaceConfig {
 				"Session".to_string(),
 			],
 			project_metadata_file: "project.toml".to_string(),
+			default_model: default_model_value(),
 		}
 	}
 

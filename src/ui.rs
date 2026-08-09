@@ -83,6 +83,13 @@ pub fn render_session_summary(
     }
 
     println!();
+}
+
+pub fn render_chat_ready() {
+    println!("Session is active. Ask a question, or type 'exit' to close the workspace.");
+}
+
+pub fn render_no_runtime_notice() {
     println!("Session is active. Press Enter to close the workspace.");
 }
 
@@ -90,6 +97,41 @@ pub fn wait_for_exit() -> Result<()> {
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
     Ok(())
+}
+
+pub fn prompt_for_chat_message() -> Result<Option<String>> {
+    loop {
+        print!("> ");
+        io::stdout().flush()?;
+
+        let mut input = String::new();
+        let bytes_read = io::stdin().read_line(&mut input)?;
+
+        if bytes_read == 0 {
+            return Ok(None);
+        }
+
+        let value = input.trim();
+        if value.eq_ignore_ascii_case("exit") || value.eq_ignore_ascii_case("quit") {
+            return Ok(None);
+        }
+
+        if value.is_empty() {
+            continue;
+        }
+
+        return Ok(Some(value.to_string()));
+    }
+}
+
+pub fn render_ai_response(content: &str) {
+    println!("[AI] {content}");
+    println!();
+}
+
+pub fn render_chat_error(message: &str) {
+    println!("Could not reach the AI runtime: {message}");
+    println!("You can try again, or type 'exit' to close the workspace.");
 }
 
 pub fn render_status(paths: &WorkspacePaths, projects: &[Project]) {

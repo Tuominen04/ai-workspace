@@ -149,6 +149,7 @@ Responsibilities
 * Stop UI
 * Health checks
 * Runtime status
+* Send chat requests to the LLM
 
 Later it may support multiple runtimes.
 
@@ -338,6 +339,11 @@ Runtime
 
 Ollama
 ```
+
+This carries both control traffic (start, stop, health checks) and chat
+messages: Workspace Core hands Runtime a resolved model name and the current
+conversation, and Runtime is responsible for however that reaches the LLM
+(HTTP call, local socket, or otherwise).
 
 A future runtime should be replaceable without changing Workspace Core.
 

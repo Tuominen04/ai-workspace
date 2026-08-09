@@ -1,12 +1,12 @@
-use crate::context::build_context_snapshot;
+use crate::context::{build_context_snapshot, ContextSnapshot};
 use crate::config::{ensure_default_workspace_config, load_workspace_config};
 use crate::error::{AppError, Result};
 use crate::paths::WorkspacePaths;
-use crate::runtime::RuntimeManager;
+use crate::runtime::{ChatMessage, RuntimeManager, OLLAMA_BASE_URL};
 use crate::ui;
 use crate::workspace::{
     create_project, discover_projects, grant_temporary_permission, initialize_permission_session,
-    inspect_project, revoke_temporary_permission, terminate_permission_session,
+    inspect_project, resolve_model, revoke_temporary_permission, terminate_permission_session,
     validate_workspace, view_permissions as build_permission_view, PermissionViewOptions,
     Project,
 };
@@ -51,12 +51,48 @@ pub fn run_session(paths: &WorkspacePaths) -> Result<()> {
     let runtime_status = runtime.ensure_ollama()?;
 
     ui::render_session_summary(&selected_project, &context, &runtime_status);
-    ui::wait_for_exit()?;
+
+    if runtime_status.running {
+        let config = load_workspace_config(paths)?;
+        let (_, metadata) = inspect_project(paths, &config, &selected_project.name)?;
+        let model = resolve_model(&config, &metadata);
+        run_chat_loop(&runtime, &model, &context);
+    } else {
+        ui::render_no_runtime_notice();
+        ui::wait_for_exit()?;
+    }
 
     let revoked = terminate_permission_session(paths, selected_project)?;
     ui::render_permission_session_closed(selected_project, revoked);
 
     Ok(())
+}
+
+fn run_chat_loop(runtime: &RuntimeManager, model: &str, context: &ContextSnapshot) {
+    let mut history = vec![ChatMessage::system(context.as_system_prompt())];
+
+    ui::render_chat_ready();
+
+    loop {
+        let message = match ui::prompt_for_chat_message() {
+            Ok(Some(text)) => text,
+            Ok(None) => break,
+            Err(_) => break,
+        };
+
+        history.push(ChatMessage::user(message));
+
+        match runtime.send_chat_message(OLLAMA_BASE_URL, model, &history) {
+            Ok(reply) => {
+                ui::render_ai_response(&reply.content);
+                history.push(reply);
+            }
+            Err(error) => {
+                history.pop();
+                ui::render_chat_error(&error.to_string());
+            }
+        }
+    }
 }
 
 pub fn show_workspace_config(paths: &WorkspacePaths) -> Result<()> {

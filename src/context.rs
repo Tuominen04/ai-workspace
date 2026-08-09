@@ -17,6 +17,15 @@ pub struct ContextSnapshot {
     pub total_bytes: usize,
 }
 
+impl ContextSnapshot {
+    pub fn as_system_prompt(&self) -> String {
+        format!(
+            "You are assisting inside the AI Workspace tool. Use the following workspace context to answer the user's questions. If the context does not cover something, say so instead of guessing.\n{}",
+            self.assembled_content
+        )
+    }
+}
+
 pub fn build_context_snapshot(paths: &WorkspacePaths, project: Option<&Project>) -> Result<ContextSnapshot> {
     let base_files = collect_markdown_files(paths.base_knowledge_path(), 2)?;
     let mut project_files = Vec::new();

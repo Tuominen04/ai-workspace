@@ -39,3 +39,20 @@ Fedora native.
 Status
 
 Accepted
+
+---
+
+## ADR-0004
+
+Runtime Manager sends chat requests to Ollama via a blocking HTTP client
+(`ureq`), calling `/api/chat` with `stream: false`.
+
+Reason
+
+The codebase is fully synchronous today; a single localhost HTTP call does
+not justify introducing an async runtime. Non-streaming keeps response
+handling to one JSON object per turn instead of incremental NDJSON parsing.
+
+Status
+
+Accepted
