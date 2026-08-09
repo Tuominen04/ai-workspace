@@ -54,7 +54,7 @@ Existing type in `context.rs`; unchanged in shape, but how its fields are popula
 | `base_files`, `project_files`, `session_files` | `Vec<PathBuf>` | Now populated from relevance-ranked `SearchResult`s when a query is supplied, instead of always being the first N in fixed priority order. |
 | `assembled_content`, `source_count`, `total_bytes` | as before | Unchanged in meaning; still bounded by `DEFAULT_MAX_CONTEXT_SOURCES`/`DEFAULT_MAX_CONTEXT_BYTES`. |
 
-**New input**: `build_context_snapshot(paths, project, query: Option<&str>)` — see research.md Decision 4. `query = None` reproduces v0.4 behavior exactly; `query = Some(text)` runs the same selection through `search.rs` ranking first.
+**New input**: `build_context_snapshot(paths, project, query: Option<&str>)` — see research.md Decision 4. `query = Some(text)` runs selection through `search.rs` ranking (used at session start, seeded from the project description, and on every chat turn, seeded from the message); `query = None` is a narrow fallback reproducing v0.4 behavior exactly, reserved for the no-project-selected case.
 
 ## State / Lifecycle
 

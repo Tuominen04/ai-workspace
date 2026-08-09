@@ -68,16 +68,15 @@ As a workspace user, I can see which documents a search matched and a snippet of
 
 ### Functional Requirements
 
-- **FR-001**: The system MUST let users search the markdown content of their accessible workspace (Base knowledge and the active Project's knowledge) using freeform text.
+- **FR-001**: The system MUST let users search the markdown content of their accessible workspace (Base knowledge, the active Project's Knowledge, and the active Project's Session resources) using freeform text.
 - **FR-002**: The system MUST restrict search results to files within paths the user currently holds Default or Temporary permission for, consistent with the existing permission model; matches outside granted paths MUST NOT appear in results.
 - **FR-003**: The system MUST rank search results by relevance to the query rather than returning them in an arbitrary or purely alphabetical order.
 - **FR-004**: The system MUST report clearly when a search produces no matches, distinct from an error condition.
 - **FR-005**: Each search result MUST include enough information (file location and a matched snippet) for the user to judge why it was considered relevant.
-- **FR-006**: The system MUST use search automatically as part of context assembly — whenever a session starts or a question is asked, search results (not just file-encounter order) determine which Base and Project documents the Context Builder includes.
-- **FR-007**: When the workspace's total available documentation exceeds the Context Builder's existing source/byte caps, the system MUST use search relevance — rather than file-encounter order — to decide which documents are included in the assembled context.
-- **FR-008**: The system MUST continue to honor the Context Builder's existing priority order (project > base > session) and size caps when combining search-selected documents into a context package.
-- **FR-009**: The system MUST treat a document that was previously matched but has since become unavailable the same way the Context Builder already treats missing context sources (skip gracefully, continue with what's available).
-- **FR-010**: The system MUST NOT require the user to start a full AI session in order to run a search and view its results.
+- **FR-006**: The system MUST use search automatically as part of context assembly, at every point a context package is produced: at session start (using the project's own description as an implicit query, since no user question exists yet) and again on every subsequent question (using the question text as the query). Search results — not file-encounter order — determine which Base, Project, and Session documents the Context Builder includes, which is what makes the selection meaningfully relevant whenever the workspace's total available documentation exceeds the Context Builder's existing source/byte caps.
+- **FR-007**: The system MUST continue to honor the Context Builder's existing priority order (project > base > session) and size caps when combining search-selected documents into a context package.
+- **FR-008**: The system MUST treat a document that was previously matched but has since become unavailable the same way the Context Builder already treats missing context sources (skip gracefully, continue with what's available).
+- **FR-009**: The system MUST NOT require the user to start a full AI session in order to run a search and view its results.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -92,12 +91,12 @@ As a workspace user, I can see which documents a search matched and a snippet of
 - **SC-001**: In a workspace with more documents than the Context Builder's caps allow, users searching for a topic find the documents that actually cover it, not an arbitrary subset, in at least 9 out of 10 representative queries.
 - **SC-002**: Users can tell within seconds of viewing search results whether a query found relevant material or nothing at all, without needing to open any of the returned files.
 - **SC-003**: A search over a workspace with hundreds of documents returns results in under 2 seconds.
-- **SC-004**: When a workspace's documentation grows well beyond what previously fit under the Context Builder's caps, the assembled session context remains focused on the current task instead of becoming visibly less relevant as the workspace grows.
-- **SC-005**: Zero search results are ever returned for a path the user does not currently hold permission for, verified across all tested permission configurations.
+- **SC-004**: Zero search results are ever returned for a path the user does not currently hold permission for, verified across all tested permission configurations.
 
 ## Assumptions
 
-- Search operates only over the markdown content already collected by the existing `collect_markdown_files` mechanism (Base + Project knowledge); non-markdown files remain out of scope for v0.5, consistent with the Context Builder.
+- Search operates only over the markdown content already collected by the existing `collect_markdown_files` mechanism (Base knowledge, Project Knowledge, and Project Session content); non-markdown files remain out of scope for v0.5, consistent with the Context Builder.
+- At session start, before any question has been asked, the implicit search query is the active project's `description` field (falling back to its display name when the description is empty), so the very first assembled context is already relevance-selected rather than an unranked snapshot.
 - "Filesystem search" per the architecture's Search Abstraction (Phase 1) means simple, local keyword/text matching over file contents — not embeddings, vector search, or RAG, which are explicitly later phases.
 - Search always respects the existing permission model; no new permission category is introduced by this feature.
 - Search is workspace-local and offline, consistent with the project's local-first, no-cloud-dependency principle.
