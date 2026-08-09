@@ -33,3 +33,4 @@
 
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
 - All items pass. FR-006 clarification resolved: search is integrated into automatic context assembly (not a standalone-only command).
+- 2026-08-09: `/speckit-analyze` (post-`/speckit-tasks`) found FR-006 was internally inconsistent with the plan (session-start relevance was designed away) and that FR-001 disagreed with the contracts on whether Session content is searchable. Both resolved directly in spec.md (FR-001 now includes Session; FR-006 reworded to cover session-start explicitly and absorbs the old FR-007) plus matching updates to research.md/tasks.md. Old FR-007 removed (merged into FR-006); FR-008/FR-009/FR-010 renumbered to FR-007/FR-008/FR-009. Old SC-004 removed (redundant with SC-001); old SC-005 renumbered to SC-004.
