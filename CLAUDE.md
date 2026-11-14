@@ -19,7 +19,7 @@ cargo test some_test_name    # run a single test by name (substring match)
 cargo run -- <args>          # run the `ai-workspace` CLI, e.g. `cargo run -- status`
 ```
 
-There is no lint/format CI config in this repo (no `rustfmt.toml`/`clippy.toml`); still run `cargo fmt` and `cargo clippy` before committing since `rust.instructions.md` requires idiomatic, panic-free code.
+`.github/workflows/ci.yml` runs `cargo fmt --check`, `cargo clippy --locked --all-targets -- -D warnings` and `cargo test --locked` on every pull request and push to `main`; run the same three locally before committing (there is no `rustfmt.toml`/`clippy.toml`, so the defaults apply).
 
 The workspace root is resolved by `WorkspacePaths::detect_with_source` in `paths.rs`: the `AI_WORKSPACE_HOME` env var, else `workspace_root` in the per-user file `~/.config/ai-workspace/config.toml` (written by `ai-workspace config set-root PATH`), else `~/AI`. Set the env var when manually testing `ai-workspace` commands to avoid touching a real workspace; tests that run the binary must also set `HOME` and `XDG_CONFIG_HOME` to a temp directory (see `tests/root_setting_tests.rs`):
 
