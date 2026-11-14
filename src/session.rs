@@ -1,15 +1,17 @@
-use crate::context::{build_context_snapshot, ContextSnapshot};
 use crate::config::{ensure_default_workspace_config, load_workspace_config};
+use crate::context::{ContextSnapshot, build_context_snapshot};
 use crate::error::{AppError, Result};
 use crate::paths::WorkspacePaths;
-use crate::runtime::{ChatMessage, RuntimeManager, OLLAMA_BASE_URL};
+use crate::runtime::{ChatMessage, OLLAMA_BASE_URL, RuntimeManager};
+use crate::search::{self, SearchCandidate, SourceKind};
 use crate::ui;
 use crate::workspace::{
+    PermissionStatus, PermissionViewOptions, Project, ProjectMetadata, collect_markdown_files,
     create_project, discover_projects, grant_temporary_permission, initialize_permission_session,
     inspect_project, resolve_model, revoke_temporary_permission, terminate_permission_session,
-    validate_workspace, view_permissions as build_permission_view, PermissionViewOptions,
-    Project,
+    validate_workspace, view_permissions as build_permission_view,
 };
+use std::path::PathBuf;
 
 pub fn init_workspace(paths: &WorkspacePaths) -> Result<()> {
     paths.ensure_layout()?;
@@ -40,23 +42,24 @@ pub fn run_session(paths: &WorkspacePaths) -> Result<()> {
 
     ui::render_projects(&projects);
     let selection = ui::prompt_for_selection(&projects)?;
-    let selected_project = projects
-        .get(selection)
-        .ok_or_else(|| AppError::InvalidSelection("workspace selection was out of range".to_string()))?;
+    let selected_project = projects.get(selection).ok_or_else(|| {
+        AppError::InvalidSelection("workspace selection was out of range".to_string())
+    })?;
 
     let _ = initialize_permission_session(paths, selected_project)?;
 
-    let context = build_context_snapshot(paths, Some(selected_project))?;
+    let config = load_workspace_config(paths)?;
+    let (_, metadata) = inspect_project(paths, &config, &selected_project.name)?;
+    let initial_query = initial_context_query(&metadata);
+    let context = build_context_snapshot(paths, Some(selected_project), Some(&initial_query))?;
     let mut runtime = RuntimeManager::new();
     let runtime_status = runtime.ensure_ollama()?;
 
-    ui::render_session_summary(&selected_project, &context, &runtime_status);
+    ui::render_session_summary(selected_project, &context, &runtime_status);
 
     if runtime_status.running {
-        let config = load_workspace_config(paths)?;
-        let (_, metadata) = inspect_project(paths, &config, &selected_project.name)?;
         let model = resolve_model(&config, &metadata);
-        run_chat_loop(&runtime, &model, &context);
+        run_chat_loop(paths, selected_project, &runtime, &model, context);
     } else {
         ui::render_no_runtime_notice();
         ui::wait_for_exit()?;
@@ -68,8 +71,117 @@ pub fn run_session(paths: &WorkspacePaths) -> Result<()> {
     Ok(())
 }
 
-fn run_chat_loop(runtime: &RuntimeManager, model: &str, context: &ContextSnapshot) {
-    let mut history = vec![ChatMessage::system(context.as_system_prompt())];
+/// The implicit query used to build the very first context, before the user
+/// has asked anything. Falls back to the project's display name only in the
+/// unlikely case its description is empty. See `research.md` Decision 4 and
+/// `contracts/context-builder-integration.md` (the fix for finding I1).
+fn initial_context_query(metadata: &ProjectMetadata) -> String {
+    let description = metadata.description.trim();
+    if description.is_empty() {
+        metadata.display_name.clone()
+    } else {
+        description.to_string()
+    }
+}
+
+/// Collects the permission-scoped candidate set search ranks against: Base
+/// knowledge, and — when a project is selected — that project's Knowledge
+/// and Session content, each only if the active permission session currently
+/// grants it. See `research.md` Decision 3.
+pub fn collect_search_candidates(
+    paths: &WorkspacePaths,
+    project: Option<&Project>,
+) -> Result<Vec<SearchCandidate>> {
+    let mut candidates = Vec::new();
+
+    for relative_path in collect_markdown_files(paths.base_knowledge_path(), 2)? {
+        candidates.push(SearchCandidate {
+            source_kind: SourceKind::Base,
+            path: paths.base_knowledge_path().join(relative_path),
+        });
+    }
+
+    let Some(project) = project else {
+        return Ok(candidates);
+    };
+
+    let permission_set = initialize_permission_session(paths, project)?;
+    let granted_roots: Vec<PathBuf> = permission_set
+        .default_grants
+        .iter()
+        .chain(permission_set.temporary_grants.iter())
+        .filter(|grant| grant.status == PermissionStatus::Active)
+        .map(|grant| PathBuf::from(&grant.canonical_path))
+        .collect();
+
+    let knowledge_root = project.path.join("Knowledge");
+    if granted_roots
+        .iter()
+        .any(|root| knowledge_root.starts_with(root))
+    {
+        for relative_path in collect_markdown_files(&knowledge_root, 2).unwrap_or_default() {
+            candidates.push(SearchCandidate {
+                source_kind: SourceKind::Project,
+                path: knowledge_root.join(relative_path),
+            });
+        }
+    }
+
+    let session_root = project.path.join("Session");
+    if granted_roots
+        .iter()
+        .any(|root| session_root.starts_with(root))
+    {
+        for relative_path in collect_markdown_files(&session_root, 2).unwrap_or_default() {
+            candidates.push(SearchCandidate {
+                source_kind: SourceKind::Session,
+                path: session_root.join(relative_path),
+            });
+        }
+    }
+
+    Ok(candidates)
+}
+
+pub fn run_search(
+    paths: &WorkspacePaths,
+    query: &str,
+    project: Option<&str>,
+    limit: usize,
+) -> Result<()> {
+    paths.ensure_layout()?;
+    enforce_validation_gate(paths, "ai search")?;
+
+    let project = match project {
+        Some(name) => {
+            let config = load_workspace_config(paths)?;
+            let (project, _) = inspect_project(paths, &config, name)?;
+            Some(project)
+        }
+        None => None,
+    };
+
+    let candidates = collect_search_candidates(paths, project.as_ref())?;
+    let search_query = search::SearchQuery::new(query, limit);
+    let outcome = search::search(&candidates, &search_query);
+
+    if outcome.results.is_empty() {
+        ui::render_no_search_results(&outcome);
+    } else {
+        ui::render_search_results(&outcome);
+    }
+
+    Ok(())
+}
+
+fn run_chat_loop(
+    paths: &WorkspacePaths,
+    project: &Project,
+    runtime: &RuntimeManager,
+    model: &str,
+    initial_context: ContextSnapshot,
+) {
+    let mut history = vec![ChatMessage::system(initial_context.as_system_prompt())];
 
     ui::render_chat_ready();
 
@@ -79,6 +191,10 @@ fn run_chat_loop(runtime: &RuntimeManager, model: &str, context: &ContextSnapsho
             Ok(None) => break,
             Err(_) => break,
         };
+
+        if let Ok(context) = build_context_snapshot(paths, Some(project), Some(&message)) {
+            history[0] = ChatMessage::system(context.as_system_prompt());
+        }
 
         history.push(ChatMessage::user(message));
 

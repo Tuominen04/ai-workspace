@@ -26,7 +26,7 @@ Single Rust project, flat `src/` module layout (per `CLAUDE.md`; the nested `cor
 
 **Purpose**: Wire the new module into the build so later tasks compile incrementally.
 
-- [ ] T001 Add `pub mod search;` to `src/lib.rs` and create `src/search.rs` with a module-level doc comment describing it as the Layer 5 Search Engine (per `ARCHITECTURE.md`)
+- [X] T001 Add `pub mod search;` to `src/lib.rs` and create `src/search.rs` with a module-level doc comment describing it as the Layer 5 Search Engine (per `ARCHITECTURE.md`)
 
 **Checkpoint**: `cargo build` succeeds with an empty `search` module.
 
@@ -38,11 +38,11 @@ Single Rust project, flat `src/` module layout (per `CLAUDE.md`; the nested `cor
 
 **⚠️ CRITICAL**: No user story task can begin until this phase is complete.
 
-- [ ] T002 Define `SourceKind`, `SearchQuery`, `SearchCandidate`, `SearchResult`, `SearchOutcome` types in `src/search.rs` per `data-model.md` (depends on T001)
-- [ ] T003 Implement `score_candidate` — case-insensitive term-frequency keyword scoring with a filename-match bonus — in `src/search.rs` per `research.md` Decision 1 (depends on T002)
-- [ ] T004 Implement `extract_snippet` — bounded (~160 char), word-boundary-trimmed excerpt around the best match — in `src/search.rs` per `research.md` Decision 6 (depends on T002)
-- [ ] T005 Implement `pub fn rank_candidates(candidates: &[SearchCandidate], query: &SearchQuery) -> Vec<SearchResult>` in `src/search.rs`, combining T003/T004, sorted by `relevance_score` descending with `source_kind` priority (project > base > session) then path as tie-break, excluding zero-score files (depends on T003, T004)
-- [ ] T006 Implement `collect_search_candidates(paths: &WorkspacePaths, project: Option<&Project>) -> Result<Vec<SearchCandidate>>` in `src/session.rs`, explicitly traversing all three permission-scoped roots via `workspace::collect_markdown_files` — the Base path, the active project's `Knowledge/` directory, and the active project's `Session/` directory — filtered to the current `SessionPermissionSet`'s `default_grants` and active `temporary_grants`, reusing `initialize_permission_session`/`view_permissions` as-is (no changes to `workspace.rs`) (depends on T002)
+- [X] T002 Define `SourceKind`, `SearchQuery`, `SearchCandidate`, `SearchResult`, `SearchOutcome` types in `src/search.rs` per `data-model.md` (depends on T001)
+- [X] T003 Implement `score_candidate` — case-insensitive term-frequency keyword scoring with a filename-match bonus — in `src/search.rs` per `research.md` Decision 1 (depends on T002)
+- [X] T004 Implement `extract_snippet` — bounded (~160 char), word-boundary-trimmed excerpt around the best match — in `src/search.rs` per `research.md` Decision 6 (depends on T002)
+- [X] T005 Implement `pub fn rank_candidates(candidates: &[SearchCandidate], query: &SearchQuery) -> Vec<SearchResult>` in `src/search.rs`, combining T003/T004, sorted by `relevance_score` descending with `source_kind` priority (project > base > session) then path as tie-break, excluding zero-score files (depends on T003, T004)
+- [X] T006 Implement `collect_search_candidates(paths: &WorkspacePaths, project: Option<&Project>) -> Result<Vec<SearchCandidate>>` in `src/session.rs`, explicitly traversing all three permission-scoped roots via `workspace::collect_markdown_files` — the Base path, the active project's `Knowledge/` directory, and the active project's `Session/` directory — filtered to the current `SessionPermissionSet`'s `default_grants` and active `temporary_grants`, reusing `initialize_permission_session`/`view_permissions` as-is (no changes to `workspace.rs`) (depends on T002)
 
 **Checkpoint**: `search.rs`'s ranking engine and `session.rs`'s candidate collection compile and are unit-testable in isolation. User story implementation can now begin.
 
@@ -56,16 +56,16 @@ Single Rust project, flat `src/` module layout (per `CLAUDE.md`; the nested `cor
 
 ### Tests for User Story 1
 
-- [ ] T007 [P] [US1] Integration test in `tests/search_tests.rs`: a project with several Markdown files where only some mention a given topic; assert `ai search --query <topic> --project <name>` returns exactly the on-topic files, ranked with the strongest match first
-- [ ] T008 [P] [US1] Integration test in `tests/search_tests.rs`: `ai search --query <text that matches nothing> --project <name>` exits `0` and prints a distinct "no results" message (not an error), per `contracts/cli-search.md`
-- [ ] T009 [P] [US1] Integration test in `tests/search_tests.rs`: a Markdown file placed outside any Default/Temporary permission grant (e.g. under a directory never passed to `ai permission grant`), whose content matches the query, is never present in `ai search` output even though it would otherwise score highly — per FR-002/SC-004 and `quickstart.md` Scenario 3
+- [X] T007 [P] [US1] Integration test in `tests/search_tests.rs`: a project with several Markdown files where only some mention a given topic; assert `ai search --query <topic> --project <name>` returns exactly the on-topic files, ranked with the strongest match first
+- [X] T008 [P] [US1] Integration test in `tests/search_tests.rs`: `ai search --query <text that matches nothing> --project <name>` exits `0` and prints a distinct "no results" message (not an error), per `contracts/cli-search.md`
+- [X] T009 [P] [US1] Integration test in `tests/search_tests.rs`: a Markdown file placed outside any Default/Temporary permission grant (e.g. under a directory never passed to `ai permission grant`), whose content matches the query, is never present in `ai search` output even though it would otherwise score highly — per FR-002/SC-004 and `quickstart.md` Scenario 3
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Add an `AppError` variant (and `Display` message) for a missing/empty `--query` usage error in `src/error.rs`
-- [ ] T011 [US1] Add `Command::Search { query, project, limit }` parsing in `src/app.rs` (`--query` required, `--project` optional, `--limit` optional positive integer defaulting to `10`, same flag-parsing style as `parse_permission_grant_command`), dispatch to a new `session::run_search`, and add the `ai search ...` line to `print_help` (depends on T010)
-- [ ] T012 [US1] Implement `render_search_results(&SearchOutcome)` and `render_no_search_results(&SearchOutcome)` in `src/ui.rs`, rendering rank/source tag/path/score/snippet per `contracts/cli-search.md`'s output format (pure presentation, no filesystem access)
-- [ ] T013 [US1] Implement `pub fn run_search(paths: &WorkspacePaths, query: &str, project: Option<&str>, limit: usize) -> Result<()>` in `src/session.rs`: call `enforce_validation_gate`, resolve `project` by name via existing project lookup (error if unknown), build candidates via `collect_search_candidates` (T006) — which already excludes anything outside the current permission grants — rank via `search::rank_candidates` (T005), truncate to `limit`, and hand the resulting `SearchOutcome` to `ui::render_search_results`/`render_no_search_results` (T012) (depends on T005, T006, T011, T012)
+- [X] T010 [US1] Add an `AppError` variant (and `Display` message) for a missing/empty `--query` usage error in `src/error.rs`
+- [X] T011 [US1] Add `Command::Search { query, project, limit }` parsing in `src/app.rs` (`--query` required, `--project` optional, `--limit` optional positive integer defaulting to `10`, same flag-parsing style as `parse_permission_grant_command`), dispatch to a new `session::run_search`, and add the `ai search ...` line to `print_help` (depends on T010)
+- [X] T012 [US1] Implement `render_search_results(&SearchOutcome)` and `render_no_search_results(&SearchOutcome)` in `src/ui.rs`, rendering rank/source tag/path/score/snippet per `contracts/cli-search.md`'s output format (pure presentation, no filesystem access)
+- [X] T013 [US1] Implement `pub fn run_search(paths: &WorkspacePaths, query: &str, project: Option<&str>, limit: usize) -> Result<()>` in `src/session.rs`: call `enforce_validation_gate`, resolve `project` by name via existing project lookup (error if unknown), build candidates via `collect_search_candidates` (T006) — which already excludes anything outside the current permission grants — rank via `search::rank_candidates` (T005), truncate to `limit`, and hand the resulting `SearchOutcome` to `ui::render_search_results`/`render_no_search_results` (T012) (depends on T005, T006, T011, T012)
 
 **Checkpoint**: `ai search --query ... [--project ...]` works end-to-end, respects permission boundaries, and is independently testable/demoable.
 
@@ -79,14 +79,14 @@ Single Rust project, flat `src/` module layout (per `CLAUDE.md`; the nested `cor
 
 ### Tests for User Story 2
 
-- [ ] T014 [P] [US2] Integration/unit test in `tests/context_tests.rs`: with more Markdown files than `DEFAULT_MAX_CONTEXT_SOURCES`, `build_context_snapshot(paths, project, Some(query))` includes the files relevant to `query` even when they weren't first in `project > base > session` order — covers both an explicit question and a project-description-style query, since both now flow through the same `Some(text)` path
-- [ ] T015 [P] [US2] Regression test in `tests/context_tests.rs`: `build_context_snapshot(paths, None, None)` (no project selected) produces the same selection/ordering as v0.4 (fixed priority order, first-fit under caps) — the one remaining case where `query = None` is expected
+- [X] T014 [P] [US2] Integration/unit test in `tests/context_tests.rs`: with more Markdown files than `DEFAULT_MAX_CONTEXT_SOURCES`, `build_context_snapshot(paths, project, Some(query))` includes the files relevant to `query` even when they weren't first in `project > base > session` order — covers both an explicit question and a project-description-style query, since both now flow through the same `Some(text)` path
+- [X] T015 [P] [US2] Regression test in `tests/context_tests.rs`: `build_context_snapshot(paths, None, None)` (no project selected) produces the same selection/ordering as v0.4 (fixed priority order, first-fit under caps) — the one remaining case where `query = None` is expected
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Change `build_context_snapshot`'s signature to `build_context_snapshot(paths: &WorkspacePaths, project: Option<&Project>, query: Option<&str>) -> Result<ContextSnapshot>` in `src/context.rs`: when `query` is `Some`, score all candidate sources via `search::rank_candidates` (T005) and select by relevance descending (existing priority order as tie-break only); when `query` is `None`, keep the existing v0.4 selection logic unchanged — this fallback path is reserved for the no-project-selected case, not for session start with an active project (see T017). Caps (`DEFAULT_MAX_CONTEXT_SOURCES`/`DEFAULT_MAX_CONTEXT_BYTES`) and the graceful-skip-on-unreadable-file behavior are preserved in both branches (depends on T005)
-- [ ] T017 [US2] Update `src/session.rs`: in `run_session`, before building the initial context, compute `initial_query` from the selected project's `metadata.description` (falling back to `metadata.display_name` when the description is empty) and call `build_context_snapshot(paths, Some(project), Some(&initial_query))` — **not** `None` — so the session-start prompt is already relevance-selected (this is the fix for finding I1: FR-006/AC1 require relevance at session start, not just per question). Change `run_chat_loop`'s signature to take `paths: &WorkspacePaths` and `project: &Project`, and on each user turn call `build_context_snapshot(paths, Some(project), Some(&message))` before sending to the runtime, replacing `history[0]` with the freshly assembled system prompt while leaving prior turns in `history` untouched (depends on T016)
-- [ ] T018 [US2] Update the existing v0.4 callers/tests of `build_context_snapshot` (`tests/context_tests.rs`) to pass the new `query` argument, verifying no behavior change for the `project = None, query = None` case (depends on T016)
+- [X] T016 [US2] Change `build_context_snapshot`'s signature to `build_context_snapshot(paths: &WorkspacePaths, project: Option<&Project>, query: Option<&str>) -> Result<ContextSnapshot>` in `src/context.rs`: when `query` is `Some`, order all candidate sources by relevance descending (existing priority order as tie-break only); when `query` is `None`, keep the existing v0.4 selection logic unchanged — this fallback path is reserved for the no-project-selected case, not for session start with an active project (see T017). Caps (`DEFAULT_MAX_CONTEXT_SOURCES`/`DEFAULT_MAX_CONTEXT_BYTES`) and the graceful-skip-on-unreadable-file behavior are preserved in both branches (depends on T005). **Implementation note**: `search::rank_candidates` (T005) drops zero-score candidates, which is correct for the standalone command but would silently break User Story 2 AC2 ("small workspace still gets everything") — an unrelated-but-fitting file would get excluded even with room to spare. Added a second `search.rs` entry point, `order_by_relevance`, that sorts by the same score but never drops zero-score candidates; `context.rs` uses that one, `session::run_search` keeps using `rank_candidates`.
+- [X] T017 [US2] Update `src/session.rs`: in `run_session`, before building the initial context, compute `initial_query` from the selected project's `metadata.description` (falling back to `metadata.display_name` when the description is empty) and call `build_context_snapshot(paths, Some(project), Some(&initial_query))` — **not** `None` — so the session-start prompt is already relevance-selected (this is the fix for finding I1: FR-006/AC1 require relevance at session start, not just per question). Change `run_chat_loop`'s signature to take `paths: &WorkspacePaths` and `project: &Project`, and on each user turn call `build_context_snapshot(paths, Some(project), Some(&message))` before sending to the runtime, replacing `history[0]` with the freshly assembled system prompt while leaving prior turns in `history` untouched (depends on T016)
+- [X] T018 [US2] Update the existing v0.4 callers/tests of `build_context_snapshot` (`tests/context_tests.rs`) to pass the new `query` argument, verifying no behavior change for the `project = None, query = None` case (depends on T016)
 
 **Checkpoint**: US1 and US2 both work independently; a live chat session's context is relevance-driven from the moment it starts, not just after the first question.
 
@@ -100,11 +100,11 @@ Single Rust project, flat `src/` module layout (per `CLAUDE.md`; the nested `cor
 
 ### Tests for User Story 3
 
-- [ ] T019 [P] [US3] Integration test in `tests/search_tests.rs`: invoking `ai search --query ... --project ...` as the very first command against a freshly initialized workspace (no prior `ai` session run) succeeds and each printed result includes a file path and a non-empty snippet
+- [X] T019 [P] [US3] Integration test in `tests/search_tests.rs`: invoking `ai search --query ... --project ...` as the very first command against a freshly initialized workspace (no prior `ai` session run) succeeds and each printed result includes a file path and a non-empty snippet
 
 ### Implementation for User Story 3
 
-- [ ] T020 [US3] Extend `render_no_search_results` in `src/ui.rs` to include the permission hint ("check `ai permission view` if you expected a path to be included") per `contracts/cli-search.md`'s no-matches output (depends on T012)
+- [X] T020 [US3] Extend `render_no_search_results` in `src/ui.rs` to include the permission hint ("check `ai permission view` if you expected a path to be included") per `contracts/cli-search.md`'s no-matches output (depends on T012)
 
 **Checkpoint**: All three user stories are independently functional and testable.
 
@@ -114,10 +114,10 @@ Single Rust project, flat `src/` module layout (per `CLAUDE.md`; the nested `cor
 
 **Purpose**: Documentation obligations flagged in `plan.md`'s Constitution Check, plus final validation.
 
-- [ ] T021 [P] Update `CLAUDE.md`'s module-responsibilities list to document `search.rs` (Layer 5 Search Engine: scoring, ranking, snippet extraction) and note `context.rs`'s `build_context_snapshot` now takes an optional query
-- [ ] T022 [P] Add a `DECISIONS.md` ADR entry for "search-driven context selection" (relevance ranking, seeded from the project description at session start and from the user's message thereafter, replaces fixed priority-order-then-cap) and confirm `ARCHITECTURE.md`'s Layer 5 description matches the shipped design
-- [ ] T023 [P] Run `cargo fmt` and `cargo clippy` across all changed files and address any warnings
-- [ ] T024 Manually run all `quickstart.md` scenarios (including 4a's session-start check and 6's hundreds-of-document timing pass for SC-003) against a scratch `AI_WORKSPACE_HOME` and confirm actual output matches each scenario's expected result
+- [X] T021 [P] Update `CLAUDE.md`'s module-responsibilities list to document `search.rs` (Layer 5 Search Engine: scoring, ranking, snippet extraction) and note `context.rs`'s `build_context_snapshot` now takes an optional query
+- [X] T022 [P] Add a `DECISIONS.md` ADR entry for "search-driven context selection" (relevance ranking, seeded from the project description at session start and from the user's message thereafter, replaces fixed priority-order-then-cap) and confirm `ARCHITECTURE.md`'s Layer 5 description matches the shipped design
+- [X] T023 [P] Run `cargo fmt` and `cargo clippy` across all changed files and address any warnings — run on 2026-11-14: `cargo fmt` applied; `cargo clippy --all-targets` clean after fixing two warnings (`needless_borrow` in `src/session.rs`, `new_without_default` for `RuntimeManager`).
+- [X] T024 Manually run all `quickstart.md` scenarios (including 4a's session-start check and 6's hundreds-of-document timing pass for SC-003) against a scratch `AI_WORKSPACE_HOME` and confirm actual output matches each scenario's expected result — all 6 scenarios verified: Scenario 1 (ranked results), 2 (no-results message), 3 (permission boundary), 6 (200 files, ~5ms — well under the 2s budget), 4a (session-start context already includes a Base file the fixed v0.4 order would have excluded, driven by the project description), 5 (small workspace still gets every file regardless of relevance)
 
 ---
 

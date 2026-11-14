@@ -19,6 +19,7 @@ pub enum AppError {
     PermissionGrantNotFound(String),
     MissingProjectContext,
     RuntimeRequestFailed(String),
+    EmptySearchQuery,
 }
 
 impl fmt::Display for AppError {
@@ -58,6 +59,9 @@ impl fmt::Display for AppError {
             ),
             Self::RuntimeRequestFailed(reason) => {
                 write!(f, "request to the AI runtime failed: {reason}")
+            }
+            Self::EmptySearchQuery => {
+                f.write_str("usage: ai search --query TEXT [--project PROJECT] [--limit N]")
             }
         }
     }

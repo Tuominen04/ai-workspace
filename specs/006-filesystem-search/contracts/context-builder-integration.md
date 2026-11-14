@@ -45,6 +45,7 @@ Per turn: after the user submits `message` and before calling `runtime.send_chat
 
 ```text
 pub fn rank_candidates(candidates: &[SearchCandidate], query: &SearchQuery) -> Vec<SearchResult>
+pub fn order_by_relevance(candidates: &[SearchCandidate], query_text: &str) -> Vec<SearchResult>
 ```
 
-Pure function: no filesystem traversal, no permission logic — callers supply an already permission-filtered candidate list (see data-model.md `SearchCandidate`). This keeps `search.rs` the single place ranking logic lives, reusable identically by both `session::run_search` (standalone command) and `context::build_context_snapshot` (session integration), per the constitution's "major components must remain replaceable" principle.
+Both are pure functions: no filesystem traversal, no permission logic — callers supply an already permission-filtered candidate list (see data-model.md `SearchCandidate`). They share the same scoring/sorting core but differ in one respect discovered during implementation: `rank_candidates` drops zero-score candidates and truncates to `query.limit` (right for the standalone command, where a zero-relevance "result" would be noise); `order_by_relevance` keeps every candidate, merely sorting the zero-score ones to the bottom, and does not truncate (right for `context::build_context_snapshot`, whose own source/byte caps do the truncation — a workspace that fits entirely under the caps must still get everything, per User Story 2 AC2, even content unrelated to the query). `session::run_search` uses `rank_candidates`; `context::build_context_snapshot` uses `order_by_relevance`. This keeps `search.rs` the single place ranking logic lives, per the constitution's "major components must remain replaceable" principle.
