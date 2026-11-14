@@ -1,6 +1,6 @@
 fn main() {
     if let Err(error) = ai_workspace::app::run() {
-        eprintln!("error: {error}");
+        ai_workspace::app::report_error(&error);
         std::process::exit(1);
     }
 }

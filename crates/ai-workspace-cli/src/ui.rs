@@ -6,9 +6,9 @@ use crate::paths::{RootSource, WorkspacePaths};
 use crate::runtime::RuntimeStatus;
 use crate::search::SearchOutcome;
 use crate::workspace::{
-    CreatedProject, PermissionCategory, PermissionGrantResult, PermissionRevokeResult,
-    PermissionStatus, PermissionViewSnapshot, Project, ProjectMetadata, ValidationIssue,
-    ValidationResult, ValidationSeverity,
+    Action, CreatedProject, PermissionCategory, PermissionGrantResult, PermissionRevokeResult,
+    PermissionStatus, PermissionViewSnapshot, Project, ProjectMetadata, SuggestedFix,
+    ValidationIssue, ValidationResult, ValidationSeverity,
 };
 use std::fmt;
 use std::io::{self, Write};
@@ -374,5 +374,26 @@ fn render_issue(issue: &ValidationIssue) {
         issue.path.display()
     );
     outln!("  Scope: {}:{}", issue.scope, issue.subject);
-    outln!("  Fix: {}", issue.suggested_fix);
+    outln!("  Fix: {}", describe_fix(&issue.suggested_fix));
+}
+
+fn describe_fix(fix: &SuggestedFix) -> String {
+    match fix {
+        SuggestedFix::Run { action, purpose } => {
+            format!("run `{}` to {purpose}", action_command(*action))
+        }
+        SuggestedFix::FixThenRerun { fix, action } => {
+            format!("{fix} and rerun `{}`", action_command(*action))
+        }
+        SuggestedFix::Manual(step) => step.clone(),
+    }
+}
+
+/// The command line that performs a core `Action`.
+fn action_command(action: Action) -> String {
+    let subcommand = match action {
+        Action::Init => "init",
+        Action::Validate => "validate",
+    };
+    format!("{COMMAND_NAME} {subcommand}")
 }

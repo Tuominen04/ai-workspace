@@ -1,7 +1,7 @@
 use crate::COMMAND_NAME;
 use crate::config::{ensure_default_workspace_config, load_workspace_config};
 use crate::context::{ContextSnapshot, build_context_snapshot};
-use crate::error::{AppError, Result};
+use crate::error::{AppError, GatedOperation, Result};
 use crate::paths::{
     RootSource, WorkspacePaths, canonical_workspace_root, env_root_override, user_config_file,
     write_user_root,
@@ -154,7 +154,7 @@ pub fn run_search(
     limit: usize,
 ) -> Result<()> {
     paths.ensure_layout()?;
-    enforce_validation_gate(paths, "search")?;
+    enforce_validation_gate(paths, GatedOperation::Search)?;
 
     let project = match project {
         Some(name) => {
@@ -238,7 +238,7 @@ pub fn create_managed_project(
     description: Option<&str>,
 ) -> Result<()> {
     paths.ensure_layout()?;
-    enforce_validation_gate(paths, "project create")?;
+    enforce_validation_gate(paths, GatedOperation::ProjectCreate)?;
     let config = load_workspace_config(paths)?;
     let created = create_project(paths, &config, name, description)?;
     ui::render_project_created(&created);
@@ -247,7 +247,7 @@ pub fn create_managed_project(
 
 pub fn show_managed_project(paths: &WorkspacePaths, project: &str) -> Result<()> {
     paths.ensure_layout()?;
-    enforce_validation_gate(paths, "project show")?;
+    enforce_validation_gate(paths, GatedOperation::ProjectShow)?;
     let config = load_workspace_config(paths)?;
     let (project, metadata) = inspect_project(paths, &config, project)?;
     ui::render_project_details(&project, &metadata);
@@ -266,22 +266,22 @@ pub fn validate_workspace_state(paths: &WorkspacePaths) -> Result<()> {
     Err(AppError::Message("workspace validation failed".to_string()))
 }
 
-/// Refuses to continue while blocking validation issues exist. `subcommand`
-/// is the gated command without the command name, e.g. `"project create"`.
-fn enforce_validation_gate(paths: &WorkspacePaths, subcommand: &str) -> Result<()> {
+/// Refuses to continue while blocking validation issues exist.
+fn enforce_validation_gate(paths: &WorkspacePaths, operation: GatedOperation) -> Result<()> {
     let result = validate_workspace(paths)?;
     if result.valid {
         return Ok(());
     }
 
-    let action = format!("{COMMAND_NAME} {subcommand}");
-    ui::render_validation_gate_block(&action, &result);
-    Err(AppError::ValidationGateBlocked(action))
+    Err(AppError::ValidationGateBlocked {
+        operation,
+        result: Box::new(result),
+    })
 }
 
 pub fn grant_permission(paths: &WorkspacePaths, project: Option<&str>, path: &str) -> Result<()> {
     paths.ensure_layout()?;
-    enforce_validation_gate(paths, "permission grant")?;
+    enforce_validation_gate(paths, GatedOperation::PermissionGrant)?;
     let config = load_workspace_config(paths)?;
     let project = resolve_permission_project(paths, &config, project)?;
     let result = grant_temporary_permission(paths, &project, path)?;
@@ -291,7 +291,7 @@ pub fn grant_permission(paths: &WorkspacePaths, project: Option<&str>, path: &st
 
 pub fn revoke_permission(paths: &WorkspacePaths, project: Option<&str>, path: &str) -> Result<()> {
     paths.ensure_layout()?;
-    enforce_validation_gate(paths, "permission revoke")?;
+    enforce_validation_gate(paths, GatedOperation::PermissionRevoke)?;
     let config = load_workspace_config(paths)?;
     let project = resolve_permission_project(paths, &config, project)?;
     let result = revoke_temporary_permission(paths, &project, path)?;
@@ -307,7 +307,7 @@ pub fn view_permissions(
     page_size: usize,
 ) -> Result<()> {
     paths.ensure_layout()?;
-    enforce_validation_gate(paths, "permission view")?;
+    enforce_validation_gate(paths, GatedOperation::PermissionView)?;
     let config = load_workspace_config(paths)?;
     let project = resolve_permission_project(paths, &config, project)?;
     let snapshot = build_permission_view(

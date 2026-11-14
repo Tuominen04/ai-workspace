@@ -1,7 +1,8 @@
 use crate::COMMAND_NAME;
-use crate::error::{AppError, Result};
+use crate::error::{AppError, GatedOperation, Result};
 use crate::paths::WorkspacePaths;
 use crate::session;
+use crate::ui;
 
 const USAGE_CONFIG_SET_ROOT: &str = "config set-root PATH";
 const USAGE_PROJECT_SHOW: &str = "project show PROJECT";
@@ -11,6 +12,43 @@ const USAGE_PERMISSION_VIEW: &str =
     "permission view [--project PROJECT] [--filter TEXT] [--page N] [--page-size N]";
 const USAGE_PERMISSION_REVOKE: &str = "permission revoke [--project PROJECT] --path PATH";
 const USAGE_SEARCH: &str = "search --query TEXT [--project PROJECT] [--limit N]";
+
+/// Reports a failed command: whatever the error carries for the user to read
+/// on stdout first (the blocking issues of a refused gated command), then
+/// `error: ...` on stderr.
+pub fn report_error(error: &AppError) {
+    if let AppError::ValidationGateBlocked { operation, result } = error {
+        ui::render_validation_gate_block(&gated_command(*operation), result);
+    }
+    eprintln!("error: {}", error_message(error));
+}
+
+/// The message for an error, in the CLI's words. Errors whose core wording
+/// would not tell a terminal user what to type are reworded here; everything
+/// else uses the core's message.
+fn error_message(error: &AppError) -> String {
+    match error {
+        AppError::ValidationGateBlocked { operation, .. } => format!(
+            "cannot run {} because workspace validation has blocking issues",
+            gated_command(*operation)
+        ),
+        AppError::MissingProjectContext => "permission command requires a project context; use --project PROJECT or keep only one project".to_string(),
+        other => other.to_string(),
+    }
+}
+
+/// The command line of a gated operation, e.g. `ai-workspace project create`.
+fn gated_command(operation: GatedOperation) -> String {
+    let subcommand = match operation {
+        GatedOperation::Search => "search",
+        GatedOperation::ProjectCreate => "project create",
+        GatedOperation::ProjectShow => "project show",
+        GatedOperation::PermissionGrant => "permission grant",
+        GatedOperation::PermissionRevoke => "permission revoke",
+        GatedOperation::PermissionView => "permission view",
+    };
+    format!("{COMMAND_NAME} {subcommand}")
+}
 
 /// Builds the usage error for one subcommand, prefixed with the command name.
 fn usage_error(usage: &str) -> AppError {
@@ -346,7 +384,7 @@ fn parse_search_command(args: &[String]) -> Result<Command> {
         match args[index].as_str() {
             "--query" => {
                 if index + 1 >= args.len() {
-                    return Err(AppError::EmptySearchQuery);
+                    return Err(usage_error(USAGE_SEARCH));
                 }
                 query = Some(args[index + 1].clone());
                 index += 2;
@@ -380,7 +418,7 @@ fn parse_search_command(args: &[String]) -> Result<Command> {
 
     let query = match query {
         Some(query) if !query.trim().is_empty() => query,
-        _ => return Err(AppError::EmptySearchQuery),
+        _ => return Err(usage_error(USAGE_SEARCH)),
     };
 
     Ok(Command::Search {
