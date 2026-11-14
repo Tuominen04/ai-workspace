@@ -25,7 +25,7 @@ Exactly three files:
 /usr/share/licenses/local-ai/LICENSE-APACHE
 ```
 
-The two license files are marked as license files, so `rpm -qL local-ai` lists them.
+`cargo-generate-rpm` 0.21.1 has no way to flag a file as a license file, so `rpm -qL local-ai` lists nothing; the texts are installed at the standard location regardless.
 
 ## What the package never does
 
@@ -37,7 +37,7 @@ The two license files are marked as license files, so `rpm -qL local-ai` lists t
 
 ## Where the metadata lives
 
-`Cargo.toml`, under `[package]` (`version`, `description`, `license`) and `[package.metadata.generate-rpm]` (`name`, the three assets with their destinations and modes, built-in dependency detection). The version is written once, in `[package] version`.
+`Cargo.toml`, under `[package]` (`version`, `description`, `license`) and `[package.metadata.generate-rpm]` (`name`, `require-sh = false`, the three assets with their destinations and modes). Built-in dependency detection is selected on the command line (`--auto-req builtin`), because the metadata key only accepts `"no"`. The version is written once, in `[package] version`.
 
 ## Behavior under the package manager
 
@@ -54,7 +54,7 @@ The two license files are marked as license files, so `rpm -qL local-ai` lists t
 ```bash
 cargo install --locked cargo-generate-rpm@0.21.1   # once
 cargo build --release --locked
-cargo generate-rpm
+cargo generate-rpm --auto-req builtin
 ls target/generate-rpm/
 ```
 

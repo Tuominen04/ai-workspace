@@ -19,7 +19,7 @@ No `NEEDS CLARIFICATION` items remained in the Technical Context. The decisions 
 
 ## Decision 3: Package dependencies are detected, the AI runtime is not required
 
-- **Decision**: Let `cargo-generate-rpm` derive library requirements from the binary with its built-in detection (`auto-req = "builtin"`). Do not add a requirement on Ollama.
+- **Decision**: Let `cargo-generate-rpm` derive library requirements from the binary with its built-in detection (`cargo generate-rpm --auto-req builtin`; the metadata key only accepts `"no"`), and set `require-sh = false` because the package runs no scripts. Do not add a requirement on Ollama.
 - **Rationale**: Built-in detection needs no RPM tooling on the runner and records the C-library requirement, so `dnf` refuses the package on a system too old to run it. Ollama is not in Fedora's repositories; requiring it would make the package uninstallable. The tool already reports a missing runtime at session start.
 - **Alternatives considered**: `auto-req = "no"` (package would install on systems where the binary cannot start); a weak dependency on Ollama (nothing to point it at).
 
@@ -48,7 +48,7 @@ No `NEEDS CLARIFICATION` items remained in the Technical Context. The decisions 
 ## Decision 7: License files and where they install
 
 - **Decision**: Add `LICENSE-MIT` and `LICENSE-APACHE` at the repository root with the same texts and copyright holder as Learning Corner; set `license = "MIT OR Apache-2.0"` in `Cargo.toml`; install both texts to `/usr/share/licenses/local-ai/`; add a License section to `README.md`.
-- **Rationale**: Matches the maintainer's other project and the Rust ecosystem's convention. `/usr/share/licenses/<package>/` is where Fedora packages put license texts, and marking them as license files makes `rpm -qL` list them.
+- **Rationale**: Matches the maintainer's other project and the Rust ecosystem's convention. `/usr/share/licenses/<package>/` is where Fedora packages put license texts, though `cargo-generate-rpm` 0.21.1 cannot flag them as license files, so `rpm -qL` does not list them (found during implementation).
 - **Alternatives considered**: A single combined `LICENSE` file (diverges from Learning Corner for no benefit).
 
 ## Decision 8: Tests must pass on a runner without Ollama

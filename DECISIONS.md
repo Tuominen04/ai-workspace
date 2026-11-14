@@ -79,3 +79,33 @@ track the current task (v0.5, `specs/006-filesystem-search/`).
 Status
 
 Accepted
+
+---
+
+## ADR-0006
+
+Release packaging, the `local-ai` command name, and the license. A release
+is a Fedora `.rpm` built by GitHub Actions when a `v<version>` tag is pushed
+and attached, with a `SHA256SUMS` file, to a draft release the maintainer
+publishes by hand. The package is built with `cargo-generate-rpm` from
+metadata in `Cargo.toml` and is installed in a Fedora container before the
+draft is created. The command is renamed from `ai` to `local-ai`, and every
+message that names it is built from one `COMMAND_NAME` constant in `lib.rs`.
+The project is licensed `MIT OR Apache-2.0`.
+
+Reason
+
+The installed command had been a hand-copied build that fell months behind
+the code. A tag-triggered package makes every version installable with
+`dnf`, the same way the maintainer's other project is released. Build
+automation in the cloud was explicitly requested and is build-time only;
+the installed tool stays offline. `cargo-generate-rpm` needs no `.spec`
+file or Fedora build container and keeps the version in one place. `ai` is
+too generic a name for a system-wide command; a single constant keeps the
+name from being scattered across string literals again. A package must
+declare a license, and the dual license matches the maintainer's other
+project (v0.6, `specs/007-release-packaging/`).
+
+Status
+
+Accepted

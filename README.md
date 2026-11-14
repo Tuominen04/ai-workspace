@@ -389,22 +389,55 @@ The system should feel like a natural extension of Fedora rather than another we
 
 ---
 
+## Install
+
+AI Workspace is installed as the `local-ai` command from a Fedora package.
+
+1. Download `local-ai-<version>.x86_64.rpm` and `SHA256SUMS` from the project's
+   [releases](https://github.com/Tuominen04/ai-workspace/releases).
+2. Optionally [verify the download](docs/release.md#verifying-a-download).
+3. Install it:
+
+   ```bash
+   sudo dnf install ./local-ai-<version>.x86_64.rpm
+   ```
+
+4. Open a new terminal and check it: `local-ai --version`.
+
+The package installs the command and the two license texts, nothing else. It
+does not create, move, or delete a workspace, and removing it
+(`sudo dnf remove local-ai`) leaves your workspace folder untouched.
+
+`local-ai` looks for the workspace in `~/AI`. If yours is somewhere else, set
+`AI_WORKSPACE_HOME`, for example in `~/.bashrc`:
+
+```bash
+export AI_WORKSPACE_HOME="$HOME/ai-local/workspaces"
+```
+
+The command was called `ai` before v0.6. If you copied an `ai` binary into
+`~/.local/bin` by hand, delete it; the package does not remove it.
+
+How a release is made is described in [docs/release.md](docs/release.md).
+
+---
+
 ## Workspace Manager Commands (v0.2)
 
 The v0.2 workspace-manager layer adds explicit commands for configuration,
 project creation, project inspection, and validation:
 
 ```text
-ai config show
-ai project create --name NAME [--description TEXT]
-ai project show PROJECT
-ai validate
+local-ai config show
+local-ai project create --name NAME [--description TEXT]
+local-ai project show PROJECT
+local-ai validate
 ```
 
 Validation behavior is safety-first:
 
-- `ai validate` reports actionable workspace and project issues.
-- `ai project create` and `ai project show` are enforcement-gated and refuse to
+- `local-ai validate` reports actionable workspace and project issues.
+- `local-ai project create` and `local-ai project show` are enforcement-gated and refuse to
     continue while blocking validation issues exist.
 
 ## Permission Commands (v0.3)
@@ -413,9 +446,9 @@ The v0.3 permission layer adds explicit commands for temporary session grants,
 permission inspection, and manual revoke:
 
 ```text
-ai permission grant [--project PROJECT] --path PATH
-ai permission view [--project PROJECT] [--filter TEXT] [--page N] [--page-size N]
-ai permission revoke [--project PROJECT] --path PATH
+local-ai permission grant [--project PROJECT] --path PATH
+local-ai permission view [--project PROJECT] [--filter TEXT] [--page N] [--page-size N]
+local-ai permission revoke [--project PROJECT] --path PATH
 ```
 
 Permission behavior is explicit and session-scoped:
@@ -424,3 +457,7 @@ Permission behavior is explicit and session-scoped:
 - invalid paths are denied with actionable errors
 - unreachable granted paths remain visible as unavailable
 - temporary grants are removed automatically at session end
+
+## License
+
+Dual licensed under [MIT](LICENSE-MIT) or [Apache 2.0](LICENSE-APACHE), at your option.

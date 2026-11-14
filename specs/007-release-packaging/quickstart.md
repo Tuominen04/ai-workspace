@@ -39,7 +39,7 @@ PATH=/usr/bin:/bin cargo test --locked
 
 ```bash
 cargo build --release --locked
-cargo generate-rpm
+cargo generate-rpm --auto-req builtin
 RPM=$(ls target/generate-rpm/local-ai-*.rpm)
 rpm -qip "$RPM"     # Name: local-ai, Version: 0.6.0, License: MIT OR Apache-2.0
 rpm -qlp "$RPM"     # exactly the three files in contracts/rpm-package.md
@@ -58,7 +58,7 @@ sudo dnf install "./$RPM"
 # open a new terminal
 command -v local-ai            # /usr/bin/local-ai
 local-ai --version             # local-ai 0.6.0
-rpm -qL local-ai               # the two license files
+rpm -ql local-ai               # the command and the two license texts
 
 sudo dnf remove local-ai
 command -v local-ai            # nothing

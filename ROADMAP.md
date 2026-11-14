@@ -73,11 +73,13 @@ Relevant document loading
 
 ## v0.6
 
-TUI
+Release packaging
 
-Replace CLI menu.
+Fedora `.rpm` built from a version tag.
 
-No backend changes.
+Command renamed to `local-ai`.
+
+The next user-interface step (TUI or desktop app) is undecided.
 
 ---
 
