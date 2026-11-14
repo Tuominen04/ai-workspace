@@ -60,9 +60,11 @@ impl fmt::Display for AppError {
             Self::RuntimeRequestFailed(reason) => {
                 write!(f, "request to the AI runtime failed: {reason}")
             }
-            Self::EmptySearchQuery => {
-                f.write_str("usage: ai search --query TEXT [--project PROJECT] [--limit N]")
-            }
+            Self::EmptySearchQuery => write!(
+                f,
+                "usage: {} search --query TEXT [--project PROJECT] [--limit N]",
+                crate::COMMAND_NAME
+            ),
         }
     }
 }

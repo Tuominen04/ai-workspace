@@ -1,3 +1,4 @@
+use crate::COMMAND_NAME;
 use crate::config::WorkspaceConfig;
 use crate::error::{AppError, Result};
 use crate::paths::WorkspacePaths;
@@ -353,8 +354,9 @@ pub fn validate_workspace(paths: &WorkspacePaths) -> Result<ValidationResult> {
                 path: path.clone(),
                 code: "WS-MISSING-PATH".to_string(),
                 message: format!("required workspace path is missing: {}", path.display()),
-                suggested_fix: "run `ai init` to recreate the standard workspace layout"
-                    .to_string(),
+                suggested_fix: format!(
+                    "run `{COMMAND_NAME} init` to recreate the standard workspace layout"
+                ),
             });
         }
     }
@@ -369,8 +371,9 @@ pub fn validate_workspace(paths: &WorkspacePaths) -> Result<ValidationResult> {
                 path,
                 code: "WS-CONFIG-MISSING".to_string(),
                 message: "workspace configuration file is missing".to_string(),
-                suggested_fix: "run `ai init` to bootstrap default workspace configuration"
-                    .to_string(),
+                suggested_fix: format!(
+                    "run `{COMMAND_NAME} init` to bootstrap default workspace configuration"
+                ),
             });
             crate::config::WorkspaceConfig::default_for_paths(paths)
         }
@@ -382,7 +385,9 @@ pub fn validate_workspace(paths: &WorkspacePaths) -> Result<ValidationResult> {
                 path,
                 code: "WS-CONFIG-INVALID".to_string(),
                 message: format!("workspace configuration is invalid: {reason}"),
-                suggested_fix: "fix Config/workspace.toml and rerun `ai validate`".to_string(),
+                suggested_fix: format!(
+                    "fix Config/workspace.toml and rerun `{COMMAND_NAME} validate`"
+                ),
             });
             crate::config::WorkspaceConfig::default_for_paths(paths)
         }
@@ -425,7 +430,9 @@ pub fn validate_workspace(paths: &WorkspacePaths) -> Result<ValidationResult> {
                     path,
                     code: "PROJECT-PERMISSION".to_string(),
                     message: "permission denied while reading project metadata".to_string(),
-                    suggested_fix: "adjust file permissions and rerun `ai validate`".to_string(),
+                    suggested_fix: format!(
+                        "adjust file permissions and rerun `{COMMAND_NAME} validate`"
+                    ),
                 });
             }
             Err(error) => {
@@ -436,7 +443,7 @@ pub fn validate_workspace(paths: &WorkspacePaths) -> Result<ValidationResult> {
                     path: project.path.clone(),
                     code: "PROJECT-METADATA-INVALID".to_string(),
                     message: format!("project metadata could not be loaded: {error}"),
-                    suggested_fix: "fix project.toml and rerun `ai validate`".to_string(),
+                    suggested_fix: format!("fix project.toml and rerun `{COMMAND_NAME} validate`"),
                 });
             }
         }

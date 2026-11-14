@@ -59,7 +59,7 @@ fn search_ranks_on_topic_documents_above_unrelated_ones() {
         ],
     );
 
-    let mut cmd = Command::cargo_bin("ai").expect("binary should exist");
+    let mut cmd = Command::cargo_bin("local-ai").expect("binary should exist");
     cmd.env("AI_WORKSPACE_HOME", &paths.root);
     cmd.args(["search", "--query", "ollama runtime", "--project", "demo"]);
     let assert = cmd.assert().success();
@@ -97,7 +97,7 @@ fn search_reports_no_results_clearly_instead_of_erroring() {
         &[("notes.md", "# Notes\nGeneral workspace notes.\n")],
     );
 
-    let mut cmd = Command::cargo_bin("ai").expect("binary should exist");
+    let mut cmd = Command::cargo_bin("local-ai").expect("binary should exist");
     cmd.env("AI_WORKSPACE_HOME", &paths.root);
     cmd.args([
         "search",
@@ -142,7 +142,7 @@ fn search_never_returns_content_outside_granted_permission_paths() {
     )
     .expect("outside markdown should be written");
 
-    let mut cmd = Command::cargo_bin("ai").expect("binary should exist");
+    let mut cmd = Command::cargo_bin("local-ai").expect("binary should exist");
     cmd.env("AI_WORKSPACE_HOME", &paths.root);
     cmd.args(["search", "--query", "ollama", "--project", "demo"]);
     let assert = cmd.assert().success();
@@ -175,8 +175,8 @@ fn search_works_as_the_first_command_without_any_prior_session() {
     );
 
     // No `ai` interactive session has ever run against this workspace —
-    // `ai search` is the very first command invoked.
-    let mut cmd = Command::cargo_bin("ai").expect("binary should exist");
+    // `local-ai search` is the very first command invoked.
+    let mut cmd = Command::cargo_bin("local-ai").expect("binary should exist");
     cmd.env("AI_WORKSPACE_HOME", &paths.root);
     cmd.args(["search", "--query", "ollama", "--project", "demo"]);
     let assert = cmd.assert().success();

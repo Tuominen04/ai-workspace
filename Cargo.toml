@@ -6,7 +6,7 @@ description = "Local-first AI workspace manager for Fedora"
 license = "MIT OR Apache-2.0"
 
 [[bin]]
-name = "ai"
+name = "local-ai"
 path = "src/main.rs"
 
 [dependencies]

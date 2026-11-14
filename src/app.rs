@@ -1,6 +1,20 @@
+use crate::COMMAND_NAME;
 use crate::error::{AppError, Result};
 use crate::paths::WorkspacePaths;
 use crate::session;
+
+const USAGE_PROJECT_SHOW: &str = "project show PROJECT";
+const USAGE_PROJECT_CREATE: &str = "project create --name NAME [--description TEXT]";
+const USAGE_PERMISSION_GRANT: &str = "permission grant [--project PROJECT] --path PATH";
+const USAGE_PERMISSION_VIEW: &str =
+    "permission view [--project PROJECT] [--filter TEXT] [--page N] [--page-size N]";
+const USAGE_PERMISSION_REVOKE: &str = "permission revoke [--project PROJECT] --path PATH";
+const USAGE_SEARCH: &str = "search --query TEXT [--project PROJECT] [--limit N]";
+
+/// Builds the usage error for one subcommand, prefixed with the command name.
+fn usage_error(usage: &str) -> AppError {
+    AppError::Message(format!("usage: {COMMAND_NAME} {usage}"))
+}
 
 pub fn run() -> Result<()> {
     let command = parse_command(std::env::args().skip(1).collect())?;
@@ -99,7 +113,7 @@ fn parse_command(args: Vec<String>) -> Result<Command> {
         "-h" | "--help" | "help" => Ok(Command::Help),
         "-V" | "--version" => Ok(Command::Version),
         other => Err(AppError::Message(format!(
-            "unknown command '{other}'. Use 'ai --help' for usage."
+            "unknown command '{other}'. Use '{COMMAND_NAME} --help' for usage."
         ))),
     }
 }
@@ -109,33 +123,31 @@ fn parse_config_command(args: &[String]) -> Result<Command> {
         return Ok(Command::ConfigShow);
     }
 
-    Err(AppError::Message(
-        "invalid config command. Use 'ai config show'.".to_string(),
-    ))
+    Err(AppError::Message(format!(
+        "invalid config command. Use '{COMMAND_NAME} config show'."
+    )))
 }
 
 fn parse_project_command(args: &[String]) -> Result<Command> {
     if args.is_empty() {
-        return Err(AppError::Message(
-            "missing project subcommand. Use 'ai project create' or 'ai project show'.".to_string(),
-        ));
+        return Err(AppError::Message(format!(
+            "missing project subcommand. Use '{COMMAND_NAME} project create' or '{COMMAND_NAME} project show'."
+        )));
     }
 
     match args[0].as_str() {
         "show" => {
             if args.len() != 2 {
-                return Err(AppError::Message(
-                    "usage: ai project show PROJECT".to_string(),
-                ));
+                return Err(usage_error(USAGE_PROJECT_SHOW));
             }
             Ok(Command::ProjectShow {
                 project: args[1].clone(),
             })
         }
         "create" => parse_project_create_command(&args[1..]),
-        _ => Err(AppError::Message(
-            "invalid project command. Use 'ai project create' or 'ai project show'.".to_string(),
-        )),
+        _ => Err(AppError::Message(format!(
+            "invalid project command. Use '{COMMAND_NAME} project create' or '{COMMAND_NAME} project show'."
+        ))),
     }
 }
 
@@ -148,53 +160,43 @@ fn parse_project_create_command(args: &[String]) -> Result<Command> {
         match args[index].as_str() {
             "--name" => {
                 if index + 1 >= args.len() {
-                    return Err(AppError::Message(
-                        "usage: ai project create --name NAME [--description TEXT]".to_string(),
-                    ));
+                    return Err(usage_error(USAGE_PROJECT_CREATE));
                 }
                 name = Some(args[index + 1].clone());
                 index += 2;
             }
             "--description" => {
                 if index + 1 >= args.len() {
-                    return Err(AppError::Message(
-                        "usage: ai project create --name NAME [--description TEXT]".to_string(),
-                    ));
+                    return Err(usage_error(USAGE_PROJECT_CREATE));
                 }
                 description = Some(args[index + 1].clone());
                 index += 2;
             }
             _ => {
-                return Err(AppError::Message(
-                    "usage: ai project create --name NAME [--description TEXT]".to_string(),
-                ));
+                return Err(usage_error(USAGE_PROJECT_CREATE));
             }
         }
     }
 
-    let name = name.ok_or_else(|| {
-        AppError::Message("usage: ai project create --name NAME [--description TEXT]".to_string())
-    })?;
+    let name = name.ok_or_else(|| usage_error(USAGE_PROJECT_CREATE))?;
 
     Ok(Command::ProjectCreate { name, description })
 }
 
 fn parse_permission_command(args: &[String]) -> Result<Command> {
     if args.is_empty() {
-        return Err(AppError::Message(
-            "missing permission subcommand. Use 'ai permission grant', 'ai permission view', or 'ai permission revoke'."
-                .to_string(),
-        ));
+        return Err(AppError::Message(format!(
+            "missing permission subcommand. Use '{COMMAND_NAME} permission grant', '{COMMAND_NAME} permission view', or '{COMMAND_NAME} permission revoke'."
+        )));
     }
 
     match args[0].as_str() {
         "grant" => parse_permission_grant_command(&args[1..]),
         "view" => parse_permission_view_command(&args[1..]),
         "revoke" => parse_permission_revoke_command(&args[1..]),
-        _ => Err(AppError::Message(
-            "invalid permission command. Use 'ai permission grant', 'ai permission view', or 'ai permission revoke'."
-                .to_string(),
-        )),
+        _ => Err(AppError::Message(format!(
+            "invalid permission command. Use '{COMMAND_NAME} permission grant', '{COMMAND_NAME} permission view', or '{COMMAND_NAME} permission revoke'."
+        ))),
     }
 }
 
@@ -207,33 +209,25 @@ fn parse_permission_grant_command(args: &[String]) -> Result<Command> {
         match args[index].as_str() {
             "--project" => {
                 if index + 1 >= args.len() {
-                    return Err(AppError::Message(
-                        "usage: ai permission grant [--project PROJECT] --path PATH".to_string(),
-                    ));
+                    return Err(usage_error(USAGE_PERMISSION_GRANT));
                 }
                 project = Some(args[index + 1].clone());
                 index += 2;
             }
             "--path" => {
                 if index + 1 >= args.len() {
-                    return Err(AppError::Message(
-                        "usage: ai permission grant [--project PROJECT] --path PATH".to_string(),
-                    ));
+                    return Err(usage_error(USAGE_PERMISSION_GRANT));
                 }
                 path = Some(args[index + 1].clone());
                 index += 2;
             }
             _ => {
-                return Err(AppError::Message(
-                    "usage: ai permission grant [--project PROJECT] --path PATH".to_string(),
-                ));
+                return Err(usage_error(USAGE_PERMISSION_GRANT));
             }
         }
     }
 
-    let path = path.ok_or_else(|| {
-        AppError::Message("usage: ai permission grant [--project PROJECT] --path PATH".to_string())
-    })?;
+    let path = path.ok_or_else(|| usage_error(USAGE_PERMISSION_GRANT))?;
 
     Ok(Command::PermissionGrant { project, path })
 }
@@ -247,33 +241,25 @@ fn parse_permission_revoke_command(args: &[String]) -> Result<Command> {
         match args[index].as_str() {
             "--project" => {
                 if index + 1 >= args.len() {
-                    return Err(AppError::Message(
-                        "usage: ai permission revoke [--project PROJECT] --path PATH".to_string(),
-                    ));
+                    return Err(usage_error(USAGE_PERMISSION_REVOKE));
                 }
                 project = Some(args[index + 1].clone());
                 index += 2;
             }
             "--path" => {
                 if index + 1 >= args.len() {
-                    return Err(AppError::Message(
-                        "usage: ai permission revoke [--project PROJECT] --path PATH".to_string(),
-                    ));
+                    return Err(usage_error(USAGE_PERMISSION_REVOKE));
                 }
                 path = Some(args[index + 1].clone());
                 index += 2;
             }
             _ => {
-                return Err(AppError::Message(
-                    "usage: ai permission revoke [--project PROJECT] --path PATH".to_string(),
-                ));
+                return Err(usage_error(USAGE_PERMISSION_REVOKE));
             }
         }
     }
 
-    let path = path.ok_or_else(|| {
-        AppError::Message("usage: ai permission revoke [--project PROJECT] --path PATH".to_string())
-    })?;
+    let path = path.ok_or_else(|| usage_error(USAGE_PERMISSION_REVOKE))?;
 
     Ok(Command::PermissionRevoke { project, path })
 }
@@ -289,30 +275,21 @@ fn parse_permission_view_command(args: &[String]) -> Result<Command> {
         match args[index].as_str() {
             "--project" => {
                 if index + 1 >= args.len() {
-                    return Err(AppError::Message(
-                        "usage: ai permission view [--project PROJECT] [--filter TEXT] [--page N] [--page-size N]"
-                            .to_string(),
-                    ));
+                    return Err(usage_error(USAGE_PERMISSION_VIEW));
                 }
                 project = Some(args[index + 1].clone());
                 index += 2;
             }
             "--filter" => {
                 if index + 1 >= args.len() {
-                    return Err(AppError::Message(
-                        "usage: ai permission view [--project PROJECT] [--filter TEXT] [--page N] [--page-size N]"
-                            .to_string(),
-                    ));
+                    return Err(usage_error(USAGE_PERMISSION_VIEW));
                 }
                 filter = Some(args[index + 1].clone());
                 index += 2;
             }
             "--page" => {
                 if index + 1 >= args.len() {
-                    return Err(AppError::Message(
-                        "usage: ai permission view [--project PROJECT] [--filter TEXT] [--page N] [--page-size N]"
-                            .to_string(),
-                    ));
+                    return Err(usage_error(USAGE_PERMISSION_VIEW));
                 }
                 page = args[index + 1].parse::<usize>().map_err(|_| {
                     AppError::Message("--page must be a positive integer".to_string())
@@ -321,10 +298,7 @@ fn parse_permission_view_command(args: &[String]) -> Result<Command> {
             }
             "--page-size" => {
                 if index + 1 >= args.len() {
-                    return Err(AppError::Message(
-                        "usage: ai permission view [--project PROJECT] [--filter TEXT] [--page N] [--page-size N]"
-                            .to_string(),
-                    ));
+                    return Err(usage_error(USAGE_PERMISSION_VIEW));
                 }
                 page_size = args[index + 1].parse::<usize>().map_err(|_| {
                     AppError::Message("--page-size must be a positive integer".to_string())
@@ -332,10 +306,7 @@ fn parse_permission_view_command(args: &[String]) -> Result<Command> {
                 index += 2;
             }
             _ => {
-                return Err(AppError::Message(
-                    "usage: ai permission view [--project PROJECT] [--filter TEXT] [--page N] [--page-size N]"
-                        .to_string(),
-                ));
+                return Err(usage_error(USAGE_PERMISSION_VIEW));
             }
         }
     }
@@ -365,18 +336,14 @@ fn parse_search_command(args: &[String]) -> Result<Command> {
             }
             "--project" => {
                 if index + 1 >= args.len() {
-                    return Err(AppError::Message(
-                        "usage: ai search --query TEXT [--project PROJECT] [--limit N]".to_string(),
-                    ));
+                    return Err(usage_error(USAGE_SEARCH));
                 }
                 project = Some(args[index + 1].clone());
                 index += 2;
             }
             "--limit" => {
                 if index + 1 >= args.len() {
-                    return Err(AppError::Message(
-                        "usage: ai search --query TEXT [--project PROJECT] [--limit N]".to_string(),
-                    ));
+                    return Err(usage_error(USAGE_SEARCH));
                 }
                 limit = args[index + 1].parse::<usize>().map_err(|_| {
                     AppError::Message("--limit must be a positive integer".to_string())
@@ -389,9 +356,7 @@ fn parse_search_command(args: &[String]) -> Result<Command> {
                 index += 2;
             }
             _ => {
-                return Err(AppError::Message(
-                    "usage: ai search --query TEXT [--project PROJECT] [--limit N]".to_string(),
-                ));
+                return Err(usage_error(USAGE_SEARCH));
             }
         }
     }
@@ -409,35 +374,39 @@ fn parse_search_command(args: &[String]) -> Result<Command> {
 }
 
 fn print_help() {
+    let cmd = COMMAND_NAME;
+    // Descriptions on their own line are indented to the description column.
+    let pad = " ".repeat(cmd.len() + 13);
+
     println!("AI Workspace");
     println!();
     println!("Usage:");
-    println!("  ai           Launch an interactive workspace session");
-    println!("  ai init      Create the standard ~/AI directory layout");
-    println!("  ai status    Show discovered workspaces and root paths");
-    println!("  ai validate  Validate workspace and project definitions");
-    println!("  ai config show");
-    println!("Show workspace configuration");
-    println!("  ai project create --name NAME [--description TEXT]");
-    println!("              Create a managed project workspace");
-    println!("  ai project show PROJECT");
-    println!("              Show project metadata and managed paths");
-    println!("  ai permission grant [--project PROJECT] --path PATH");
-    println!("              Grant temporary permission for a local path");
-    println!("  ai permission view [--project PROJECT] [--filter TEXT] [--page N] [--page-size N]");
-    println!("              Show active default and temporary permissions");
-    println!("  ai permission revoke [--project PROJECT] --path PATH");
-    println!("              Revoke a temporary permission");
-    println!("  ai search --query TEXT [--project PROJECT] [--limit N]");
-    println!("              Search accessible workspace knowledge, ranked by relevance");
-    println!("  ai --version Show the ai binary version");
-    println!("  ai --help    Show this help message");
+    println!("  {cmd}           Launch an interactive workspace session");
+    println!("  {cmd} init      Create the standard ~/AI directory layout");
+    println!("  {cmd} status    Show discovered workspaces and root paths");
+    println!("  {cmd} validate  Validate workspace and project definitions");
+    println!("  {cmd} config show");
+    println!("{pad}Show workspace configuration");
+    println!("  {cmd} {USAGE_PROJECT_CREATE}");
+    println!("{pad}Create a managed project workspace");
+    println!("  {cmd} {USAGE_PROJECT_SHOW}");
+    println!("{pad}Show project metadata and managed paths");
+    println!("  {cmd} {USAGE_PERMISSION_GRANT}");
+    println!("{pad}Grant temporary permission for a local path");
+    println!("  {cmd} {USAGE_PERMISSION_VIEW}");
+    println!("{pad}Show active default and temporary permissions");
+    println!("  {cmd} {USAGE_PERMISSION_REVOKE}");
+    println!("{pad}Revoke a temporary permission");
+    println!("  {cmd} {USAGE_SEARCH}");
+    println!("{pad}Search accessible workspace knowledge, ranked by relevance");
+    println!("  {cmd} --version Show the {cmd} binary version");
+    println!("  {cmd} --help    Show this help message");
     println!();
     println!("Environment:");
     println!("  AI_WORKSPACE_HOME  Override the default workspace root (~/AI)");
 }
 
 fn print_version() -> Result<()> {
-    println!("ai {}", env!("CARGO_PKG_VERSION"));
+    println!("{COMMAND_NAME} {}", env!("CARGO_PKG_VERSION"));
     Ok(())
 }

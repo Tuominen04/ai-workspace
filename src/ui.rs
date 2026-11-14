@@ -1,3 +1,4 @@
+use crate::COMMAND_NAME;
 use crate::config::WorkspaceConfig;
 use crate::context::ContextSnapshot;
 use crate::error::{AppError, Result};
@@ -219,8 +220,8 @@ pub fn render_validation_result(result: &ValidationResult) {
         }
     }
 
-    println!("Gated commands blocked: ai project create, ai project show");
-    println!("Run `ai validate` after fixes to clear blocking issues.");
+    println!("Gated commands blocked: {COMMAND_NAME} project create, {COMMAND_NAME} project show");
+    println!("Run `{COMMAND_NAME} validate` after fixes to clear blocking issues.");
 }
 
 pub fn render_validation_gate_block(action: &str, result: &ValidationResult) {
@@ -229,7 +230,7 @@ pub fn render_validation_gate_block(action: &str, result: &ValidationResult) {
         action,
         result.blocking_issue_count()
     );
-    println!("Run `ai validate` to inspect and clear blocking issues first.");
+    println!("Run `{COMMAND_NAME} validate` to inspect and clear blocking issues first.");
 }
 
 pub fn render_permission_grant(project: &Project, result: &PermissionGrantResult) {
@@ -305,7 +306,7 @@ pub fn render_search_results(outcome: &SearchOutcome) {
 pub fn render_no_search_results(outcome: &SearchOutcome) {
     println!("Search: \"{}\"  (0 results)", outcome.query_text);
     println!(
-        "No documents matched. Try a different term, or check `ai permission view` if you expected a path to be included."
+        "No documents matched. Try a different term, or check `{COMMAND_NAME} permission view` if you expected a path to be included."
     );
 }
 
