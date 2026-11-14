@@ -112,3 +112,30 @@ project (v0.6, `specs/007-release-packaging/`).
 Status
 
 Accepted
+
+---
+
+## ADR-0007
+
+The workspace folder is a per-user setting. `ai-workspace config set-root PATH`
+validates that PATH is an existing directory and saves its absolute path as
+`workspace_root` in `~/.config/ai-workspace/config.toml` (under
+`$XDG_CONFIG_HOME` when that is an absolute path). The folder is resolved in
+this order: the `AI_WORKSPACE_HOME` environment variable, then that file, then
+`~/AI`. `status` and `config show` report which one was used. `--help`,
+`--version` and `config set-root` never need a workspace, so they work even
+when the saved setting is missing or broken.
+
+Reason
+
+An installed package cannot know where the user keeps the workspace, and an
+environment variable has to be exported from a shell profile. The setting
+cannot live inside the workspace, because the tool has to find it first, so it
+is a small TOML file the user can read and edit, in line with the
+filesystem-first rule. The environment variable stays on top so tests and
+one-off runs can still point at a scratch folder (`specs/` was skipped for this
+change at the maintainer's request).
+
+Status
+
+Accepted

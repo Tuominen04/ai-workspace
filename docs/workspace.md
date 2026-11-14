@@ -13,6 +13,7 @@ Workspace manager behavior is filesystem-first and user-visible:
 
 ```text
 ai-workspace config show
+ai-workspace config set-root PATH
 ai-workspace project create --name NAME [--description TEXT]
 ai-workspace project show PROJECT
 ai-workspace validate

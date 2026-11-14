@@ -21,7 +21,7 @@ cargo run -- <args>          # run the `ai-workspace` CLI, e.g. `cargo run -- st
 
 There is no lint/format CI config in this repo (no `rustfmt.toml`/`clippy.toml`); still run `cargo fmt` and `cargo clippy` before committing since `rust.instructions.md` requires idiomatic, panic-free code.
 
-The binary reads workspace root from `AI_WORKSPACE_HOME` (defaults to `~/AI`) — set this env var when manually testing `ai-workspace` commands to avoid touching a real `~/AI` directory:
+The workspace root is resolved by `WorkspacePaths::detect_with_source` in `paths.rs`: the `AI_WORKSPACE_HOME` env var, else `workspace_root` in the per-user file `~/.config/ai-workspace/config.toml` (written by `ai-workspace config set-root PATH`), else `~/AI`. Set the env var when manually testing `ai-workspace` commands to avoid touching a real workspace; tests that run the binary must also set `HOME` and `XDG_CONFIG_HOME` to a temp directory (see `tests/root_setting_tests.rs`):
 
 ```bash
 AI_WORKSPACE_HOME=/tmp/ai-test cargo run -- init

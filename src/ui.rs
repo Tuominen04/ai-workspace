@@ -2,7 +2,7 @@ use crate::COMMAND_NAME;
 use crate::config::WorkspaceConfig;
 use crate::context::ContextSnapshot;
 use crate::error::{AppError, Result};
-use crate::paths::WorkspacePaths;
+use crate::paths::{RootSource, WorkspacePaths};
 use crate::runtime::RuntimeStatus;
 use crate::search::SearchOutcome;
 use crate::workspace::{
@@ -139,9 +139,10 @@ pub fn render_chat_error(message: &str) {
     println!("You can try again, or type 'exit' to close the workspace.");
 }
 
-pub fn render_status(paths: &WorkspacePaths, projects: &[Project]) {
+pub fn render_status(paths: &WorkspacePaths, source: &RootSource, projects: &[Project]) {
     println!("AI Workspace status");
     println!("Root: {}", paths.root.display());
+    println!("Root chosen by: {}", source.describe());
     println!("Base: {}", paths.base.display());
     println!("Projects: {}", paths.projects.display());
     println!("Discovered workspaces: {}", projects.len());
@@ -162,8 +163,14 @@ pub fn render_init(paths: &WorkspacePaths, config_path: &std::path::Path, config
     }
 }
 
-pub fn render_workspace_config(config: &WorkspaceConfig) {
+pub fn render_workspace_config(
+    config: &WorkspaceConfig,
+    paths: &WorkspacePaths,
+    source: &RootSource,
+) {
     println!("Workspace configuration");
+    println!("Active root: {}", paths.root.display());
+    println!("Root chosen by: {}", source.describe());
     println!("Root: {}", config.root_path);
     println!("Base: {}", config.base_path);
     println!("Projects: {}", config.projects_path);
@@ -174,6 +181,25 @@ pub fn render_workspace_config(config: &WorkspaceConfig) {
     println!("Default project directories:");
     for directory in &config.default_project_directories {
         println!("- {}", directory);
+    }
+}
+
+pub fn render_workspace_root_set(
+    root: &std::path::Path,
+    config_file: &std::path::Path,
+    env_override: Option<&std::path::Path>,
+) {
+    println!("Workspace folder set to {}", root.display());
+    println!("Saved in {}", config_file.display());
+    println!(
+        "Run `{COMMAND_NAME} init` to create the standard layout there if it is not set up yet."
+    );
+    if let Some(env_root) = env_override {
+        println!(
+            "Note: {} is set to {} and takes precedence. Unset it to use the saved folder.",
+            crate::paths::WORKSPACE_ROOT_ENV,
+            env_root.display()
+        );
     }
 }
 

@@ -20,6 +20,7 @@ pub enum AppError {
     MissingProjectContext,
     RuntimeRequestFailed(String),
     EmptySearchQuery,
+    InvalidWorkspaceRoot { input: String, reason: String },
 }
 
 impl fmt::Display for AppError {
@@ -59,6 +60,9 @@ impl fmt::Display for AppError {
             ),
             Self::RuntimeRequestFailed(reason) => {
                 write!(f, "request to the AI runtime failed: {reason}")
+            }
+            Self::InvalidWorkspaceRoot { input, reason } => {
+                write!(f, "cannot use '{input}' as the workspace folder: {reason}")
             }
             Self::EmptySearchQuery => write!(
                 f,

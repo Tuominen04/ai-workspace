@@ -408,12 +408,29 @@ The package installs the command and the two license texts, nothing else. It
 does not create, move, or delete a workspace, and removing it
 (`sudo dnf remove ai-workspace`) leaves your workspace folder untouched.
 
-`ai-workspace` looks for the workspace in `~/AI`. If yours is somewhere else, set
-`AI_WORKSPACE_HOME`, for example in `~/.bashrc`:
+### Choosing the workspace folder
+
+`ai-workspace` keeps its workspace in `~/AI` unless you say otherwise. To use another folder, create it and then save it once:
 
 ```bash
-export AI_WORKSPACE_HOME="$HOME/ai-local/workspaces"
+mkdir -p ~/ai-local/workspaces
+ai-workspace config set-root ~/ai-local/workspaces
+ai-workspace init        # creates the standard layout there if it is not set up yet
 ```
+
+The choice is stored in `~/.config/ai-workspace/config.toml` (or under `$XDG_CONFIG_HOME`), a small file you can read and edit by hand:
+
+```toml
+workspace_root = "/home/you/ai-local/workspaces"
+```
+
+The folder is looked up in this order, and `ai-workspace status` and `ai-workspace config show` print which one was used:
+
+1. the `AI_WORKSPACE_HOME` environment variable, if set (handy for testing against a scratch folder);
+2. `workspace_root` in the config file above;
+3. `~/AI`.
+
+To go back to `~/AI`, delete the config file. Installing, upgrading or removing the package never touches it or your workspace.
 
 The command was called `ai` before v0.6. If you copied an `ai` binary into
 `~/.local/bin` by hand, delete it; the package does not remove it.

@@ -2,7 +2,10 @@ use crate::COMMAND_NAME;
 use crate::config::{ensure_default_workspace_config, load_workspace_config};
 use crate::context::{ContextSnapshot, build_context_snapshot};
 use crate::error::{AppError, Result};
-use crate::paths::WorkspacePaths;
+use crate::paths::{
+    RootSource, WorkspacePaths, canonical_workspace_root, env_root_override, user_config_file,
+    write_user_root,
+};
 use crate::runtime::{ChatMessage, OLLAMA_BASE_URL, RuntimeManager};
 use crate::search::{self, SearchCandidate, SourceKind};
 use crate::ui;
@@ -21,11 +24,11 @@ pub fn init_workspace(paths: &WorkspacePaths) -> Result<()> {
     Ok(())
 }
 
-pub fn print_status(paths: &WorkspacePaths) -> Result<()> {
+pub fn print_status(paths: &WorkspacePaths, source: &RootSource) -> Result<()> {
     paths.ensure_layout()?;
     let _ = ensure_default_workspace_config(paths, false)?;
     let projects = discover_projects(paths)?;
-    ui::render_status(paths, &projects);
+    ui::render_status(paths, source, &projects);
     Ok(())
 }
 
@@ -212,10 +215,20 @@ fn run_chat_loop(
     }
 }
 
-pub fn show_workspace_config(paths: &WorkspacePaths) -> Result<()> {
+pub fn show_workspace_config(paths: &WorkspacePaths, source: &RootSource) -> Result<()> {
     paths.ensure_layout()?;
     let config = load_workspace_config(paths)?;
-    ui::render_workspace_config(&config);
+    ui::render_workspace_config(&config, paths, source);
+    Ok(())
+}
+
+/// Saves `path` as the workspace folder in the user config file. Needs no
+/// existing workspace, so it never runs the validation gate.
+pub fn set_workspace_root(path: &str) -> Result<()> {
+    let root = canonical_workspace_root(path)?;
+    let config_file = user_config_file()?;
+    write_user_root(&config_file, &root)?;
+    ui::render_workspace_root_set(&root, &config_file, env_root_override().as_deref());
     Ok(())
 }
 
