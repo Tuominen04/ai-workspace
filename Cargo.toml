@@ -1,32 +1,17 @@
-[package]
-name = "ai-workspace"
+[workspace]
+members = ["crates/*"]
+resolver = "3"
+
+# Shared by every crate; the release version lives here only.
+[workspace.package]
 version = "0.6.0"
 edition = "2024"
-description = "Local-first AI workspace manager for Fedora"
 license = "MIT OR Apache-2.0"
 
-[[bin]]
-name = "ai-workspace"
-path = "src/main.rs"
-
-[dependencies]
+[workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.8"
 ureq = { version = "2", default-features = false }
-
-[dev-dependencies]
 assert_cmd = "2"
 predicates = "2"
-
-# The Fedora package, built by `cargo generate-rpm --auto-req builtin`
-# (see docs/release.md). Version, license and summary come from [package].
-[package.metadata.generate-rpm]
-name = "ai-workspace"
-# The package runs no install scripts, so it does not need a shell.
-require-sh = false
-assets = [
-    { source = "target/release/ai-workspace", dest = "/usr/bin/ai-workspace", mode = "755" },
-    { source = "LICENSE-MIT", dest = "/usr/share/licenses/ai-workspace/LICENSE-MIT", mode = "644" },
-    { source = "LICENSE-APACHE", dest = "/usr/share/licenses/ai-workspace/LICENSE-APACHE", mode = "644" },
-]

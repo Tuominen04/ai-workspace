@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ai-workspace"
+name = "ai-workspace-cli"
 version = "0.6.0"
 dependencies = [
  "assert_cmd",
