@@ -13,6 +13,8 @@ pub mod search;
 pub mod workspace;
 
 mod engine;
+mod session;
 
 pub use engine::{Engine, InitReport, SetRootReport, set_workspace_root};
 pub use error::{AppError, GatedOperation, Result};
+pub use session::{Session, SessionSummary};

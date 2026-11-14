@@ -1,9 +1,8 @@
 use crate::COMMAND_NAME;
-use crate::session;
 use crate::ui;
-use ai_workspace_core::Engine;
 use ai_workspace_core::error::{AppError, GatedOperation, Result};
 use ai_workspace_core::workspace::PermissionViewOptions;
+use ai_workspace_core::{Engine, Session};
 
 const USAGE_CONFIG_SET_ROOT: &str = "config set-root PATH";
 const USAGE_PROJECT_SHOW: &str = "project show PROJECT";
@@ -80,7 +79,7 @@ fn run_workspace_command(command: Command) -> Result<()> {
     let engine = Engine::open()?;
 
     match command {
-        Command::Run => session::run_session(&engine),
+        Command::Run => run_session(&engine),
         Command::Init => {
             let report = engine.init()?;
             ui::render_init(engine.paths(), &report.config_path, report.config_created);
@@ -156,6 +155,52 @@ fn run_workspace_command(command: Command) -> Result<()> {
         // Handled in `run` before a workspace is resolved; never reached.
         Command::Version | Command::Help | Command::ConfigSetRoot { .. } => Ok(()),
     }
+}
+
+/// The interactive session: pick a project, show what the session sees, then
+/// chat until the user leaves (or, without a runtime, wait for Enter).
+fn run_session(engine: &Engine) -> Result<()> {
+    let projects = engine.projects()?;
+
+    ui::render_startup_banner(engine.paths());
+    if projects.is_empty() {
+        outln!(
+            "No workspaces found under {}",
+            engine.paths().projects.display()
+        );
+        outln!("Create a project directory there and rerun {COMMAND_NAME}.");
+        return Err(AppError::Message("no workspaces found".to_string()));
+    }
+
+    ui::render_projects(&projects);
+    let selection = ui::prompt_for_selection(&projects)?;
+    let selected_project = projects.get(selection).ok_or_else(|| {
+        AppError::InvalidSelection("workspace selection was out of range".to_string())
+    })?;
+
+    let mut session = Session::open(engine, selected_project)?;
+    let summary = session.summary();
+    ui::render_session_summary(summary.project, summary.context, summary.runtime);
+
+    if session.can_chat() {
+        ui::render_chat_ready();
+        // A failed prompt (closed stdin, unreadable input) ends the chat the
+        // same way `exit` does.
+        while let Ok(Some(message)) = ui::prompt_for_chat_message() {
+            match session.send(&message) {
+                Ok(reply) => ui::render_ai_response(&reply),
+                Err(error) => ui::render_chat_error(&error.to_string()),
+            }
+        }
+    } else {
+        ui::render_no_runtime_notice();
+        ui::wait_for_exit()?;
+    }
+
+    let revoked = session.close()?;
+    ui::render_permission_session_closed(selected_project, revoked);
+
+    Ok(())
 }
 
 enum Command {

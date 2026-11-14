@@ -17,7 +17,6 @@ macro_rules! out {
 }
 
 pub mod app;
-pub mod session;
 pub mod ui;
 
 /// The name of the installed command.
