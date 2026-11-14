@@ -49,6 +49,31 @@ Filesystem      Knowledge      Ollama
 
 ---
 
+## Code Layout
+
+The layers below are split across two crates in one Cargo workspace (ADR-0008):
+
+```txt
+crates/ai-workspace-core     Layers 2–6 (library ai_workspace_core)
+    engine.rs                Workspace Core: Engine, one method per workspace operation
+    session.rs               Workspace Core: Session, one interactive project session
+    paths.rs, config.rs      Configuration and filesystem layout (platform lookups in paths.rs)
+    workspace.rs             Project Manager, validation, permission sessions
+    context.rs               Context Builder
+    search.rs                Search Engine
+    runtime.rs               Runtime Manager
+    error.rs                 AppError, shared by every layer
+
+crates/ai-workspace-cli      Layer 1 (binary ai-workspace)
+    app.rs                   Argument parsing, usage text, command dispatch
+    ui.rs                    Rendering and terminal prompts
+```
+
+The core returns data and never prints, reads the terminal, or names the command; a front end
+renders what it gets back. Cargo prevents the core from depending on a front end.
+
+---
+
 ## Layer Mapping
 
 The project is divided into logical layers.
@@ -73,6 +98,9 @@ Possible implementations
 
 The UI should never contain business logic.
 
+Implemented by `crates/ai-workspace-cli`. A second front end (for example a desktop app)
+would be another crate that depends on the core.
+
 ---
 
 ### Layer 2 — Workspace Core
@@ -88,6 +116,9 @@ Responsibilities
 * Configuration loading
 
 Everything flows through this layer.
+
+Implemented by `Engine` and `Session` in `crates/ai-workspace-core`. Both return data to the
+front end; neither prints nor prompts.
 
 ---
 
