@@ -12,7 +12,7 @@ Make every version installable on Fedora the way Learning Corner is: pushing a `
 
 Three things ship together (spec FR-004, accepted exception to one-feature-per-PR):
 
-1. **Rename** the command from `ai` to `local-ai` — binary name, every usage/help/error string, tests, and current documentation.
+1. **Rename** the command from `ai` to `ai-workspace` — binary name, every usage/help/error string, tests, and current documentation.
 2. **License** the project `MIT OR Apache-2.0` and add both license texts.
 3. **Package and release** — RPM metadata in `Cargo.toml`, one release workflow, and install/verify/release documentation.
 
@@ -26,7 +26,7 @@ No change to what the workspace, permission, context, search, or runtime layers 
 
 **Storage**: None. The package installs three files (the binary and two license texts) and touches nothing under the user's home directory.
 
-**Testing**: `cargo test --locked`. Existing integration tests switch from `cargo_bin("ai")` to `cargo_bin("local-ai")`; `tests/app_version_tests.rs` asserts the new version line; one new test asserts `--help` names the command `local-ai` and no usage line still says `ai`. The package itself is verified in the workflow by installing it in a `fedora:44` container, and by hand through `quickstart.md`.
+**Testing**: `cargo test --locked`. Existing integration tests switch from `cargo_bin("ai")` to `cargo_bin("ai-workspace")`; `tests/app_version_tests.rs` asserts the new version line; one new test asserts `--help` names the command `ai-workspace` and no usage line still says `ai`. The package itself is verified in the workflow by installing it in a `fedora:44` container, and by hand through `quickstart.md`.
 
 **Target Platform**: Fedora Linux, x86_64 only.
 
@@ -76,14 +76,14 @@ specs/007-release-packaging/
 └── workflows/
     └── release.yml   # NEW: tag-triggered build → package → smoke test → draft release
 
-Cargo.toml            # MODIFIED: [[bin]] name = "local-ai"; version 0.6.0; license;
+Cargo.toml            # MODIFIED: [[bin]] name = "ai-workspace"; version 0.6.0; license;
                       #   [package.metadata.generate-rpm] (name, assets, license files)
 Cargo.lock            # MODIFIED: version only
 LICENSE-MIT           # NEW
 LICENSE-APACHE        # NEW
 
 src/
-├── lib.rs        # MODIFIED: add `pub const COMMAND_NAME: &str = "local-ai";`
+├── lib.rs        # MODIFIED: add `pub const COMMAND_NAME: &str = "ai-workspace";`
 ├── app.rs        # MODIFIED: help text, usage errors, version line use COMMAND_NAME
 ├── error.rs      # MODIFIED: one usage message
 ├── session.rs    # MODIFIED: gate labels and the "rerun" hint
@@ -122,4 +122,4 @@ docs/
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| Three changes in one pull request (rename, license, packaging) against "one meaningful feature per pull request" | The package fixes the installed command's name and must declare a license; shipping `local-ai` as a package requires all three at once | Splitting was offered (rename first, then packaging) and the maintainer chose one pull request on 2026-11-14. The work is still organised as separately reviewable commits and independently testable user stories. |
+| Three changes in one pull request (rename, license, packaging) against "one meaningful feature per pull request" | The package fixes the installed command's name and must declare a license; shipping `ai-workspace` as a package requires all three at once | Splitting was offered (rename first, then packaging) and the maintainer chose one pull request on 2026-11-14. The work is still organised as separately reviewable commits and independently testable user stories. |

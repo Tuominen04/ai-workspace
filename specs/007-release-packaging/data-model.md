@@ -21,7 +21,7 @@ Nothing in this feature is stored by the tool at run time. The entities below ar
 
 | Field | Value | Source |
 |-------|-------|--------|
-| Name | `local-ai` | `[package.metadata.generate-rpm]` |
+| Name | `ai-workspace` | `[package.metadata.generate-rpm]` |
 | Version | project version | `Cargo.toml` `version` |
 | Release | `1` | tool default |
 | Architecture | `x86_64` | build target |
@@ -34,9 +34,9 @@ Nothing in this feature is stored by the tool at run time. The entities below ar
 
 | Path | Mode | Kind |
 |------|------|------|
-| `/usr/bin/local-ai` | 755 | command |
-| `/usr/share/licenses/local-ai/LICENSE-MIT` | 644 | license |
-| `/usr/share/licenses/local-ai/LICENSE-APACHE` | 644 | license |
+| `/usr/bin/ai-workspace` | 755 | command |
+| `/usr/share/licenses/ai-workspace/LICENSE-MIT` | 644 | license |
+| `/usr/share/licenses/ai-workspace/LICENSE-APACHE` | 644 | license |
 
 **Rules**: no file under any home directory; no configuration file; no service unit; no script that runs at install, upgrade, or removal (FR-008, FR-018).
 
@@ -44,14 +44,14 @@ Nothing in this feature is stored by the tool at run time. The entities below ar
 
 | File | Name | Content |
 |------|------|---------|
-| Package file | `local-ai-<version>.x86_64.rpm` | the package above |
+| Package file | `ai-workspace-<version>.x86_64.rpm` | the package above |
 | Checksum file | `SHA256SUMS` | one SHA-256 line per other attached file |
 
 **Rule**: every attached file except `SHA256SUMS` itself has a line in `SHA256SUMS` (FR-014).
 
 ## Draft release
 
-- **Title**: `local-ai <version>`.
+- **Title**: `ai-workspace <version>`.
 - **Tag**: the version tag.
 - **Notes**: generated from merged changes since the previous release.
 - **State transitions**:
@@ -66,6 +66,6 @@ tag pushed ──► checks pass ──► package built and smoke-tested ──
 
 ## Command name
 
-- **Value**: `local-ai`, defined once as `COMMAND_NAME`.
+- **Value**: `ai-workspace`, defined once as `COMMAND_NAME`.
 - **Appears in**: help text, usage errors, validation hints, the version line, the binary file name, the package name.
 - **Rule**: no user-facing output of the current version refers to the command as `ai` (FR-004).

@@ -84,14 +84,17 @@ Accepted
 
 ## ADR-0006
 
-Release packaging, the `local-ai` command name, and the license. A release
+Release packaging, the `ai-workspace` command name, and the license. A release
 is a Fedora `.rpm` built by GitHub Actions when a `v<version>` tag is pushed
 and attached, with a `SHA256SUMS` file, to a draft release the maintainer
 publishes by hand. The package is built with `cargo-generate-rpm` from
 metadata in `Cargo.toml` and is installed in a Fedora container before the
-draft is created. The command is renamed from `ai` to `local-ai`, and every
-message that names it is built from one `COMMAND_NAME` constant in `lib.rs`.
-The project is licensed `MIT OR Apache-2.0`.
+draft is created. The command is renamed from `ai` to `ai-workspace`, matching
+the crate, the repository and the product name (`local-ai` was considered
+first and dropped before any release, partly because LocalAI ships a binary
+of that name), and every message that names it is built from one
+`COMMAND_NAME` constant in `lib.rs`. The project is licensed
+`MIT OR Apache-2.0`.
 
 Reason
 

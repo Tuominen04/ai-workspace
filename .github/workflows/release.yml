@@ -78,19 +78,19 @@ jobs:
             --env VERSION="$version" \
             registry.fedoraproject.org/fedora:44 \
             bash -euc '
-              dnf install -y /pkg/local-ai-*.rpm
-              [ "$(command -v local-ai)" = /usr/bin/local-ai ]
-              got=$(local-ai --version)
-              [ "$got" = "local-ai $VERSION" ] \
-                || { echo "::error::installed command says \"$got\", expected \"local-ai $VERSION\""; exit 1; }
-              local-ai --help >/dev/null
+              dnf install -y /pkg/ai-workspace-*.rpm
+              [ "$(command -v ai-workspace)" = /usr/bin/ai-workspace ]
+              got=$(ai-workspace --version)
+              [ "$got" = "ai-workspace $VERSION" ] \
+                || { echo "::error::installed command says \"$got\", expected \"ai-workspace $VERSION\""; exit 1; }
+              ai-workspace --help >/dev/null
             '
 
       - name: Collect and checksum
         run: |
           version="${GITHUB_REF_NAME#v}"
           mkdir dist-release
-          cp target/generate-rpm/local-ai-*.rpm "dist-release/local-ai-$version.x86_64.rpm"
+          cp target/generate-rpm/ai-workspace-*.rpm "dist-release/ai-workspace-$version.x86_64.rpm"
           cd dist-release
           sha256sum -- * > SHA256SUMS
           cat SHA256SUMS
@@ -132,5 +132,5 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --draft \
             --verify-tag \
-            --title "local-ai ${GITHUB_REF_NAME#v}" \
+            --title "ai-workspace ${GITHUB_REF_NAME#v}" \
             --generate-notes

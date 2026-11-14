@@ -1,6 +1,6 @@
 # Releases
 
-A release of AI Workspace is one Fedora package, `local-ai-<version>.x86_64.rpm`,
+A release of AI Workspace is one Fedora package, `ai-workspace-<version>.x86_64.rpm`,
 attached to a GitHub release together with a `SHA256SUMS` file. It is built by
 `.github/workflows/release.yml`; nobody builds a release by hand.
 
@@ -17,7 +17,7 @@ sha256sum -c SHA256SUMS
 Expected output:
 
 ```text
-local-ai-<version>.x86_64.rpm: OK
+ai-workspace-<version>.x86_64.rpm: OK
 ```
 
 `FAILED` means the file is not the one the release process produced. Do not
@@ -56,7 +56,7 @@ The workflow ends without creating anything when:
 - the tag does not equal `version` in `Cargo.toml` (the message states both);
 - any test fails, or `Cargo.lock` is out of date;
 - the package does not install on Fedora, or the installed command does not
-  report `local-ai <version>`.
+  report `ai-workspace <version>`.
 
 To retry after fixing the cause, delete the tag
 (`git push --delete origin v<version>` and `git tag -d v<version>`) and push
@@ -69,7 +69,7 @@ Two jobs:
 - **build** (read-only access): checks the tag, runs `cargo test --locked`,
   builds with `cargo build --release --locked`, packages with
   `cargo generate-rpm --auto-req builtin`, installs the package in a Fedora
-  container and runs `local-ai --version`, then writes `SHA256SUMS`.
+  container and runs `ai-workspace --version`, then writes `SHA256SUMS`.
 - **draft** (write access): takes the finished files and creates the draft
   release. It checks out no code and runs no project code.
 
@@ -81,8 +81,8 @@ For checking the package, not for releasing it:
 cargo install --locked cargo-generate-rpm@0.21.1   # once
 cargo build --release --locked
 cargo generate-rpm --auto-req builtin
-rpm -qip target/generate-rpm/local-ai-*.rpm   # name, version, license
-rpm -qlp target/generate-rpm/local-ai-*.rpm   # the three installed files
+rpm -qip target/generate-rpm/ai-workspace-*.rpm   # name, version, license
+rpm -qlp target/generate-rpm/ai-workspace-*.rpm   # the three installed files
 ```
 
 The package is described under `[package.metadata.generate-rpm]` in

@@ -34,45 +34,45 @@ Single Rust CLI project: `src/`, `tests/` at the repository root (flat module la
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-**Purpose**: Rename the command from `ai` to `local-ai` everywhere it names itself, per [contracts/cli-naming.md](./contracts/cli-naming.md). The package (US1) and the workflow's smoke test (US2) both depend on the new name.
+**Purpose**: Rename the command from `ai` to `ai-workspace` everywhere it names itself, per [contracts/cli-naming.md](./contracts/cli-naming.md). The package (US1) and the workflow's smoke test (US2) both depend on the new name.
 
 **⚠️ CRITICAL**: No user story task can begin until this phase is complete.
 
 ### Tests (write first; they must fail before T008)
 
-- [X] T004 In `tests/app_version_tests.rs`, change `Command::cargo_bin("ai")` to `Command::cargo_bin("local-ai")`, make the existing version test expect exactly `local-ai <CARGO_PKG_VERSION>`, and add a test `help_names_the_command_local_ai` asserting that `--help` exits `0`, contains the lines `  local-ai init`, `  local-ai search --query TEXT [--project PROJECT] [--limit N]` and `  local-ai --help`, and contains no line that starts with two spaces followed by `ai ` (the old usage form)
-- [X] T005 [P] In `tests/search_tests.rs`, change all four `Command::cargo_bin("ai")` calls to `Command::cargo_bin("local-ai")` and update any assertion that quotes `ai permission view` to `local-ai permission view`
+- [X] T004 In `tests/app_version_tests.rs`, change `Command::cargo_bin("ai")` to `Command::cargo_bin("ai-workspace")`, make the existing version test expect exactly `ai-workspace <CARGO_PKG_VERSION>`, and add a test `help_names_the_command_ai_workspace` asserting that `--help` exits `0`, contains the lines `  ai-workspace init`, `  ai-workspace search --query TEXT [--project PROJECT] [--limit N]` and `  ai-workspace --help`, and contains no line that starts with two spaces followed by `ai ` (the old usage form)
+- [X] T005 [P] In `tests/search_tests.rs`, change all four `Command::cargo_bin("ai")` calls to `Command::cargo_bin("ai-workspace")` and update any assertion that quotes `ai permission view` to `ai-workspace permission view`
 
 ### Implementation
 
-- [X] T006 In `Cargo.toml`, change the `[[bin]]` target's `name` from `"ai"` to `"local-ai"` (path stays `src/main.rs`; the `[package] name` stays `ai-workspace`)
-- [X] T007 In `src/lib.rs`, add `pub const COMMAND_NAME: &str = "local-ai";` with a doc comment stating it is the single source for the command's name in every user-facing message (research.md Decision 4)
-- [X] T008 In `src/app.rs`, build every string that names the command from `crate::COMMAND_NAME`: all `usage: ai ...` error messages, every line of `print_help` (including `Show the local-ai binary version`), the unknown-command hint pointing at `--help`, and the `print_version` line (`"{COMMAND_NAME} {version}"`). Where one usage string is repeated several times, define it once per subcommand (a small helper returning the `String`) instead of repeating the `format!` (depends on T007)
+- [X] T006 In `Cargo.toml`, change the `[[bin]]` target's `name` from `"ai"` to `"ai-workspace"` (path stays `src/main.rs`; the `[package] name` stays `ai-workspace`)
+- [X] T007 In `src/lib.rs`, add `pub const COMMAND_NAME: &str = "ai-workspace";` with a doc comment stating it is the single source for the command's name in every user-facing message (research.md Decision 4)
+- [X] T008 In `src/app.rs`, build every string that names the command from `crate::COMMAND_NAME`: all `usage: ai ...` error messages, every line of `print_help` (including `Show the ai-workspace binary version`), the unknown-command hint pointing at `--help`, and the `print_version` line (`"{COMMAND_NAME} {version}"`). Where one usage string is repeated several times, define it once per subcommand (a small helper returning the `String`) instead of repeating the `format!` (depends on T007)
 - [X] T009 [P] In `src/error.rs`, build the `usage: ai search --query TEXT [--project PROJECT] [--limit N]` message from `crate::COMMAND_NAME` (depends on T007)
 - [X] T010 [P] In `src/session.rs`, build from `crate::COMMAND_NAME` the six labels passed to `enforce_validation_gate` (`search`, `project create`, `project show`, `permission grant`, `permission revoke`, `permission view`) and the `Create a project directory there and rerun ai.` hint (depends on T007)
 - [X] T011 [P] In `src/ui.rs`, build from `crate::COMMAND_NAME` the validation-gate lines (`Gated commands blocked: ...`, ``Run `ai validate` ...`` in both places) and the search no-results hint (``check `ai permission view` ...``); these are string changes only — no logic or filesystem access is added (depends on T007)
 - [X] T012 [P] In `src/workspace.rs`, build from `crate::COMMAND_NAME` the four `suggested_fix` strings that name `ai init` or `ai validate` (depends on T007)
 - [X] T013 Run `cargo test`; then run `grep -nE '"[^"]*\bai (init|status|validate|config|project|permission|search|--)' src/*.rs` and `grep -n 'rerun ai\|`ai ' src/*.rs` and confirm both print nothing; fix any literal that remains (depends on T004–T012)
 
-**Checkpoint**: `cargo run -- --version` prints `local-ai 0.6.0`; `target/debug/local-ai` exists and a clean build produces no `target/debug/ai`; all tests pass. This is `quickstart.md` Scenario 1.
+**Checkpoint**: `cargo run -- --version` prints `ai-workspace 0.6.0`; `target/debug/ai-workspace` exists and a clean build produces no `target/debug/ai`; all tests pass. This is `quickstart.md` Scenario 1.
 
 ---
 
 ## Phase 3: User Story 1 - Install a released version on Fedora (Priority: P1) 🎯 MVP
 
-**Goal**: An `.rpm` that installs `local-ai` on Fedora with `dnf`, upgrades and removes cleanly, declares its license, and never touches the workspace folder.
+**Goal**: An `.rpm` that installs `ai-workspace` on Fedora with `dnf`, upgrades and removes cleanly, declares its license, and never touches the workspace folder.
 
-**Independent Test**: Build the package locally, inspect it, install it with `dnf`, run `local-ai --version` in a new terminal, remove it, and confirm the workspace folder is unchanged — `quickstart.md` Scenarios 3 and 4.
+**Independent Test**: Build the package locally, inspect it, install it with `dnf`, run `ai-workspace --version` in a new terminal, remove it, and confirm the workspace folder is unchanged — `quickstart.md` Scenarios 3 and 4.
 
 ### Implementation for User Story 1
 
-- [X] T014 [US1] Add a `[package.metadata.generate-rpm]` table to `Cargo.toml` per [contracts/rpm-package.md](./contracts/rpm-package.md): `name = "local-ai"`; built-in dependency detection (`auto-req = "builtin"`); and exactly three assets — `target/release/local-ai` → `/usr/bin/local-ai` mode `755`, `LICENSE-MIT` → `/usr/share/licenses/local-ai/LICENSE-MIT` mode `644`, `LICENSE-APACHE` → `/usr/share/licenses/local-ai/LICENSE-APACHE` mode `644`. Check the `cargo-generate-rpm` 0.21.1 README for the exact key names and for a way to flag the two texts as license files, and use it if one exists (depends on T002, T003, T006)
+- [X] T014 [US1] Add a `[package.metadata.generate-rpm]` table to `Cargo.toml` per [contracts/rpm-package.md](./contracts/rpm-package.md): `name = "ai-workspace"`; built-in dependency detection (`auto-req = "builtin"`); and exactly three assets — `target/release/ai-workspace` → `/usr/bin/ai-workspace` mode `755`, `LICENSE-MIT` → `/usr/share/licenses/ai-workspace/LICENSE-MIT` mode `644`, `LICENSE-APACHE` → `/usr/share/licenses/ai-workspace/LICENSE-APACHE` mode `644`. Check the `cargo-generate-rpm` 0.21.1 README for the exact key names and for a way to flag the two texts as license files, and use it if one exists (depends on T002, T003, T006)
 - [X] T015 [US1] Install the tool with `cargo install --locked cargo-generate-rpm@0.21.1`, then run `quickstart.md` Scenario 3 (`cargo build --release --locked`, `cargo generate-rpm`, `rpm -qip`, `rpm -qlp`, `rpm -qp --scripts`, `rpm -qLp`) and adjust `Cargo.toml` until name, version, license, summary and the three-file list match the contract and there are no install scripts. If the tool cannot mark license files, remove the `rpm -qL` claim from `contracts/rpm-package.md` and `quickstart.md` rather than working around it (depends on T014)
-- [ ] T016 [US1] (maintainer) Run `quickstart.md` Scenario 4 on the Fedora machine: checksum the workspace folder, `sudo dnf install` the package, confirm `local-ai --version` in a new terminal, perform the upgrade check with a temporarily higher version, `sudo dnf remove local-ai`, and confirm the workspace checksum is unchanged. Requires `sudo`; ask the maintainer to run it and record the result (depends on T015)
-- [X] T017 [P] [US1] Update `README.md`: replace every `ai ...` command in the "Workspace Manager Commands" and "Permission Commands" sections with `local-ai ...`; add an **Install** section (download `local-ai-<version>.x86_64.rpm` from the release, `sudo dnf install ./local-ai-<version>.x86_64.rpm`, set `AI_WORKSPACE_HOME` if the workspace is not at `~/AI`, delete an old hand-copied `~/.local/bin/ai`); add a **License** section ("Dual licensed under [MIT](LICENSE-MIT) or [Apache 2.0](LICENSE-APACHE), at your option.")
-- [X] T018 [P] [US1] Replace the command name `ai` with `local-ai` in every command example and inline reference in `docs/workspace.md` and `docs/permissions.md` (leave `AI_WORKSPACE_HOME` and `~/AI` unchanged)
+- [ ] T016 [US1] (maintainer) Run `quickstart.md` Scenario 4 on the Fedora machine: checksum the workspace folder, `sudo dnf install` the package, confirm `ai-workspace --version` in a new terminal, perform the upgrade check with a temporarily higher version, `sudo dnf remove ai-workspace`, and confirm the workspace checksum is unchanged. Requires `sudo`; ask the maintainer to run it and record the result (depends on T015)
+- [X] T017 [P] [US1] Update `README.md`: replace every `ai ...` command in the "Workspace Manager Commands" and "Permission Commands" sections with `ai-workspace ...`; add an **Install** section (download `ai-workspace-<version>.x86_64.rpm` from the release, `sudo dnf install ./ai-workspace-<version>.x86_64.rpm`, set `AI_WORKSPACE_HOME` if the workspace is not at `~/AI`, delete an old hand-copied `~/.local/bin/ai`); add a **License** section ("Dual licensed under [MIT](LICENSE-MIT) or [Apache 2.0](LICENSE-APACHE), at your option.")
+- [X] T018 [P] [US1] Replace the command name `ai` with `ai-workspace` in every command example and inline reference in `docs/workspace.md` and `docs/permissions.md` (leave `AI_WORKSPACE_HOME` and `~/AI` unchanged)
 
-**Checkpoint**: A locally built `local-ai-0.6.0-1.x86_64.rpm` installs, upgrades and removes cleanly on Fedora, and the docs tell a user how to install it.
+**Checkpoint**: A locally built `ai-workspace-0.6.0-1.x86_64.rpm` installs, upgrades and removes cleanly on Fedora, and the docs tell a user how to install it.
 
 ---
 
@@ -86,9 +86,9 @@ Single Rust CLI project: `src/`, `tests/` at the repository root (flat module la
 
 - [X] T019 [US2] Run `quickstart.md` Scenario 2 (`PATH=/usr/bin:/bin cargo test --locked`, which hides `/usr/local/bin/ollama`) and confirm every test passes without a local AI runtime; if a test needs the runtime, fix the test, not the workflow (research.md Decision 8)
 - [X] T020 [US2] Create `.github/workflows/release.yml` with the header, `on: push: tags: ["v*"]`, top-level `permissions: contents: read`, and the `build` job on `ubuntu-24.04` implementing steps 1–8 of [contracts/release-workflow.md](./contracts/release-workflow.md): checkout with `fetch-depth: 0`; fail if `gh release view "$GITHUB_REF_NAME"` finds a release; fail unless `git merge-base --is-ancestor "$GITHUB_SHA" origin/main`; fail with both versions in the message unless the tag without `v` equals the `version` read from `Cargo.toml`; install stable Rust; `cargo test --locked`; `cargo build --release --locked`; `cargo install --locked cargo-generate-rpm@0.21.1` and `cargo generate-rpm`. Pin actions by commit SHA using the pins in `/home/iamtuominen/git/learning-corner/.github/workflows/release.yml` (`actions/checkout`, `dtolnay/rust-toolchain`) (depends on T014)
-- [X] T021 [US2] Add step 9 to the `build` job in `.github/workflows/release.yml`: run a `fedora:44` container with the generated `.rpm` mounted, `dnf install -y` it, and fail unless `local-ai --version` prints exactly `local-ai <version>` and `local-ai --help` exits `0` (depends on T020)
-- [X] T022 [US2] Add steps 10–11 to the `build` job in `.github/workflows/release.yml`: copy the package to `dist-release/local-ai-<version>.x86_64.rpm`, write `dist-release/SHA256SUMS` with `sha256sum -- * > SHA256SUMS` run inside that folder, print it, and upload `dist-release/` as the `packages` artifact with `if-no-files-found: error` using the pinned `actions/upload-artifact` (depends on T021)
-- [X] T023 [US2] Add the `draft` job to `.github/workflows/release.yml`: `needs: build`, `permissions: contents: write`, no checkout; download the `packages` artifact with the pinned `actions/download-artifact`, then `gh release create "$GITHUB_REF_NAME" dist-release/* --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title "local-ai ${GITHUB_REF_NAME#v}" --generate-notes` with `GH_TOKEN: ${{ github.token }}`. Confirm the file parses with `python3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/release.yml'))"` (depends on T022)
+- [X] T021 [US2] Add step 9 to the `build` job in `.github/workflows/release.yml`: run a `fedora:44` container with the generated `.rpm` mounted, `dnf install -y` it, and fail unless `ai-workspace --version` prints exactly `ai-workspace <version>` and `ai-workspace --help` exits `0` (depends on T020)
+- [X] T022 [US2] Add steps 10–11 to the `build` job in `.github/workflows/release.yml`: copy the package to `dist-release/ai-workspace-<version>.x86_64.rpm`, write `dist-release/SHA256SUMS` with `sha256sum -- * > SHA256SUMS` run inside that folder, print it, and upload `dist-release/` as the `packages` artifact with `if-no-files-found: error` using the pinned `actions/upload-artifact` (depends on T021)
+- [X] T023 [US2] Add the `draft` job to `.github/workflows/release.yml`: `needs: build`, `permissions: contents: write`, no checkout; download the `packages` artifact with the pinned `actions/download-artifact`, then `gh release create "$GITHUB_REF_NAME" dist-release/* --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title "ai-workspace ${GITHUB_REF_NAME#v}" --generate-notes` with `GH_TOKEN: ${{ github.token }}`. Confirm the file parses with `python3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/release.yml'))"` (depends on T022)
 - [X] T024 [P] [US2] Create `docs/release.md` with a **Cutting a release** section: bump `version` in `Cargo.toml`, merge to `main`, `git tag v<version>` and `git push origin v<version>`, wait for the draft, read it, publish with `gh release edit v<version> --draft=false`; list what stops a release (tag off `main`, version mismatch, failing tests, release already exists) and note that the workflow never publishes on its own
 
 **Checkpoint**: The workflow file is complete and parses. It can only be exercised by pushing a tag after merge (Phase 6).
@@ -113,10 +113,10 @@ Single Rust CLI project: `src/`, `tests/` at the repository root (flat module la
 
 **Purpose**: Project documentation obligations from `plan.md`'s Constitution Check, quality gates, and the validation that can only happen once the workflow is on `main`.
 
-- [X] T026 [P] Update `CLAUDE.md`: the binary is `local-ai` (Project Intent line, the `cargo run` examples and the `AI_WORKSPACE_HOME=/tmp/ai-test cargo run -- init` note stay valid), mention `COMMAND_NAME` in `lib.rs` as the single source for the command name, note `.github/workflows/release.yml` and `docs/release.md`, and change the "Current shipped versions" line to end with `→ v0.6 (Release packaging, current Cargo.toml version)`
-- [X] T027 [P] Update `ROADMAP.md` so the v0.6 entry is "Release packaging" (Fedora `.rpm` from a version tag; command renamed to `local-ai`) and remove the TUI entry from the v0.6 slot, leaving a one-line note that the next user-interface step (TUI or desktop app) is undecided; add `ADR-0006` to `DECISIONS.md` in the existing format recording the three decisions and their reasons: packaging with `cargo-generate-rpm` via a tag-triggered draft release, the command name `local-ai` from one constant, and the `MIT OR Apache-2.0` license
+- [X] T026 [P] Update `CLAUDE.md`: the binary is `ai-workspace` (Project Intent line, the `cargo run` examples and the `AI_WORKSPACE_HOME=/tmp/ai-test cargo run -- init` note stay valid), mention `COMMAND_NAME` in `lib.rs` as the single source for the command name, note `.github/workflows/release.yml` and `docs/release.md`, and change the "Current shipped versions" line to end with `→ v0.6 (Release packaging, current Cargo.toml version)`
+- [X] T027 [P] Update `ROADMAP.md` so the v0.6 entry is "Release packaging" (Fedora `.rpm` from a version tag; command renamed to `ai-workspace`) and remove the TUI entry from the v0.6 slot, leaving a one-line note that the next user-interface step (TUI or desktop app) is undecided; add `ADR-0006` to `DECISIONS.md` in the existing format recording the three decisions and their reasons: packaging with `cargo-generate-rpm` via a tag-triggered draft release, the command name `ai-workspace` from one constant, and the `MIT OR Apache-2.0` license
 - [X] T028 Run `cargo fmt`, `cargo clippy --all-targets` and `cargo test --locked`; fix every warning and failure (depends on all implementation tasks)
-- [ ] T029 (maintainer) After the pull request is merged to `main`: run `quickstart.md` Scenario 5 (a mismatched tag and an off-`main` tag each fail before compiling and create no release; delete the test tags afterwards), then Scenario 6 (push `v0.6.0`, confirm a draft with `local-ai-0.6.0.x86_64.rpm` and `SHA256SUMS` appears within 15 minutes). These push tags to GitHub — do them only with the maintainer's go-ahead (depends on T023, merge)
+- [ ] T029 (maintainer) After the pull request is merged to `main`: run `quickstart.md` Scenario 5 (a mismatched tag and an off-`main` tag each fail before compiling and create no release; delete the test tags afterwards), then Scenario 6 (push `v0.6.0`, confirm a draft with `ai-workspace-0.6.0.x86_64.rpm` and `SHA256SUMS` appears within 15 minutes). These push tags to GitHub — do them only with the maintainer's go-ahead (depends on T023, merge)
 - [ ] T030 (maintainer) Run `quickstart.md` Scenario 7 against the `v0.6.0` draft (`sha256sum -c` passes, then fails on an altered copy); if all scenarios passed, the maintainer publishes with `gh release edit v0.6.0 --draft=false`, installs the released package, and deletes the old `~/.local/bin/ai` (depends on T029)
 
 ---
@@ -169,11 +169,11 @@ Task: "T012 workspace.rs — suggested_fix strings"
 1. Phase 1: version and license.
 2. Phase 2: the rename, with its tests.
 3. Phase 3: package metadata, local build, install check.
-4. **Stop and validate**: a locally built `.rpm` installs `local-ai` on Fedora. The maintainer can already replace the July hand-copied binary at this point.
+4. **Stop and validate**: a locally built `.rpm` installs `ai-workspace` on Fedora. The maintainer can already replace the July hand-copied binary at this point.
 
 ### Incremental Delivery
 
-1. Setup + Foundational → `local-ai` builds and passes tests.
+1. Setup + Foundational → `ai-workspace` builds and passes tests.
 2. US1 → installable package (MVP).
 3. US2 → the workflow that builds it from a tag.
 4. US3 → verification documented.

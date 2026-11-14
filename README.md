@@ -391,24 +391,24 @@ The system should feel like a natural extension of Fedora rather than another we
 
 ## Install
 
-AI Workspace is installed as the `local-ai` command from a Fedora package.
+AI Workspace is installed as the `ai-workspace` command from a Fedora package.
 
-1. Download `local-ai-<version>.x86_64.rpm` and `SHA256SUMS` from the project's
+1. Download `ai-workspace-<version>.x86_64.rpm` and `SHA256SUMS` from the project's
    [releases](https://github.com/Tuominen04/ai-workspace/releases).
 2. Optionally [verify the download](docs/release.md#verifying-a-download).
 3. Install it:
 
    ```bash
-   sudo dnf install ./local-ai-<version>.x86_64.rpm
+   sudo dnf install ./ai-workspace-<version>.x86_64.rpm
    ```
 
-4. Open a new terminal and check it: `local-ai --version`.
+4. Open a new terminal and check it: `ai-workspace --version`.
 
 The package installs the command and the two license texts, nothing else. It
 does not create, move, or delete a workspace, and removing it
-(`sudo dnf remove local-ai`) leaves your workspace folder untouched.
+(`sudo dnf remove ai-workspace`) leaves your workspace folder untouched.
 
-`local-ai` looks for the workspace in `~/AI`. If yours is somewhere else, set
+`ai-workspace` looks for the workspace in `~/AI`. If yours is somewhere else, set
 `AI_WORKSPACE_HOME`, for example in `~/.bashrc`:
 
 ```bash
@@ -428,16 +428,16 @@ The v0.2 workspace-manager layer adds explicit commands for configuration,
 project creation, project inspection, and validation:
 
 ```text
-local-ai config show
-local-ai project create --name NAME [--description TEXT]
-local-ai project show PROJECT
-local-ai validate
+ai-workspace config show
+ai-workspace project create --name NAME [--description TEXT]
+ai-workspace project show PROJECT
+ai-workspace validate
 ```
 
 Validation behavior is safety-first:
 
-- `local-ai validate` reports actionable workspace and project issues.
-- `local-ai project create` and `local-ai project show` are enforcement-gated and refuse to
+- `ai-workspace validate` reports actionable workspace and project issues.
+- `ai-workspace project create` and `ai-workspace project show` are enforcement-gated and refuse to
     continue while blocking validation issues exist.
 
 ## Permission Commands (v0.3)
@@ -446,9 +446,9 @@ The v0.3 permission layer adds explicit commands for temporary session grants,
 permission inspection, and manual revoke:
 
 ```text
-local-ai permission grant [--project PROJECT] --path PATH
-local-ai permission view [--project PROJECT] [--filter TEXT] [--page N] [--page-size N]
-local-ai permission revoke [--project PROJECT] --path PATH
+ai-workspace permission grant [--project PROJECT] --path PATH
+ai-workspace permission view [--project PROJECT] [--filter TEXT] [--page N] [--page-size N]
+ai-workspace permission revoke [--project PROJECT] --path PATH
 ```
 
 Permission behavior is explicit and session-scoped:

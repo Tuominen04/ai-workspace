@@ -1,11 +1,11 @@
-# Contract: The `local-ai` Package
+# Contract: The `ai-workspace` Package
 
 Covers FR-001, FR-002, FR-005 to FR-008, and FR-018 (see spec.md). Field values are listed in [data-model.md](../data-model.md).
 
 ## Identity
 
 ```text
-Name        : local-ai
+Name        : ai-workspace
 Version     : <project version>
 Release     : 1
 Architecture: x86_64
@@ -13,19 +13,19 @@ License     : MIT OR Apache-2.0
 Summary     : Local-first AI workspace manager for Fedora
 ```
 
-File name on a release: `local-ai-<version>.x86_64.rpm`.
+File name on a release: `ai-workspace-<version>.x86_64.rpm`.
 
 ## Contents
 
 Exactly three files:
 
 ```text
-/usr/bin/local-ai
-/usr/share/licenses/local-ai/LICENSE-MIT
-/usr/share/licenses/local-ai/LICENSE-APACHE
+/usr/bin/ai-workspace
+/usr/share/licenses/ai-workspace/LICENSE-MIT
+/usr/share/licenses/ai-workspace/LICENSE-APACHE
 ```
 
-`cargo-generate-rpm` 0.21.1 has no way to flag a file as a license file, so `rpm -qL local-ai` lists nothing; the texts are installed at the standard location regardless.
+`cargo-generate-rpm` 0.21.1 has no way to flag a file as a license file, so `rpm -qL ai-workspace` lists nothing; the texts are installed at the standard location regardless.
 
 ## What the package never does
 
@@ -43,11 +43,11 @@ Exactly three files:
 
 | Action | Expected result |
 | --- | --- |
-| `sudo dnf install ./local-ai-<version>.x86_64.rpm` | `local-ai` is on the path in a new terminal; no prompts beyond the usual confirmation |
+| `sudo dnf install ./ai-workspace-<version>.x86_64.rpm` | `ai-workspace` is on the path in a new terminal; no prompts beyond the usual confirmation |
 | Install a higher version over a lower one | handled as an upgrade; one version installed afterwards |
-| `sudo dnf remove local-ai` | the three files are gone; the workspace folder is unchanged |
-| `rpm -qi local-ai` | shows the identity fields above |
-| `rpm -ql local-ai` | shows exactly the three files above |
+| `sudo dnf remove ai-workspace` | the three files are gone; the workspace folder is unchanged |
+| `rpm -qi ai-workspace` | shows the identity fields above |
+| `rpm -ql ai-workspace` | shows exactly the three files above |
 
 ## Local build (for verification, not for release)
 

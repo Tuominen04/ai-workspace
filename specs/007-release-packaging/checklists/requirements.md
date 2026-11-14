@@ -32,5 +32,5 @@
 ## Notes
 
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
-- Both clarifications were resolved by the user on 2026-11-14: FR-004 (the `ai` → `local-ai` rename ships inside this feature, with no `ai` alias) and FR-006 (MIT or Apache-2.0, same as Learning Corner). All items pass.
-- The spec names `local-ai`, `ai`, and `AI_WORKSPACE_HOME` because they are user-facing names the feature must fix or preserve, not implementation details. The packaging tool and workflow layout are left to planning.
+- Both clarifications were resolved by the user on 2026-11-14: FR-004 (the `ai` → `ai-workspace` rename ships inside this feature, with no `ai` alias) and FR-006 (MIT or Apache-2.0, same as Learning Corner). All items pass.
+- The spec names `ai-workspace`, `ai`, and `AI_WORKSPACE_HOME` because they are user-facing names the feature must fix or preserve, not implementation details. The packaging tool and workflow layout are left to planning.
