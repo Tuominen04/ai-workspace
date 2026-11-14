@@ -1,7 +1,7 @@
 use crate::config::WorkspaceConfig;
 use crate::error::{AppError, Result};
-use crate::paths::canonical_local_existing_path;
 use crate::paths::WorkspacePaths;
+use crate::paths::canonical_local_existing_path;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Write;
@@ -253,7 +253,9 @@ pub fn create_project(
         let metadata = ProjectMetadata {
             project_id: project_id.clone(),
             display_name: requested_name.trim().to_string(),
-            description: description.unwrap_or("No description provided.").to_string(),
+            description: description
+                .unwrap_or("No description provided.")
+                .to_string(),
             created_at: format!("{}", unix_timestamp()),
             knowledge_dir: "Knowledge".to_string(),
             specs_dir: "Specs".to_string(),
@@ -286,12 +288,15 @@ pub fn load_project_metadata(
     metadata_filename: &str,
 ) -> Result<ProjectMetadata> {
     let metadata_path = paths.project_metadata_file(project_root, metadata_filename);
-    let raw = fs::read_to_string(&metadata_path).map_err(|error| map_path_error(&metadata_path, error))?;
+    let raw = fs::read_to_string(&metadata_path)
+        .map_err(|error| map_path_error(&metadata_path, error))?;
 
-    toml::from_str::<ProjectMetadata>(&raw).map_err(|error| AppError::Message(format!(
-        "invalid project metadata at {}: {error}",
-        metadata_path.display()
-    )))
+    toml::from_str::<ProjectMetadata>(&raw).map_err(|error| {
+        AppError::Message(format!(
+            "invalid project metadata at {}: {error}",
+            metadata_path.display()
+        ))
+    })
 }
 
 pub fn save_project_metadata(
@@ -301,8 +306,9 @@ pub fn save_project_metadata(
     metadata: &ProjectMetadata,
 ) -> Result<()> {
     let metadata_path = paths.project_metadata_file(project_root, metadata_filename);
-    let serialized = toml::to_string_pretty(metadata)
-        .map_err(|error| AppError::Message(format!("failed to serialize project metadata: {error}")))?;
+    let serialized = toml::to_string_pretty(metadata).map_err(|error| {
+        AppError::Message(format!("failed to serialize project metadata: {error}"))
+    })?;
     fs::write(&metadata_path, serialized).map_err(|error| map_path_error(&metadata_path, error))
 }
 
@@ -347,7 +353,8 @@ pub fn validate_workspace(paths: &WorkspacePaths) -> Result<ValidationResult> {
                 path: path.clone(),
                 code: "WS-MISSING-PATH".to_string(),
                 message: format!("required workspace path is missing: {}", path.display()),
-                suggested_fix: "run `ai init` to recreate the standard workspace layout".to_string(),
+                suggested_fix: "run `ai init` to recreate the standard workspace layout"
+                    .to_string(),
             });
         }
     }
@@ -362,7 +369,8 @@ pub fn validate_workspace(paths: &WorkspacePaths) -> Result<ValidationResult> {
                 path,
                 code: "WS-CONFIG-MISSING".to_string(),
                 message: "workspace configuration file is missing".to_string(),
-                suggested_fix: "run `ai init` to bootstrap default workspace configuration".to_string(),
+                suggested_fix: "run `ai init` to bootstrap default workspace configuration"
+                    .to_string(),
             });
             crate::config::WorkspaceConfig::default_for_paths(paths)
         }
@@ -401,7 +409,10 @@ pub fn validate_workspace(paths: &WorkspacePaths) -> Result<ValidationResult> {
                             path: dir,
                             code: "PROJECT-DIR-MISSING".to_string(),
                             message: format!("required project directory is missing: {folder}"),
-                            suggested_fix: format!("recreate '{folder}' under project {}", project.name),
+                            suggested_fix: format!(
+                                "recreate '{folder}' under project {}",
+                                project.name
+                            ),
                         });
                     }
                 }
@@ -473,7 +484,10 @@ pub fn collect_markdown_files(root: &Path, max_depth: usize) -> Result<Vec<PathB
     Ok(files)
 }
 
-pub fn initialize_permission_session(paths: &WorkspacePaths, project: &Project) -> Result<SessionPermissionSet> {
+pub fn initialize_permission_session(
+    paths: &WorkspacePaths,
+    project: &Project,
+) -> Result<SessionPermissionSet> {
     if let Some(existing) = load_permission_set(paths, project)? {
         return Ok(existing);
     }
@@ -596,11 +610,13 @@ pub fn revoke_temporary_permission(
     let mut set = initialize_permission_session(paths, project)?;
     let lookup = normalize_permission_lookup_path(requested_path)?;
 
-    let maybe_index = set.temporary_grants.iter().position(|grant| {
-        grant.canonical_path == lookup || grant.display_path == requested_path
-    });
+    let maybe_index = set
+        .temporary_grants
+        .iter()
+        .position(|grant| grant.canonical_path == lookup || grant.display_path == requested_path);
 
-    let index = maybe_index.ok_or_else(|| AppError::PermissionGrantNotFound(requested_path.to_string()))?;
+    let index =
+        maybe_index.ok_or_else(|| AppError::PermissionGrantNotFound(requested_path.to_string()))?;
     let removed = set.temporary_grants.remove(index);
     save_permission_set(paths, project, &set)?;
 
@@ -663,7 +679,10 @@ pub fn view_permissions(
         }
     }
 
-    let filter = options.filter.as_ref().map(|value| value.to_ascii_lowercase());
+    let filter = options
+        .filter
+        .as_ref()
+        .map(|value| value.to_ascii_lowercase());
     let mut all_entries: Vec<PermissionGrant> = set
         .default_grants
         .iter()
@@ -721,7 +740,9 @@ pub fn ensure_permission_access(
         }
     }
 
-    Err(AppError::PermissionGrantNotFound(requested_path.to_string()))
+    Err(AppError::PermissionGrantNotFound(
+        requested_path.to_string(),
+    ))
 }
 
 pub fn terminate_permission_session(paths: &WorkspacePaths, project: &Project) -> Result<usize> {
@@ -748,19 +769,24 @@ pub fn terminate_permission_session(paths: &WorkspacePaths, project: &Project) -
 
     let permissions_path = paths.project_permissions_file(&project.path);
     if permissions_path.exists() {
-        fs::remove_file(&permissions_path).map_err(|error| map_path_error(&permissions_path, error))?;
+        fs::remove_file(&permissions_path)
+            .map_err(|error| map_path_error(&permissions_path, error))?;
     }
 
     Ok(set.temporary_grants.len())
 }
 
-fn load_permission_set(paths: &WorkspacePaths, project: &Project) -> Result<Option<SessionPermissionSet>> {
+fn load_permission_set(
+    paths: &WorkspacePaths,
+    project: &Project,
+) -> Result<Option<SessionPermissionSet>> {
     let permissions_path = paths.project_permissions_file(&project.path);
     if !permissions_path.exists() {
         return Ok(None);
     }
 
-    let raw = fs::read_to_string(&permissions_path).map_err(|error| map_path_error(&permissions_path, error))?;
+    let raw = fs::read_to_string(&permissions_path)
+        .map_err(|error| map_path_error(&permissions_path, error))?;
     let parsed = toml::from_str::<SessionPermissionSet>(&raw).map_err(|error| {
         AppError::Message(format!(
             "invalid permission session artifact at {}: {error}",
@@ -770,20 +796,27 @@ fn load_permission_set(paths: &WorkspacePaths, project: &Project) -> Result<Opti
     Ok(Some(parsed))
 }
 
-fn save_permission_set(paths: &WorkspacePaths, project: &Project, set: &SessionPermissionSet) -> Result<()> {
+fn save_permission_set(
+    paths: &WorkspacePaths,
+    project: &Project,
+    set: &SessionPermissionSet,
+) -> Result<()> {
     let session_dir = project.path.join("Session");
     fs::create_dir_all(&session_dir).map_err(|error| map_path_error(&session_dir, error))?;
     let permissions_path = paths.project_permissions_file(&project.path);
-    let serialized = toml::to_string_pretty(set)
-        .map_err(|error| AppError::Message(format!("failed to serialize permission state: {error}")))?;
-    fs::write(&permissions_path, serialized).map_err(|error| map_path_error(&permissions_path, error))
+    let serialized = toml::to_string_pretty(set).map_err(|error| {
+        AppError::Message(format!("failed to serialize permission state: {error}"))
+    })?;
+    fs::write(&permissions_path, serialized)
+        .map_err(|error| map_path_error(&permissions_path, error))
 }
 
 fn append_permission_event(paths: &WorkspacePaths, event: &PermissionEvent) -> Result<()> {
     fs::create_dir_all(&paths.logs).map_err(|error| map_path_error(&paths.logs, error))?;
     let log_path = paths.logs.join("permissions-events.log");
-    let serialized = toml::to_string(event)
-        .map_err(|error| AppError::Message(format!("failed to serialize permission event: {error}")))?;
+    let serialized = toml::to_string(event).map_err(|error| {
+        AppError::Message(format!("failed to serialize permission event: {error}"))
+    })?;
 
     let mut file = fs::OpenOptions::new()
         .create(true)

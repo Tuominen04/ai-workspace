@@ -23,10 +23,21 @@ pub fn run() -> Result<()> {
             filter,
             page,
             page_size,
-        } => session::view_permissions(&paths, project.as_deref(), filter.as_deref(), page, page_size),
+        } => session::view_permissions(
+            &paths,
+            project.as_deref(),
+            filter.as_deref(),
+            page,
+            page_size,
+        ),
         Command::PermissionRevoke { project, path } => {
             session::revoke_permission(&paths, project.as_deref(), &path)
         }
+        Command::Search {
+            query,
+            project,
+            limit,
+        } => session::run_search(&paths, &query, project.as_deref(), limit),
         Command::Validate => session::validate_workspace_state(&paths),
         Command::Version => print_version(),
         Command::Help => {
@@ -41,16 +52,32 @@ enum Command {
     Init,
     Status,
     ConfigShow,
-    ProjectCreate { name: String, description: Option<String> },
-    ProjectShow { project: String },
-    PermissionGrant { project: Option<String>, path: String },
+    ProjectCreate {
+        name: String,
+        description: Option<String>,
+    },
+    ProjectShow {
+        project: String,
+    },
+    PermissionGrant {
+        project: Option<String>,
+        path: String,
+    },
     PermissionView {
         project: Option<String>,
         filter: Option<String>,
         page: usize,
         page_size: usize,
     },
-    PermissionRevoke { project: Option<String>, path: String },
+    PermissionRevoke {
+        project: Option<String>,
+        path: String,
+    },
+    Search {
+        query: String,
+        project: Option<String>,
+        limit: usize,
+    },
     Validate,
     Version,
     Help,
@@ -68,6 +95,7 @@ fn parse_command(args: Vec<String>) -> Result<Command> {
         "config" => parse_config_command(&args[1..]),
         "project" => parse_project_command(&args[1..]),
         "permission" => parse_permission_command(&args[1..]),
+        "search" => parse_search_command(&args[1..]),
         "-h" | "--help" | "help" => Ok(Command::Help),
         "-V" | "--version" => Ok(Command::Version),
         other => Err(AppError::Message(format!(
@@ -89,8 +117,7 @@ fn parse_config_command(args: &[String]) -> Result<Command> {
 fn parse_project_command(args: &[String]) -> Result<Command> {
     if args.is_empty() {
         return Err(AppError::Message(
-            "missing project subcommand. Use 'ai project create' or 'ai project show'."
-                .to_string(),
+            "missing project subcommand. Use 'ai project create' or 'ai project show'.".to_string(),
         ));
     }
 
@@ -107,8 +134,7 @@ fn parse_project_command(args: &[String]) -> Result<Command> {
         }
         "create" => parse_project_create_command(&args[1..]),
         _ => Err(AppError::Message(
-            "invalid project command. Use 'ai project create' or 'ai project show'."
-                .to_string(),
+            "invalid project command. Use 'ai project create' or 'ai project show'.".to_string(),
         )),
     }
 }
@@ -322,6 +348,66 @@ fn parse_permission_view_command(args: &[String]) -> Result<Command> {
     })
 }
 
+fn parse_search_command(args: &[String]) -> Result<Command> {
+    let mut query: Option<String> = None;
+    let mut project: Option<String> = None;
+    let mut limit: usize = 10;
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--query" => {
+                if index + 1 >= args.len() {
+                    return Err(AppError::EmptySearchQuery);
+                }
+                query = Some(args[index + 1].clone());
+                index += 2;
+            }
+            "--project" => {
+                if index + 1 >= args.len() {
+                    return Err(AppError::Message(
+                        "usage: ai search --query TEXT [--project PROJECT] [--limit N]".to_string(),
+                    ));
+                }
+                project = Some(args[index + 1].clone());
+                index += 2;
+            }
+            "--limit" => {
+                if index + 1 >= args.len() {
+                    return Err(AppError::Message(
+                        "usage: ai search --query TEXT [--project PROJECT] [--limit N]".to_string(),
+                    ));
+                }
+                limit = args[index + 1].parse::<usize>().map_err(|_| {
+                    AppError::Message("--limit must be a positive integer".to_string())
+                })?;
+                if limit == 0 {
+                    return Err(AppError::Message(
+                        "--limit must be a positive integer".to_string(),
+                    ));
+                }
+                index += 2;
+            }
+            _ => {
+                return Err(AppError::Message(
+                    "usage: ai search --query TEXT [--project PROJECT] [--limit N]".to_string(),
+                ));
+            }
+        }
+    }
+
+    let query = match query {
+        Some(query) if !query.trim().is_empty() => query,
+        _ => return Err(AppError::EmptySearchQuery),
+    };
+
+    Ok(Command::Search {
+        query,
+        project,
+        limit,
+    })
+}
+
 fn print_help() {
     println!("AI Workspace");
     println!();
@@ -342,6 +428,8 @@ fn print_help() {
     println!("              Show active default and temporary permissions");
     println!("  ai permission revoke [--project PROJECT] --path PATH");
     println!("              Revoke a temporary permission");
+    println!("  ai search --query TEXT [--project PROJECT] [--limit N]");
+    println!("              Search accessible workspace knowledge, ranked by relevance");
     println!("  ai --version Show the ai binary version");
     println!("  ai --help    Show this help message");
     println!();

@@ -1,11 +1,11 @@
+use ai_workspace::config::WorkspaceConfig;
 use ai_workspace::error::AppError;
 use ai_workspace::paths::WorkspacePaths;
 use ai_workspace::workspace::{
-    create_project, inspect_project, normalize_project_name, grant_temporary_permission,
-    revoke_temporary_permission, validate_workspace, view_permissions, PermissionStatus,
-    PermissionViewOptions,
+    PermissionStatus, PermissionViewOptions, create_project, grant_temporary_permission,
+    inspect_project, normalize_project_name, revoke_temporary_permission, validate_workspace,
+    view_permissions,
 };
-use ai_workspace::config::WorkspaceConfig;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn test_paths(name: &str) -> WorkspacePaths {
@@ -19,7 +19,8 @@ fn test_paths(name: &str) -> WorkspacePaths {
 
 #[test]
 fn normalize_project_name_accepts_valid_name() {
-    let normalized = normalize_project_name("Demo Project").expect("valid project name should normalize");
+    let normalized =
+        normalize_project_name("Demo Project").expect("valid project name should normalize");
     assert_eq!(normalized, "demo-project");
 }
 
@@ -50,10 +51,12 @@ fn validate_workspace_reports_missing_config_as_blocking_issue() {
     let result = validate_workspace(&paths).expect("validation should return result");
     assert!(!result.valid);
     assert!(result.blocking_issue_count() >= 1);
-    assert!(result
-        .workspace_issues
-        .iter()
-        .any(|issue| issue.code == "WS-CONFIG-MISSING"));
+    assert!(
+        result
+            .workspace_issues
+            .iter()
+            .any(|issue| issue.code == "WS-CONFIG-MISSING")
+    );
 
     let _ = std::fs::remove_dir_all(&paths.root);
 }
@@ -67,10 +70,11 @@ fn permission_grant_is_idempotent_for_same_path() {
 
     let config = WorkspaceConfig::default_for_paths(&paths);
     create_project(&paths, &config, "Perm Demo", None).expect("project should be created");
-    let (project, _) = inspect_project(&paths, &config, "Perm Demo").expect("project should be inspectable");
+    let (project, _) =
+        inspect_project(&paths, &config, "Perm Demo").expect("project should be inspectable");
 
-    let first = grant_temporary_permission(&paths, &project, "/tmp")
-        .expect("first grant should succeed");
+    let first =
+        grant_temporary_permission(&paths, &project, "/tmp").expect("first grant should succeed");
     let second = grant_temporary_permission(&paths, &project, "/tmp")
         .expect("duplicate grant should succeed idempotently");
 
@@ -89,9 +93,11 @@ fn permission_revoke_missing_returns_not_found() {
 
     let config = WorkspaceConfig::default_for_paths(&paths);
     create_project(&paths, &config, "Perm Demo", None).expect("project should be created");
-    let (project, _) = inspect_project(&paths, &config, "Perm Demo").expect("project should be inspectable");
+    let (project, _) =
+        inspect_project(&paths, &config, "Perm Demo").expect("project should be inspectable");
 
-    let result = revoke_temporary_permission(&paths, &project, "/tmp/does-not-exist-for-revoke-test");
+    let result =
+        revoke_temporary_permission(&paths, &project, "/tmp/does-not-exist-for-revoke-test");
     assert!(matches!(result, Err(AppError::PermissionGrantNotFound(_))));
 
     let _ = std::fs::remove_dir_all(&paths.root);
@@ -106,7 +112,8 @@ fn permission_view_marks_deleted_grant_unavailable() {
 
     let config = WorkspaceConfig::default_for_paths(&paths);
     create_project(&paths, &config, "Perm Demo", None).expect("project should be created");
-    let (project, _) = inspect_project(&paths, &config, "Perm Demo").expect("project should be inspectable");
+    let (project, _) =
+        inspect_project(&paths, &config, "Perm Demo").expect("project should be inspectable");
 
     let temp_file = std::env::temp_dir().join("ai-workspace-permission-view-unavailable.tmp");
     std::fs::write(&temp_file, "x").expect("temp file should be writable");

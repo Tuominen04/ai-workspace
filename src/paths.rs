@@ -75,7 +75,8 @@ pub fn canonical_local_existing_path(input: &str) -> Result<PathBuf> {
         return Err(AppError::InvalidPermissionPath(input.to_string()));
     }
 
-    std::fs::canonicalize(&candidate).map_err(|_| AppError::InvalidPermissionPath(input.to_string()))
+    std::fs::canonicalize(&candidate)
+        .map_err(|_| AppError::InvalidPermissionPath(input.to_string()))
 }
 
 fn home_dir() -> Result<PathBuf> {

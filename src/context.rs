@@ -1,6 +1,7 @@
 use crate::error::Result;
 use crate::paths::WorkspacePaths;
-use crate::workspace::{collect_markdown_files, Project};
+use crate::search::{self, SourceKind};
+use crate::workspace::{Project, collect_markdown_files};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -26,47 +27,82 @@ impl ContextSnapshot {
     }
 }
 
-pub fn build_context_snapshot(paths: &WorkspacePaths, project: Option<&Project>) -> Result<ContextSnapshot> {
+pub fn build_context_snapshot(
+    paths: &WorkspacePaths,
+    project: Option<&Project>,
+    query: Option<&str>,
+) -> Result<ContextSnapshot> {
     let base_files = collect_markdown_files(paths.base_knowledge_path(), 2)?;
     let mut project_files = Vec::new();
     let mut session_files = Vec::new();
     let project_root = project.map(|project| project.path.clone());
 
     if let Some(project) = project {
-        project_files = collect_markdown_files(&project.path.join("Knowledge"), 2).unwrap_or_default();
-        session_files = collect_markdown_files(&project.path.join("Session"), 2).unwrap_or_default();
+        project_files =
+            collect_markdown_files(&project.path.join("Knowledge"), 2).unwrap_or_default();
+        session_files =
+            collect_markdown_files(&project.path.join("Session"), 2).unwrap_or_default();
     }
 
     let mut all_sources = Vec::new();
     for file in base_files.iter() {
-        all_sources.push(("base".to_string(), resolve_source_path(paths.base_knowledge_path(), file)));
+        all_sources.push((
+            "base".to_string(),
+            resolve_source_path(paths.base_knowledge_path(), file),
+        ));
     }
     for file in project_files.iter() {
         let project_root = project_root.as_deref().unwrap_or_else(|| Path::new(""));
-        all_sources.push(("project".to_string(), resolve_source_path(project_root.join("Knowledge").as_path(), file)));
+        all_sources.push((
+            "project".to_string(),
+            resolve_source_path(project_root.join("Knowledge").as_path(), file),
+        ));
     }
     for file in session_files.iter() {
         let project_root = project_root.as_deref().unwrap_or_else(|| Path::new(""));
-        all_sources.push(("session".to_string(), resolve_source_path(project_root.join("Session").as_path(), file)));
+        all_sources.push((
+            "session".to_string(),
+            resolve_source_path(project_root.join("Session").as_path(), file),
+        ));
     }
 
-    all_sources.sort_by(|left, right| {
-        let rank = |kind: &str| match kind {
-            "project" => 0,
-            "base" => 1,
-            "session" => 2,
-            _ => 3,
-        };
-        rank(left.0.as_str())
-            .cmp(&rank(right.0.as_str()))
-            .then_with(|| left.1.cmp(&right.1))
-    });
+    let ordered_sources: Vec<(String, PathBuf)> = match query {
+        Some(text) => {
+            let candidates: Vec<search::SearchCandidate> = all_sources
+                .iter()
+                .map(|(kind, path)| search::SearchCandidate {
+                    source_kind: source_kind_from_tag(kind),
+                    path: path.clone(),
+                })
+                .collect();
+
+            search::order_by_relevance(&candidates, text)
+                .into_iter()
+                .map(|result| (result.source_kind.as_str().to_string(), result.path))
+                .collect()
+        }
+        None => {
+            let mut sources = all_sources;
+            sources.sort_by(|left, right| {
+                let rank = |kind: &str| match kind {
+                    "project" => 0,
+                    "base" => 1,
+                    "session" => 2,
+                    _ => 3,
+                };
+                rank(left.0.as_str())
+                    .cmp(&rank(right.0.as_str()))
+                    .then_with(|| left.1.cmp(&right.1))
+            });
+            sources
+        }
+    };
 
     let mut selected_sources = Vec::new();
     let mut assembled_content = String::new();
     let mut total_bytes = 0usize;
 
-    for (kind, path) in all_sources.into_iter() {
+    for (kind, path) in ordered_sources.into_iter() {
         if selected_sources.len() >= DEFAULT_MAX_CONTEXT_SOURCES {
             break;
         }
@@ -112,6 +148,14 @@ pub fn build_context_snapshot(paths: &WorkspacePaths, project: Option<&Project>)
         source_count: selected_sources.len(),
         total_bytes,
     })
+}
+
+fn source_kind_from_tag(kind: &str) -> SourceKind {
+    match kind {
+        "project" => SourceKind::Project,
+        "session" => SourceKind::Session,
+        _ => SourceKind::Base,
+    }
 }
 
 fn resolve_source_path(root: &Path, relative_path: &Path) -> PathBuf {

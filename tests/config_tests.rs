@@ -19,8 +19,8 @@ fn bootstrap_creates_default_workspace_config() {
         .ensure_layout()
         .expect("workspace layout should be created for test");
 
-    let bootstrap =
-        ensure_default_workspace_config(&paths, false).expect("default config bootstrap should succeed");
+    let bootstrap = ensure_default_workspace_config(&paths, false)
+        .expect("default config bootstrap should succeed");
 
     assert!(bootstrap.created);
     assert!(bootstrap.path.exists());

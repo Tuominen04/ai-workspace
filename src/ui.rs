@@ -1,8 +1,9 @@
-use crate::context::ContextSnapshot;
 use crate::config::WorkspaceConfig;
+use crate::context::ContextSnapshot;
 use crate::error::{AppError, Result};
 use crate::paths::WorkspacePaths;
 use crate::runtime::RuntimeStatus;
+use crate::search::SearchOutcome;
 use crate::workspace::{
     CreatedProject, PermissionCategory, PermissionGrantResult, PermissionRevokeResult,
     PermissionStatus, PermissionViewSnapshot, Project, ProjectMetadata, ValidationIssue,
@@ -41,7 +42,10 @@ pub fn prompt_for_selection(projects: &[Project]) -> Result<usize> {
 
         match value.parse::<usize>() {
             Ok(number) if number >= 1 && number <= projects.len() => return Ok(number - 1),
-            _ => println!("Invalid selection. Enter a number between 1 and {}.", projects.len()),
+            _ => println!(
+                "Invalid selection. Enter a number between 1 and {}.",
+                projects.len()
+            ),
         }
     }
 }
@@ -199,7 +203,10 @@ pub fn render_validation_result(result: &ValidationResult) {
         return;
     }
 
-    println!("Status: FAIL (blocking issues: {})", result.blocking_issue_count());
+    println!(
+        "Status: FAIL (blocking issues: {})",
+        result.blocking_issue_count()
+    );
 
     for issue in &result.workspace_issues {
         render_issue(issue);
@@ -272,6 +279,33 @@ pub fn render_permission_session_closed(project: &Project, revoked_count: usize)
     println!(
         "Session cleanup for project {}: revoked {} temporary permission(s).",
         project.name, revoked_count
+    );
+}
+
+pub fn render_search_results(outcome: &SearchOutcome) {
+    println!(
+        "Search: \"{}\"  ({} result(s))",
+        outcome.query_text,
+        outcome.results.len()
+    );
+    println!();
+
+    for (index, result) in outcome.results.iter().enumerate() {
+        println!(
+            "{}. [{}] {}   score: {:.1}",
+            index + 1,
+            result.source_kind.as_str(),
+            result.path.display(),
+            result.relevance_score
+        );
+        println!("   \"{}\"", result.snippet);
+    }
+}
+
+pub fn render_no_search_results(outcome: &SearchOutcome) {
+    println!("Search: \"{}\"  (0 results)", outcome.query_text);
+    println!(
+        "No documents matched. Try a different term, or check `ai permission view` if you expected a path to be included."
     );
 }
 
