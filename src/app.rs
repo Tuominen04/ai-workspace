@@ -3,6 +3,7 @@ use crate::error::{AppError, Result};
 use crate::paths::WorkspacePaths;
 use crate::session;
 
+const USAGE_CONFIG_SET_ROOT: &str = "config set-root PATH";
 const USAGE_PROJECT_SHOW: &str = "project show PROJECT";
 const USAGE_PROJECT_CREATE: &str = "project create --name NAME [--description TEXT]";
 const USAGE_PERMISSION_GRANT: &str = "permission grant [--project PROJECT] --path PATH";
@@ -18,13 +19,28 @@ fn usage_error(usage: &str) -> AppError {
 
 pub fn run() -> Result<()> {
     let command = parse_command(std::env::args().skip(1).collect())?;
-    let paths = WorkspacePaths::detect()?;
+
+    // These never need a workspace, so they must work even before one is
+    // chosen, or when the saved workspace setting is broken.
+    match command {
+        Command::Version => print_version(),
+        Command::Help => {
+            print_help();
+            Ok(())
+        }
+        Command::ConfigSetRoot { path } => session::set_workspace_root(&path),
+        workspace_command => run_workspace_command(workspace_command),
+    }
+}
+
+fn run_workspace_command(command: Command) -> Result<()> {
+    let (paths, source) = WorkspacePaths::detect_with_source()?;
 
     match command {
         Command::Run => session::run_session(&paths),
         Command::Init => session::init_workspace(&paths),
-        Command::Status => session::print_status(&paths),
-        Command::ConfigShow => session::show_workspace_config(&paths),
+        Command::Status => session::print_status(&paths, &source),
+        Command::ConfigShow => session::show_workspace_config(&paths, &source),
         Command::ProjectCreate { name, description } => {
             session::create_managed_project(&paths, &name, description.as_deref())
         }
@@ -53,11 +69,8 @@ pub fn run() -> Result<()> {
             limit,
         } => session::run_search(&paths, &query, project.as_deref(), limit),
         Command::Validate => session::validate_workspace_state(&paths),
-        Command::Version => print_version(),
-        Command::Help => {
-            print_help();
-            Ok(())
-        }
+        // Handled in `run` before a workspace is resolved; never reached.
+        Command::Version | Command::Help | Command::ConfigSetRoot { .. } => Ok(()),
     }
 }
 
@@ -66,6 +79,9 @@ enum Command {
     Init,
     Status,
     ConfigShow,
+    ConfigSetRoot {
+        path: String,
+    },
     ProjectCreate {
         name: String,
         description: Option<String>,
@@ -119,13 +135,14 @@ fn parse_command(args: Vec<String>) -> Result<Command> {
 }
 
 fn parse_config_command(args: &[String]) -> Result<Command> {
-    if args.len() == 1 && args[0] == "show" {
-        return Ok(Command::ConfigShow);
+    match args {
+        [sub] if sub == "show" => Ok(Command::ConfigShow),
+        [sub, path] if sub == "set-root" => Ok(Command::ConfigSetRoot { path: path.clone() }),
+        [sub] if sub == "set-root" => Err(usage_error(USAGE_CONFIG_SET_ROOT)),
+        _ => Err(AppError::Message(format!(
+            "invalid config command. Use '{COMMAND_NAME} config show' or '{COMMAND_NAME} config set-root PATH'."
+        ))),
     }
-
-    Err(AppError::Message(format!(
-        "invalid config command. Use '{COMMAND_NAME} config show'."
-    )))
 }
 
 fn parse_project_command(args: &[String]) -> Result<Command> {
@@ -387,6 +404,8 @@ fn print_help() {
     println!("  {cmd} validate  Validate workspace and project definitions");
     println!("  {cmd} config show");
     println!("{pad}Show workspace configuration");
+    println!("  {cmd} {USAGE_CONFIG_SET_ROOT}");
+    println!("{pad}Remember PATH as the workspace folder (instead of ~/AI)");
     println!("  {cmd} {USAGE_PROJECT_CREATE}");
     println!("{pad}Create a managed project workspace");
     println!("  {cmd} {USAGE_PROJECT_SHOW}");
@@ -403,7 +422,9 @@ fn print_help() {
     println!("  {cmd} --help    Show this help message");
     println!();
     println!("Environment:");
-    println!("  AI_WORKSPACE_HOME  Override the default workspace root (~/AI)");
+    println!(
+        "  AI_WORKSPACE_HOME  Override the workspace folder for this shell (wins over the saved setting)"
+    );
 }
 
 fn print_version() -> Result<()> {
