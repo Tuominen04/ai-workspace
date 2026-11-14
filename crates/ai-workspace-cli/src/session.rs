@@ -1,15 +1,15 @@
 use crate::COMMAND_NAME;
-use crate::config::{ensure_default_workspace_config, load_workspace_config};
-use crate::context::{ContextSnapshot, build_context_snapshot};
-use crate::error::{AppError, GatedOperation, Result};
-use crate::paths::{
+use crate::ui;
+use ai_workspace_core::config::{ensure_default_workspace_config, load_workspace_config};
+use ai_workspace_core::context::{ContextSnapshot, build_context_snapshot};
+use ai_workspace_core::error::{AppError, GatedOperation, Result};
+use ai_workspace_core::paths::{
     RootSource, WorkspacePaths, canonical_workspace_root, env_root_override, user_config_file,
     write_user_root,
 };
-use crate::runtime::{ChatMessage, OLLAMA_BASE_URL, RuntimeManager};
-use crate::search::{self, SearchCandidate, SourceKind};
-use crate::ui;
-use crate::workspace::{
+use ai_workspace_core::runtime::{ChatMessage, OLLAMA_BASE_URL, RuntimeManager};
+use ai_workspace_core::search::{self, SearchCandidate, SourceKind};
+use ai_workspace_core::workspace::{
     PermissionStatus, PermissionViewOptions, Project, ProjectMetadata, collect_markdown_files,
     create_project, discover_projects, grant_temporary_permission, initialize_permission_session,
     inspect_project, resolve_model, revoke_temporary_permission, terminate_permission_session,
@@ -325,7 +325,7 @@ pub fn view_permissions(
 
 fn resolve_permission_project(
     paths: &WorkspacePaths,
-    config: &crate::config::WorkspaceConfig,
+    config: &ai_workspace_core::config::WorkspaceConfig,
     requested_project: Option<&str>,
 ) -> Result<Project> {
     if let Some(project_name) = requested_project {

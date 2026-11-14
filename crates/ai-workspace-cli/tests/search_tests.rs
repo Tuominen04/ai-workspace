@@ -1,6 +1,6 @@
-use ai_workspace::config::{WorkspaceConfig, ensure_default_workspace_config};
-use ai_workspace::paths::WorkspacePaths;
-use ai_workspace::workspace::create_project;
+use ai_workspace_core::config::{WorkspaceConfig, ensure_default_workspace_config};
+use ai_workspace_core::paths::WorkspacePaths;
+use ai_workspace_core::workspace::create_project;
 use assert_cmd::Command;
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};

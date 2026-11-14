@@ -1,8 +1,8 @@
 use crate::COMMAND_NAME;
-use crate::error::{AppError, GatedOperation, Result};
-use crate::paths::WorkspacePaths;
 use crate::session;
 use crate::ui;
+use ai_workspace_core::error::{AppError, GatedOperation, Result};
+use ai_workspace_core::paths::WorkspacePaths;
 
 const USAGE_CONFIG_SET_ROOT: &str = "config set-root PATH";
 const USAGE_PROJECT_SHOW: &str = "project show PROJECT";

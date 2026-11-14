@@ -1,11 +1,11 @@
 use crate::COMMAND_NAME;
-use crate::config::WorkspaceConfig;
-use crate::context::ContextSnapshot;
-use crate::error::{AppError, Result};
-use crate::paths::{RootSource, WorkspacePaths};
-use crate::runtime::RuntimeStatus;
-use crate::search::SearchOutcome;
-use crate::workspace::{
+use ai_workspace_core::config::WorkspaceConfig;
+use ai_workspace_core::context::ContextSnapshot;
+use ai_workspace_core::error::{AppError, Result};
+use ai_workspace_core::paths::{RootSource, WorkspacePaths};
+use ai_workspace_core::runtime::RuntimeStatus;
+use ai_workspace_core::search::SearchOutcome;
+use ai_workspace_core::workspace::{
     Action, CreatedProject, PermissionCategory, PermissionGrantResult, PermissionRevokeResult,
     PermissionStatus, PermissionViewSnapshot, Project, ProjectMetadata, SuggestedFix,
     ValidationIssue, ValidationResult, ValidationSeverity,
@@ -218,7 +218,7 @@ pub fn render_workspace_root_set(
     if let Some(env_root) = env_override {
         outln!(
             "Note: {} is set to {} and takes precedence. Unset it to use the saved folder.",
-            crate::paths::WORKSPACE_ROOT_ENV,
+            ai_workspace_core::paths::WORKSPACE_ROOT_ENV,
             env_root.display()
         );
     }

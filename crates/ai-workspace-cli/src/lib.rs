@@ -17,15 +17,8 @@ macro_rules! out {
 }
 
 pub mod app;
-pub mod config;
-pub mod context;
-pub mod error;
-pub mod paths;
-pub mod runtime;
-pub mod search;
 pub mod session;
 pub mod ui;
-pub mod workspace;
 
 /// The name of the installed command.
 ///
