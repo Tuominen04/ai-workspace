@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Intent
 
-`ai-workspace` (binary name `local-ai`) is a local-first AI workspace manager for Fedora. It is **not** a chatbot — it launches project-aware sessions that assemble context from the filesystem and hand it to a local LLM runtime (Ollama). The filesystem is always the source of truth; the app must never become a hidden store of state.
+`ai-workspace` (binary name `ai-workspace`) is a local-first AI workspace manager for Fedora. It is **not** a chatbot — it launches project-aware sessions that assemble context from the filesystem and hand it to a local LLM runtime (Ollama). The filesystem is always the source of truth; the app must never become a hidden store of state.
 
 Read `README.md` for the full vision/phase breakdown before making architectural changes — it explains *why* the layering below exists.
 
@@ -16,12 +16,12 @@ cargo build --release       # release build
 cargo test                  # run all tests (unit + tests/*.rs integration tests)
 cargo test --test workspace_tests   # run a single integration test file
 cargo test some_test_name    # run a single test by name (substring match)
-cargo run -- <args>          # run the `local-ai` CLI, e.g. `cargo run -- status`
+cargo run -- <args>          # run the `ai-workspace` CLI, e.g. `cargo run -- status`
 ```
 
 There is no lint/format CI config in this repo (no `rustfmt.toml`/`clippy.toml`); still run `cargo fmt` and `cargo clippy` before committing since `rust.instructions.md` requires idiomatic, panic-free code.
 
-The binary reads workspace root from `AI_WORKSPACE_HOME` (defaults to `~/AI`) — set this env var when manually testing `local-ai` commands to avoid touching a real `~/AI` directory:
+The binary reads workspace root from `AI_WORKSPACE_HOME` (defaults to `~/AI`) — set this env var when manually testing `ai-workspace` commands to avoid touching a real `~/AI` directory:
 
 ```bash
 AI_WORKSPACE_HOME=/tmp/ai-test cargo run -- init
@@ -46,16 +46,16 @@ Module responsibilities (dependencies flow one direction — UI never contains b
 - **`runtime.rs`** — `RuntimeManager` starts/detects/stops Ollama (port 11434) as a child process; killed on `Drop`. This is the one runtime implementation behind what `ARCHITECTURE.md` calls the Runtime abstraction — expect future runtimes (LM Studio, vLLM) to need this interface generalized, not the caller changed.
 - **`ui.rs`** — all `println!`/prompt rendering for the CLI. Pure presentation; takes data structures from `workspace`/`context`/`search`/`runtime`/`config` and prints them. Never put filesystem or decision logic here.
 - **`app.rs`** — CLI argument parsing (hand-rolled, no clap) and command dispatch table.
-- **`lib.rs`** — re-exports the modules and defines `COMMAND_NAME` (`"local-ai"`), the single source for the command's name. Build every user-facing string that names the command (help, usage errors, hints, the version line) from it; never write the name as a literal.
+- **`lib.rs`** — re-exports the modules and defines `COMMAND_NAME` (`"ai-workspace"`), the single source for the command's name. Build every user-facing string that names the command (help, usage errors, hints, the version line) from it; never write the name as a literal.
 - **`session.rs`** — orchestration layer called by `app.rs`: wires `paths` + `config` + `workspace` + `context` + `search` + `runtime` + `ui` together per command (`run_session`, `create_managed_project`, `grant_permission`, `run_search`, etc.). This is "Workspace Core" from `ARCHITECTURE.md`. `run_session` seeds the session-start context query from the project's description; `run_chat_loop` re-derives context from the user's message on every turn.
 
 ### Validation gate
 
-`local-ai validate` is always runnable and reports issues but never blocks. `local-ai project create`, `local-ai project show`, and all `local-ai permission *` commands call `enforce_validation_gate` first (see `session.rs`) and refuse to run while blocking (`Error`-severity) issues exist. When adding a new mutating command, decide whether it needs the same gate.
+`ai-workspace validate` is always runnable and reports issues but never blocks. `ai-workspace project create`, `ai-workspace project show`, and all `ai-workspace permission *` commands call `enforce_validation_gate` first (see `session.rs`) and refuse to run while blocking (`Error`-severity) issues exist. When adding a new mutating command, decide whether it needs the same gate.
 
 ### Permission model specifics
 
-- Two categories: `Default` (Base + selected project, always granted) and `Temporary` (explicit `local-ai permission grant --path`).
+- Two categories: `Default` (Base + selected project, always granted) and `Temporary` (explicit `ai-workspace permission grant --path`).
 - Grants are idempotent by **canonical path**; invalid/nonexistent paths are denied with an actionable error and logged as a `deny` event.
 - A previously-granted path that later disappears stays visible with `Unavailable` status rather than being silently dropped.
 - All permission state changes are appended as structured events (`grant`/`deny`/`revoke`/`status-change`) to `Logs/permissions-events.log` — see `docs/permissions.md` for the full behavior spec.
@@ -76,7 +76,7 @@ These apply regardless of which assistant is editing this repo:
 
 - Add tests when a change affects behavior, workflows, validation, or safety — not for every tiny refactor or rename.
 - Cover at least one happy path and the critical failure/safety path (e.g. an invalid permission path, a blocked validation gate).
-- Integration tests in `tests/*.rs` use `assert_cmd` to invoke the real `local-ai` binary end-to-end; set `AI_WORKSPACE_HOME` to a temp directory in new tests to avoid touching the real workspace (see existing tests in `tests/config_tests.rs`, `tests/workspace_tests.rs`, `tests/context_tests.rs` for the pattern).
+- Integration tests in `tests/*.rs` use `assert_cmd` to invoke the real `ai-workspace` binary end-to-end; set `AI_WORKSPACE_HOME` to a temp directory in new tests to avoid touching the real workspace (see existing tests in `tests/config_tests.rs`, `tests/workspace_tests.rs`, `tests/context_tests.rs` for the pattern).
 
 ## Spec-Kit Workflow
 

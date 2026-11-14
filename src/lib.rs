@@ -14,4 +14,4 @@ pub mod workspace;
 /// This is the single source for the command's name in every user-facing
 /// message (help text, usage errors, hints, the version line). Build such
 /// strings from this constant instead of writing the name out.
-pub const COMMAND_NAME: &str = "local-ai";
+pub const COMMAND_NAME: &str = "ai-workspace";

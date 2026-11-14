@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "Release packaging: like Learning Corner, pushing a version tag makes GitHub Actions build an .rpm that can be installed on Fedora with dnf. The installed command could be `local-ai` instead of `ai`."
+**Input**: User description: "Release packaging: like Learning Corner, pushing a version tag makes GitHub Actions build an .rpm that can be installed on Fedora with dnf. The installed command could be `ai-workspace` instead of `ai`."
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -20,7 +20,7 @@ The maintainer wants the current version of the tool on their Fedora machine wit
 
 **Acceptance Scenarios**:
 
-1. **Given** a Fedora machine without the tool installed, **When** the user installs the release package with the system package manager, **Then** the `local-ai` command is available on the standard path without any further step.
+1. **Given** a Fedora machine without the tool installed, **When** the user installs the release package with the system package manager, **Then** the `ai-workspace` command is available on the standard path without any further step.
 2. **Given** the package is installed, **When** the user runs the command's version option, **Then** it reports the same version as the release the package came from.
 3. **Given** an older release is installed, **When** the user installs a newer release package, **Then** the system package manager treats it as an upgrade and the newer version replaces the older one.
 4. **Given** the package is installed, **When** the user removes it with the system package manager, **Then** the command is gone and the user's workspace folder and its contents are untouched.
@@ -76,8 +76,8 @@ Before installing, the maintainer checks that the package file they downloaded i
 
 - **FR-001**: The project MUST produce an installable Fedora package for 64-bit Intel/AMD machines containing the command-line tool.
 - **FR-002**: The package MUST install the command on the system's standard command path so it is available in every terminal without any further user step.
-- **FR-003**: The installed command MUST be named `local-ai`.
-- **FR-004**: The rename from `ai` to `local-ai` MUST be delivered as part of this feature. Every place the command names itself (help text, usage and error messages, version output, and the project documentation) MUST say `local-ai`, and the `ai` name MUST NOT be provided by the package or by a build from source.
+- **FR-003**: The installed command MUST be named `ai-workspace`.
+- **FR-004**: The rename from `ai` to `ai-workspace` MUST be delivered as part of this feature. Every place the command names itself (help text, usage and error messages, version output, and the project documentation) MUST say `ai-workspace`, and the `ai` name MUST NOT be provided by the package or by a build from source.
 - **FR-005**: The package MUST carry a name, version, summary, and license, and its version MUST equal the version the project declares at the tagged commit.
 - **FR-006**: The project MUST be licensed under MIT or Apache-2.0 at the user's choice, the same as Learning Corner. Both license texts MUST be added to the repository, the package MUST declare that license, and the package MUST install both license texts alongside the command.
 - **FR-007**: Installing a newer package over an older one MUST be handled by the system package manager as an upgrade.
@@ -116,7 +116,8 @@ Before installing, the maintainer checks that the package file they downloaded i
 
 - The release process runs on the project's existing code-hosting service's automation, as Learning Corner's does. This was explicitly requested and is build-time only; the tool itself stays offline (FR-018).
 - Fedora on 64-bit Intel/AMD is the only target. Debian packages, portable bundles, and other architectures are out of scope; Learning Corner ships them because it is a public desktop app, and this tool is Fedora-first.
-- The package is named after the command, `local-ai`. The repository and the project's own name ("AI Workspace") do not change.
+- The command was first drafted as `local-ai` and changed to `ai-workspace` by the maintainer on 2026-11-14, before any release, so that the command, crate, repository and product share one name.
+- The package is named after the command, `ai-workspace`. The repository and the project's own name ("AI Workspace") do not change.
 - The rename ships in the same pull request as packaging, by the maintainer's decision (2026-11-14), as an accepted exception to the one-feature-per-pull-request rule: the package and the command name it installs are released together.
 - The repository stays private until the maintainer decides to publish it. Adding the license files does not change that.
 - Releases are drafts first, mirroring Learning Corner.

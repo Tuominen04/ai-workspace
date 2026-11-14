@@ -77,7 +77,7 @@ Release packaging
 
 Fedora `.rpm` built from a version tag.
 
-Command renamed to `local-ai`.
+Command renamed to `ai-workspace`.
 
 The next user-interface step (TUI or desktop app) is undecided.
 

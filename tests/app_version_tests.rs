@@ -2,24 +2,24 @@ use assert_cmd::Command;
 
 #[test]
 fn version_flag_prints_command_name_and_package_version() {
-    let mut cmd = Command::cargo_bin("local-ai").expect("binary should exist");
+    let mut cmd = Command::cargo_bin("ai-workspace").expect("binary should exist");
     cmd.arg("--version");
     cmd.assert()
         .success()
-        .stdout(format!("local-ai {}\n", env!("CARGO_PKG_VERSION")));
+        .stdout(format!("ai-workspace {}\n", env!("CARGO_PKG_VERSION")));
 }
 
 #[test]
-fn help_names_the_command_local_ai() {
-    let mut cmd = Command::cargo_bin("local-ai").expect("binary should exist");
+fn help_names_the_command_ai_workspace() {
+    let mut cmd = Command::cargo_bin("ai-workspace").expect("binary should exist");
     cmd.arg("--help");
     let output = cmd.assert().success().get_output().stdout.clone();
     let help = String::from_utf8(output).expect("help output should be UTF-8");
 
     for expected in [
-        "  local-ai init",
-        "  local-ai search --query TEXT [--project PROJECT] [--limit N]",
-        "  local-ai --help",
+        "  ai-workspace init",
+        "  ai-workspace search --query TEXT [--project PROJECT] [--limit N]",
+        "  ai-workspace --help",
     ] {
         assert!(
             help.lines().any(|line| line.starts_with(expected)),
@@ -37,10 +37,10 @@ fn help_names_the_command_local_ai() {
 }
 
 #[test]
-fn usage_errors_name_the_command_local_ai() {
-    let mut cmd = Command::cargo_bin("local-ai").expect("binary should exist");
+fn usage_errors_name_the_command_ai_workspace() {
+    let mut cmd = Command::cargo_bin("ai-workspace").expect("binary should exist");
     cmd.args(["project", "show"]);
     cmd.assert().failure().stderr(predicates::str::contains(
-        "usage: local-ai project show PROJECT",
+        "usage: ai-workspace project show PROJECT",
     ));
 }

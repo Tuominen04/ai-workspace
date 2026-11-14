@@ -12,17 +12,17 @@ Workspace manager behavior is filesystem-first and user-visible:
 ## Command Surface
 
 ```text
-local-ai config show
-local-ai project create --name NAME [--description TEXT]
-local-ai project show PROJECT
-local-ai validate
+ai-workspace config show
+ai-workspace project create --name NAME [--description TEXT]
+ai-workspace project show PROJECT
+ai-workspace validate
 ```
 
 ## Safety Gate
 
 Validation uses an enforcement gate for safety:
 
-- `local-ai validate` is always available and reports blocking issues.
-- `local-ai project create` and `local-ai project show` run pre-action checks and refuse to
+- `ai-workspace validate` is always available and reports blocking issues.
+- `ai-workspace project create` and `ai-workspace project show` run pre-action checks and refuse to
   continue when blocking issues are present.
-- After fixing issues, run `local-ai validate` again, then retry gated commands.
+- After fixing issues, run `ai-workspace validate` again, then retry gated commands.
