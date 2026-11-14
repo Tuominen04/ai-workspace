@@ -163,6 +163,7 @@ The core's front-end API:
 pub struct Engine { /* WorkspacePaths + RootSource */ }
 impl Engine {
     pub fn open() -> Result<Engine>;                    // resolves the root (ADR-0007)
+    pub fn at(paths: WorkspacePaths, source: RootSource) -> Engine;  // an already resolved root
     pub fn paths(&self) -> &WorkspacePaths;
     pub fn root_source(&self) -> &RootSource;
     pub fn init(&self) -> Result<InitReport>;
@@ -183,6 +184,7 @@ pub struct Session { /* project, model, runtime, chat history */ }
 impl Session {
     pub fn open(engine: &Engine, project: &Project) -> Result<Session>;
     pub fn summary(&self) -> SessionSummary<'_>;        // project, first context, runtime status
+    pub fn can_chat(&self) -> bool;                     // a runtime is available
     pub fn send(&mut self, message: &str) -> Result<String>;
     pub fn close(self) -> Result<usize>;                // temporary grants revoked
 }
