@@ -1,3 +1,4 @@
+use crate::COMMAND_NAME;
 use crate::config::{ensure_default_workspace_config, load_workspace_config};
 use crate::context::{ContextSnapshot, build_context_snapshot};
 use crate::error::{AppError, Result};
@@ -36,7 +37,7 @@ pub fn run_session(paths: &WorkspacePaths) -> Result<()> {
     ui::render_startup_banner(paths);
     if projects.is_empty() {
         println!("No workspaces found under {}", paths.projects.display());
-        println!("Create a project directory there and rerun ai.");
+        println!("Create a project directory there and rerun {COMMAND_NAME}.");
         return Err(AppError::Message("no workspaces found".to_string()));
     }
 
@@ -150,7 +151,7 @@ pub fn run_search(
     limit: usize,
 ) -> Result<()> {
     paths.ensure_layout()?;
-    enforce_validation_gate(paths, "ai search")?;
+    enforce_validation_gate(paths, "search")?;
 
     let project = match project {
         Some(name) => {
@@ -224,7 +225,7 @@ pub fn create_managed_project(
     description: Option<&str>,
 ) -> Result<()> {
     paths.ensure_layout()?;
-    enforce_validation_gate(paths, "ai project create")?;
+    enforce_validation_gate(paths, "project create")?;
     let config = load_workspace_config(paths)?;
     let created = create_project(paths, &config, name, description)?;
     ui::render_project_created(&created);
@@ -233,7 +234,7 @@ pub fn create_managed_project(
 
 pub fn show_managed_project(paths: &WorkspacePaths, project: &str) -> Result<()> {
     paths.ensure_layout()?;
-    enforce_validation_gate(paths, "ai project show")?;
+    enforce_validation_gate(paths, "project show")?;
     let config = load_workspace_config(paths)?;
     let (project, metadata) = inspect_project(paths, &config, project)?;
     ui::render_project_details(&project, &metadata);
@@ -252,19 +253,22 @@ pub fn validate_workspace_state(paths: &WorkspacePaths) -> Result<()> {
     Err(AppError::Message("workspace validation failed".to_string()))
 }
 
-fn enforce_validation_gate(paths: &WorkspacePaths, action: &str) -> Result<()> {
+/// Refuses to continue while blocking validation issues exist. `subcommand`
+/// is the gated command without the command name, e.g. `"project create"`.
+fn enforce_validation_gate(paths: &WorkspacePaths, subcommand: &str) -> Result<()> {
     let result = validate_workspace(paths)?;
     if result.valid {
         return Ok(());
     }
 
-    ui::render_validation_gate_block(action, &result);
-    Err(AppError::ValidationGateBlocked(action.to_string()))
+    let action = format!("{COMMAND_NAME} {subcommand}");
+    ui::render_validation_gate_block(&action, &result);
+    Err(AppError::ValidationGateBlocked(action))
 }
 
 pub fn grant_permission(paths: &WorkspacePaths, project: Option<&str>, path: &str) -> Result<()> {
     paths.ensure_layout()?;
-    enforce_validation_gate(paths, "ai permission grant")?;
+    enforce_validation_gate(paths, "permission grant")?;
     let config = load_workspace_config(paths)?;
     let project = resolve_permission_project(paths, &config, project)?;
     let result = grant_temporary_permission(paths, &project, path)?;
@@ -274,7 +278,7 @@ pub fn grant_permission(paths: &WorkspacePaths, project: Option<&str>, path: &st
 
 pub fn revoke_permission(paths: &WorkspacePaths, project: Option<&str>, path: &str) -> Result<()> {
     paths.ensure_layout()?;
-    enforce_validation_gate(paths, "ai permission revoke")?;
+    enforce_validation_gate(paths, "permission revoke")?;
     let config = load_workspace_config(paths)?;
     let project = resolve_permission_project(paths, &config, project)?;
     let result = revoke_temporary_permission(paths, &project, path)?;
@@ -290,7 +294,7 @@ pub fn view_permissions(
     page_size: usize,
 ) -> Result<()> {
     paths.ensure_layout()?;
-    enforce_validation_gate(paths, "ai permission view")?;
+    enforce_validation_gate(paths, "permission view")?;
     let config = load_workspace_config(paths)?;
     let project = resolve_permission_project(paths, &config, project)?;
     let snapshot = build_permission_view(

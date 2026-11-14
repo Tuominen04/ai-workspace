@@ -1,11 +1,12 @@
 [package]
 name = "ai-workspace"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2024"
 description = "Local-first AI workspace manager for Fedora"
+license = "MIT OR Apache-2.0"
 
 [[bin]]
-name = "ai"
+name = "local-ai"
 path = "src/main.rs"
 
 [dependencies]
@@ -17,3 +18,15 @@ ureq = { version = "2", default-features = false }
 [dev-dependencies]
 assert_cmd = "2"
 predicates = "2"
+
+# The Fedora package, built by `cargo generate-rpm --auto-req builtin`
+# (see docs/release.md). Version, license and summary come from [package].
+[package.metadata.generate-rpm]
+name = "local-ai"
+# The package runs no install scripts, so it does not need a shell.
+require-sh = false
+assets = [
+    { source = "target/release/local-ai", dest = "/usr/bin/local-ai", mode = "755" },
+    { source = "LICENSE-MIT", dest = "/usr/share/licenses/local-ai/LICENSE-MIT", mode = "644" },
+    { source = "LICENSE-APACHE", dest = "/usr/share/licenses/local-ai/LICENSE-APACHE", mode = "644" },
+]

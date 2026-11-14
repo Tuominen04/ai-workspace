@@ -8,7 +8,7 @@ Permission scope is explicit and session-bound.
   - `Base/`
   - selected project directory
 - Temporary scope:
-  - explicit local filesystem paths granted with `ai permission grant`
+  - explicit local filesystem paths granted with `local-ai permission grant`
 
 Temporary permissions are removed when the session ends.
 
@@ -17,19 +17,19 @@ Temporary permissions are removed when the session ends.
 Grant access:
 
 ```text
-ai permission grant [--project PROJECT] --path PATH
+local-ai permission grant [--project PROJECT] --path PATH
 ```
 
 View effective access scope:
 
 ```text
-ai permission view [--project PROJECT] [--filter TEXT] [--page N] [--page-size N]
+local-ai permission view [--project PROJECT] [--filter TEXT] [--page N] [--page-size N]
 ```
 
 Revoke temporary access:
 
 ```text
-ai permission revoke [--project PROJECT] --path PATH
+local-ai permission revoke [--project PROJECT] --path PATH
 ```
 
 If `--project` is omitted and more than one project exists, the command returns a
