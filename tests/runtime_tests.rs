@@ -6,7 +6,9 @@ use std::thread;
 
 fn spawn_mock_server(response: String) -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("mock listener should bind");
-    let addr = listener.local_addr().expect("mock listener should have a local addr");
+    let addr = listener
+        .local_addr()
+        .expect("mock listener should have a local addr");
     thread::spawn(move || {
         if let Ok((mut stream, _)) = listener.accept() {
             let mut buffer = [0u8; 4096];
@@ -42,7 +44,9 @@ fn send_chat_message_parses_successful_response() {
 
 #[test]
 fn send_chat_message_maps_non_200_to_runtime_request_failed() {
-    let response = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".to_string();
+    let response =
+        "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+            .to_string();
     let base_url = spawn_mock_server(response);
 
     let runtime = RuntimeManager::new();

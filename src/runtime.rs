@@ -54,6 +54,12 @@ pub struct RuntimeManager {
     ollama: Option<Child>,
 }
 
+impl Default for RuntimeManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RuntimeManager {
     pub fn new() -> Self {
         Self { ollama: None }
@@ -87,7 +93,8 @@ impl RuntimeManager {
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(RuntimeStatus {
                 running: false,
                 started_here: false,
-                detail: "Ollama is not installed; session continues without a local runtime".to_string(),
+                detail: "Ollama is not installed; session continues without a local runtime"
+                    .to_string(),
             }),
             Err(error) => Err(error.into()),
         }
