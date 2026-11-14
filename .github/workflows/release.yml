@@ -43,6 +43,7 @@ jobs:
           git merge-base --is-ancestor "$GITHUB_SHA" origin/main \
             || { echo "::error::$GITHUB_REF_NAME is not on main"; exit 1; }
 
+      # The version lives once, under [workspace.package] in the root Cargo.toml.
       - name: Tag matches the version
         run: |
           version="${GITHUB_REF_NAME#v}"
@@ -56,17 +57,17 @@ jobs:
 
       # The lock is committed; a release contains exactly the dependency versions in it.
       - name: Test
-        run: cargo test --locked
+        run: cargo test --locked --workspace
 
       - name: Build
-        run: cargo build --release --locked
+        run: cargo build --release --locked -p ai-workspace-cli
 
       # `--auto-req builtin` records the libraries the binary needs without RPM tooling
-      # on the runner.
+      # on the runner. The package is described in the CLI crate's Cargo.toml.
       - name: Package
         run: |
           cargo install --locked cargo-generate-rpm@0.21.1
-          cargo generate-rpm --auto-req builtin
+          cargo generate-rpm -p crates/ai-workspace-cli --auto-req builtin
 
       # Install the package on the system it is for and run the command, so a package
       # that does not install or does not start never reaches a release.

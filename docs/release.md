@@ -25,7 +25,8 @@ install it; download it again.
 
 ## Cutting a release
 
-1. Set the new `version` in `Cargo.toml`, run `cargo build` so `Cargo.lock`
+1. Set the new `version` under `[workspace.package]` in the root `Cargo.toml`,
+   run `cargo build` so `Cargo.lock`
    follows, and merge that to `main`.
 2. Tag the merged commit and push the tag:
 
@@ -53,7 +54,7 @@ The workflow ends without creating anything when:
 
 - a release for the tag already exists (the existing one is left unchanged);
 - the tagged commit is not on `main`;
-- the tag does not equal `version` in `Cargo.toml` (the message states both);
+- the tag does not equal `version` in the root `Cargo.toml` (the message states both);
 - any test fails, or `Cargo.lock` is out of date;
 - the package does not install on Fedora, or the installed command does not
   report `ai-workspace <version>`.
@@ -66,9 +67,10 @@ it again from the fixed `main`.
 
 Two jobs:
 
-- **build** (read-only access): checks the tag, runs `cargo test --locked`,
-  builds with `cargo build --release --locked`, packages with
-  `cargo generate-rpm --auto-req builtin`, installs the package in a Fedora
+- **build** (read-only access): checks the tag, runs
+  `cargo test --locked --workspace`, builds with
+  `cargo build --release --locked -p ai-workspace-cli`, packages with
+  `cargo generate-rpm -p crates/ai-workspace-cli --auto-req builtin`, installs the package in a Fedora
   container and runs `ai-workspace --version`, then writes `SHA256SUMS`.
 - **draft** (write access): takes the finished files and creates the draft
   release. It checks out no code and runs no project code.
@@ -79,14 +81,15 @@ For checking the package, not for releasing it:
 
 ```bash
 cargo install --locked cargo-generate-rpm@0.21.1   # once
-cargo build --release --locked
-cargo generate-rpm --auto-req builtin
+cargo build --release --locked -p ai-workspace-cli
+cargo generate-rpm -p crates/ai-workspace-cli --auto-req builtin
 rpm -qip target/generate-rpm/ai-workspace-*.rpm   # name, version, license
 rpm -qlp target/generate-rpm/ai-workspace-*.rpm   # the three installed files
 ```
 
 The package is described under `[package.metadata.generate-rpm]` in
-`Cargo.toml`.
+`crates/ai-workspace-cli/Cargo.toml`; its version, license and summary come
+from that crate, which takes version and license from the workspace.
 
 ## Not included yet
 
