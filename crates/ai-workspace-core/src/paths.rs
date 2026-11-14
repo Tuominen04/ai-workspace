@@ -129,11 +129,9 @@ pub fn env_root_override() -> Option<PathBuf> {
 /// Path of the per-user settings file: `$XDG_CONFIG_HOME/ai-workspace/config.toml`
 /// when that variable holds an absolute path, else `~/.config/ai-workspace/config.toml`.
 pub fn user_config_file() -> Result<PathBuf> {
-    let base = match env::var_os("XDG_CONFIG_HOME").map(PathBuf::from) {
-        Some(dir) if dir.is_absolute() => dir,
-        _ => home_dir()?.join(".config"),
-    };
-    Ok(base.join(USER_CONFIG_DIR_NAME).join(USER_CONFIG_FILE_NAME))
+    Ok(platform::user_config_dir()?
+        .join(USER_CONFIG_DIR_NAME)
+        .join(USER_CONFIG_FILE_NAME))
 }
 
 /// Reads `workspace_root` from the user config file. A missing file or a file
@@ -227,8 +225,30 @@ pub fn canonical_local_existing_path(input: &str) -> Result<PathBuf> {
         .map_err(|_| AppError::InvalidPermissionPath(input.to_string()))
 }
 
-fn home_dir() -> Result<PathBuf> {
-    env::var_os("HOME")
-        .map(PathBuf::from)
-        .ok_or(AppError::MissingHome)
+use platform::home_dir;
+
+/// Where the operating system keeps a user's folders. Every platform
+/// difference in folder lookup lives here, so supporting another system means
+/// changing this module only. Today only the Linux/XDG behavior exists
+/// (ADR-0008).
+mod platform {
+    use crate::error::{AppError, Result};
+    use std::env;
+    use std::path::PathBuf;
+
+    /// The user's home folder, from `HOME`.
+    pub(super) fn home_dir() -> Result<PathBuf> {
+        env::var_os("HOME")
+            .map(PathBuf::from)
+            .ok_or(AppError::MissingHome)
+    }
+
+    /// The folder for per-user settings: `$XDG_CONFIG_HOME` when that is an
+    /// absolute path, else `~/.config`.
+    pub(super) fn user_config_dir() -> Result<PathBuf> {
+        match env::var_os("XDG_CONFIG_HOME").map(PathBuf::from) {
+            Some(dir) if dir.is_absolute() => Ok(dir),
+            _ => Ok(home_dir()?.join(".config")),
+        }
+    }
 }
