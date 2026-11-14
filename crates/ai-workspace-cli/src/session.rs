@@ -1,41 +1,19 @@
 use crate::COMMAND_NAME;
 use crate::ui;
-use ai_workspace_core::config::{ensure_default_workspace_config, load_workspace_config};
+use ai_workspace_core::Engine;
+use ai_workspace_core::config::load_workspace_config;
 use ai_workspace_core::context::{ContextSnapshot, build_context_snapshot};
-use ai_workspace_core::error::{AppError, GatedOperation, Result};
-use ai_workspace_core::paths::{
-    RootSource, WorkspacePaths, canonical_workspace_root, env_root_override, user_config_file,
-    write_user_root,
-};
+use ai_workspace_core::error::{AppError, Result};
+use ai_workspace_core::paths::WorkspacePaths;
 use ai_workspace_core::runtime::{ChatMessage, OLLAMA_BASE_URL, RuntimeManager};
-use ai_workspace_core::search::{self, SearchCandidate, SourceKind};
 use ai_workspace_core::workspace::{
-    PermissionStatus, PermissionViewOptions, Project, ProjectMetadata, collect_markdown_files,
-    create_project, discover_projects, grant_temporary_permission, initialize_permission_session,
-    inspect_project, resolve_model, revoke_temporary_permission, terminate_permission_session,
-    validate_workspace, view_permissions as build_permission_view,
+    Project, ProjectMetadata, initialize_permission_session, inspect_project, resolve_model,
+    terminate_permission_session,
 };
-use std::path::PathBuf;
 
-pub fn init_workspace(paths: &WorkspacePaths) -> Result<()> {
-    paths.ensure_layout()?;
-    let bootstrap = ensure_default_workspace_config(paths, false)?;
-    ui::render_init(paths, &bootstrap.path, bootstrap.created);
-    Ok(())
-}
-
-pub fn print_status(paths: &WorkspacePaths, source: &RootSource) -> Result<()> {
-    paths.ensure_layout()?;
-    let _ = ensure_default_workspace_config(paths, false)?;
-    let projects = discover_projects(paths)?;
-    ui::render_status(paths, source, &projects);
-    Ok(())
-}
-
-pub fn run_session(paths: &WorkspacePaths) -> Result<()> {
-    paths.ensure_layout()?;
-    let _ = ensure_default_workspace_config(paths, false)?;
-    let projects = discover_projects(paths)?;
+pub fn run_session(engine: &Engine) -> Result<()> {
+    let paths = engine.paths();
+    let projects = engine.projects()?;
 
     ui::render_startup_banner(paths);
     if projects.is_empty() {
@@ -88,96 +66,6 @@ fn initial_context_query(metadata: &ProjectMetadata) -> String {
     }
 }
 
-/// Collects the permission-scoped candidate set search ranks against: Base
-/// knowledge, and — when a project is selected — that project's Knowledge
-/// and Session content, each only if the active permission session currently
-/// grants it. See `research.md` Decision 3.
-pub fn collect_search_candidates(
-    paths: &WorkspacePaths,
-    project: Option<&Project>,
-) -> Result<Vec<SearchCandidate>> {
-    let mut candidates = Vec::new();
-
-    for relative_path in collect_markdown_files(paths.base_knowledge_path(), 2)? {
-        candidates.push(SearchCandidate {
-            source_kind: SourceKind::Base,
-            path: paths.base_knowledge_path().join(relative_path),
-        });
-    }
-
-    let Some(project) = project else {
-        return Ok(candidates);
-    };
-
-    let permission_set = initialize_permission_session(paths, project)?;
-    let granted_roots: Vec<PathBuf> = permission_set
-        .default_grants
-        .iter()
-        .chain(permission_set.temporary_grants.iter())
-        .filter(|grant| grant.status == PermissionStatus::Active)
-        .map(|grant| PathBuf::from(&grant.canonical_path))
-        .collect();
-
-    let knowledge_root = project.path.join("Knowledge");
-    if granted_roots
-        .iter()
-        .any(|root| knowledge_root.starts_with(root))
-    {
-        for relative_path in collect_markdown_files(&knowledge_root, 2).unwrap_or_default() {
-            candidates.push(SearchCandidate {
-                source_kind: SourceKind::Project,
-                path: knowledge_root.join(relative_path),
-            });
-        }
-    }
-
-    let session_root = project.path.join("Session");
-    if granted_roots
-        .iter()
-        .any(|root| session_root.starts_with(root))
-    {
-        for relative_path in collect_markdown_files(&session_root, 2).unwrap_or_default() {
-            candidates.push(SearchCandidate {
-                source_kind: SourceKind::Session,
-                path: session_root.join(relative_path),
-            });
-        }
-    }
-
-    Ok(candidates)
-}
-
-pub fn run_search(
-    paths: &WorkspacePaths,
-    query: &str,
-    project: Option<&str>,
-    limit: usize,
-) -> Result<()> {
-    paths.ensure_layout()?;
-    enforce_validation_gate(paths, GatedOperation::Search)?;
-
-    let project = match project {
-        Some(name) => {
-            let config = load_workspace_config(paths)?;
-            let (project, _) = inspect_project(paths, &config, name)?;
-            Some(project)
-        }
-        None => None,
-    };
-
-    let candidates = collect_search_candidates(paths, project.as_ref())?;
-    let search_query = search::SearchQuery::new(query, limit);
-    let outcome = search::search(&candidates, &search_query);
-
-    if outcome.results.is_empty() {
-        ui::render_no_search_results(&outcome);
-    } else {
-        ui::render_search_results(&outcome);
-    }
-
-    Ok(())
-}
-
 fn run_chat_loop(
     paths: &WorkspacePaths,
     project: &Project,
@@ -213,130 +101,4 @@ fn run_chat_loop(
             }
         }
     }
-}
-
-pub fn show_workspace_config(paths: &WorkspacePaths, source: &RootSource) -> Result<()> {
-    paths.ensure_layout()?;
-    let config = load_workspace_config(paths)?;
-    ui::render_workspace_config(&config, paths, source);
-    Ok(())
-}
-
-/// Saves `path` as the workspace folder in the user config file. Needs no
-/// existing workspace, so it never runs the validation gate.
-pub fn set_workspace_root(path: &str) -> Result<()> {
-    let root = canonical_workspace_root(path)?;
-    let config_file = user_config_file()?;
-    write_user_root(&config_file, &root)?;
-    ui::render_workspace_root_set(&root, &config_file, env_root_override().as_deref());
-    Ok(())
-}
-
-pub fn create_managed_project(
-    paths: &WorkspacePaths,
-    name: &str,
-    description: Option<&str>,
-) -> Result<()> {
-    paths.ensure_layout()?;
-    enforce_validation_gate(paths, GatedOperation::ProjectCreate)?;
-    let config = load_workspace_config(paths)?;
-    let created = create_project(paths, &config, name, description)?;
-    ui::render_project_created(&created);
-    Ok(())
-}
-
-pub fn show_managed_project(paths: &WorkspacePaths, project: &str) -> Result<()> {
-    paths.ensure_layout()?;
-    enforce_validation_gate(paths, GatedOperation::ProjectShow)?;
-    let config = load_workspace_config(paths)?;
-    let (project, metadata) = inspect_project(paths, &config, project)?;
-    ui::render_project_details(&project, &metadata);
-    Ok(())
-}
-
-pub fn validate_workspace_state(paths: &WorkspacePaths) -> Result<()> {
-    paths.ensure_layout()?;
-    let result = validate_workspace(paths)?;
-    ui::render_validation_result(&result);
-
-    if result.valid {
-        return Ok(());
-    }
-
-    Err(AppError::Message("workspace validation failed".to_string()))
-}
-
-/// Refuses to continue while blocking validation issues exist.
-fn enforce_validation_gate(paths: &WorkspacePaths, operation: GatedOperation) -> Result<()> {
-    let result = validate_workspace(paths)?;
-    if result.valid {
-        return Ok(());
-    }
-
-    Err(AppError::ValidationGateBlocked {
-        operation,
-        result: Box::new(result),
-    })
-}
-
-pub fn grant_permission(paths: &WorkspacePaths, project: Option<&str>, path: &str) -> Result<()> {
-    paths.ensure_layout()?;
-    enforce_validation_gate(paths, GatedOperation::PermissionGrant)?;
-    let config = load_workspace_config(paths)?;
-    let project = resolve_permission_project(paths, &config, project)?;
-    let result = grant_temporary_permission(paths, &project, path)?;
-    ui::render_permission_grant(&project, &result);
-    Ok(())
-}
-
-pub fn revoke_permission(paths: &WorkspacePaths, project: Option<&str>, path: &str) -> Result<()> {
-    paths.ensure_layout()?;
-    enforce_validation_gate(paths, GatedOperation::PermissionRevoke)?;
-    let config = load_workspace_config(paths)?;
-    let project = resolve_permission_project(paths, &config, project)?;
-    let result = revoke_temporary_permission(paths, &project, path)?;
-    ui::render_permission_revoke(&project, &result);
-    Ok(())
-}
-
-pub fn view_permissions(
-    paths: &WorkspacePaths,
-    project: Option<&str>,
-    filter: Option<&str>,
-    page: usize,
-    page_size: usize,
-) -> Result<()> {
-    paths.ensure_layout()?;
-    enforce_validation_gate(paths, GatedOperation::PermissionView)?;
-    let config = load_workspace_config(paths)?;
-    let project = resolve_permission_project(paths, &config, project)?;
-    let snapshot = build_permission_view(
-        paths,
-        &project,
-        &PermissionViewOptions {
-            filter: filter.map(|value| value.to_string()),
-            page,
-            page_size,
-        },
-    )?;
-    ui::render_permission_view(&project, &snapshot);
-    Ok(())
-}
-
-fn resolve_permission_project(
-    paths: &WorkspacePaths,
-    config: &ai_workspace_core::config::WorkspaceConfig,
-    requested_project: Option<&str>,
-) -> Result<Project> {
-    if let Some(project_name) = requested_project {
-        let (project, _) = inspect_project(paths, config, project_name)?;
-        return Ok(project);
-    }
-
-    let projects = discover_projects(paths)?;
-    if projects.len() == 1 {
-        return Ok(projects[0].clone());
-    }
-
-    Err(AppError::MissingProjectContext)
 }

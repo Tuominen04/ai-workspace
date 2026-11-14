@@ -1,4 +1,5 @@
 use crate::COMMAND_NAME;
+use ai_workspace_core::SetRootReport;
 use ai_workspace_core::config::WorkspaceConfig;
 use ai_workspace_core::context::ContextSnapshot;
 use ai_workspace_core::error::{AppError, Result};
@@ -205,17 +206,13 @@ pub fn render_workspace_config(
     }
 }
 
-pub fn render_workspace_root_set(
-    root: &std::path::Path,
-    config_file: &std::path::Path,
-    env_override: Option<&std::path::Path>,
-) {
-    outln!("Workspace folder set to {}", root.display());
-    outln!("Saved in {}", config_file.display());
+pub fn render_workspace_root_set(report: &SetRootReport) {
+    outln!("Workspace folder set to {}", report.root.display());
+    outln!("Saved in {}", report.config_file.display());
     outln!(
         "Run `{COMMAND_NAME} init` to create the standard layout there if it is not set up yet."
     );
-    if let Some(env_root) = env_override {
+    if let Some(env_root) = &report.env_override {
         outln!(
             "Note: {} is set to {} and takes precedence. Unset it to use the saved folder.",
             ai_workspace_core::paths::WORKSPACE_ROOT_ENV,
