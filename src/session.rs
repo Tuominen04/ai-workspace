@@ -39,8 +39,8 @@ pub fn run_session(paths: &WorkspacePaths) -> Result<()> {
 
     ui::render_startup_banner(paths);
     if projects.is_empty() {
-        println!("No workspaces found under {}", paths.projects.display());
-        println!("Create a project directory there and rerun {COMMAND_NAME}.");
+        outln!("No workspaces found under {}", paths.projects.display());
+        outln!("Create a project directory there and rerun {COMMAND_NAME}.");
         return Err(AppError::Message("no workspaces found".to_string()));
     }
 

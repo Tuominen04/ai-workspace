@@ -395,39 +395,39 @@ fn print_help() {
     // Descriptions on their own line are indented to the description column.
     let pad = " ".repeat(cmd.len() + 13);
 
-    println!("AI Workspace");
-    println!();
-    println!("Usage:");
-    println!("  {cmd}           Launch an interactive workspace session");
-    println!("  {cmd} init      Create the standard ~/AI directory layout");
-    println!("  {cmd} status    Show discovered workspaces and root paths");
-    println!("  {cmd} validate  Validate workspace and project definitions");
-    println!("  {cmd} config show");
-    println!("{pad}Show workspace configuration");
-    println!("  {cmd} {USAGE_CONFIG_SET_ROOT}");
-    println!("{pad}Remember PATH as the workspace folder (instead of ~/AI)");
-    println!("  {cmd} {USAGE_PROJECT_CREATE}");
-    println!("{pad}Create a managed project workspace");
-    println!("  {cmd} {USAGE_PROJECT_SHOW}");
-    println!("{pad}Show project metadata and managed paths");
-    println!("  {cmd} {USAGE_PERMISSION_GRANT}");
-    println!("{pad}Grant temporary permission for a local path");
-    println!("  {cmd} {USAGE_PERMISSION_VIEW}");
-    println!("{pad}Show active default and temporary permissions");
-    println!("  {cmd} {USAGE_PERMISSION_REVOKE}");
-    println!("{pad}Revoke a temporary permission");
-    println!("  {cmd} {USAGE_SEARCH}");
-    println!("{pad}Search accessible workspace knowledge, ranked by relevance");
-    println!("  {cmd} --version Show the {cmd} binary version");
-    println!("  {cmd} --help    Show this help message");
-    println!();
-    println!("Environment:");
-    println!(
+    outln!("AI Workspace");
+    outln!();
+    outln!("Usage:");
+    outln!("  {cmd}           Launch an interactive workspace session");
+    outln!("  {cmd} init      Create the standard ~/AI directory layout");
+    outln!("  {cmd} status    Show discovered workspaces and root paths");
+    outln!("  {cmd} validate  Validate workspace and project definitions");
+    outln!("  {cmd} config show");
+    outln!("{pad}Show workspace configuration");
+    outln!("  {cmd} {USAGE_CONFIG_SET_ROOT}");
+    outln!("{pad}Remember PATH as the workspace folder (instead of ~/AI)");
+    outln!("  {cmd} {USAGE_PROJECT_CREATE}");
+    outln!("{pad}Create a managed project workspace");
+    outln!("  {cmd} {USAGE_PROJECT_SHOW}");
+    outln!("{pad}Show project metadata and managed paths");
+    outln!("  {cmd} {USAGE_PERMISSION_GRANT}");
+    outln!("{pad}Grant temporary permission for a local path");
+    outln!("  {cmd} {USAGE_PERMISSION_VIEW}");
+    outln!("{pad}Show active default and temporary permissions");
+    outln!("  {cmd} {USAGE_PERMISSION_REVOKE}");
+    outln!("{pad}Revoke a temporary permission");
+    outln!("  {cmd} {USAGE_SEARCH}");
+    outln!("{pad}Search accessible workspace knowledge, ranked by relevance");
+    outln!("  {cmd} --version Show the {cmd} binary version");
+    outln!("  {cmd} --help    Show this help message");
+    outln!();
+    outln!("Environment:");
+    outln!(
         "  AI_WORKSPACE_HOME  Override the workspace folder for this shell (wins over the saved setting)"
     );
 }
 
 fn print_version() -> Result<()> {
-    println!("{COMMAND_NAME} {}", env!("CARGO_PKG_VERSION"));
+    outln!("{COMMAND_NAME} {}", env!("CARGO_PKG_VERSION"));
     Ok(())
 }

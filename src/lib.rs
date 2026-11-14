@@ -1,3 +1,21 @@
+/// Like `println!`, but a closed stdout (for example `ai-workspace --help | head`)
+/// does not panic. See [`ui::write_stdout`].
+macro_rules! outln {
+    () => {
+        $crate::ui::write_stdout(format_args!("\n"))
+    };
+    ($($arg:tt)*) => {
+        $crate::ui::write_stdout(format_args!("{}\n", format_args!($($arg)*)))
+    };
+}
+
+/// Like `print!`, but a closed stdout does not panic. See [`ui::write_stdout`].
+macro_rules! out {
+    ($($arg:tt)*) => {
+        $crate::ui::write_stdout(format_args!($($arg)*))
+    };
+}
+
 pub mod app;
 pub mod config;
 pub mod context;
