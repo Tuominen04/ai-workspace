@@ -108,8 +108,54 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
   await page.addInitScript(
     ({ fixture, failures }) => {
       window.__calls = [];
+      // A little state, so writes show up in later reads.
+      const projects = [...fixture.status.projects];
+      const grants = [
+        { path: "/home/me/AI/Base", category: "default", status: "active", granted_at: "1794690257" },
+        { path: "/home/me/AI/Projects/security", category: "default", status: "active", granted_at: "1794690257" },
+      ];
       const answers = {
-        workspace_status: () => fixture.status,
+        workspace_status: () => ({ ...fixture.status, projects: [...projects] }),
+        workspace_init: () => ({ root: fixture.status.root, config_file: fixture.config.config_file, config_created: true }),
+        workspace_set_root: ({ path }) =>
+          path.includes("nope")
+            ? Promise.reject({ kind: "InvalidWorkspaceRoot", message: `cannot use '${path}' as the workspace folder: it does not exist` })
+            : {
+                root: path,
+                config_file: "/home/me/.config/ai-workspace/config.toml",
+                env_override: fixture.envOverride ?? null,
+                session_closed: null,
+              },
+        workspace_switch_to_saved: () => ({
+          root: "/home/me/ai-local/workspaces",
+          root_source: "user config file /home/me/.config/ai-workspace/config.toml (AI_WORKSPACE_HOME ignored until the app restarts)",
+          session_closed: null,
+        }),
+        project_create: ({ name, description }) => {
+          if (name === "Config")
+            return Promise.reject({ kind: "InvalidProjectName", message: "invalid project name 'Config'" });
+          const slug = name.toLowerCase().replace(/\s+/g, "-");
+          projects.push({ name: slug, path: `/home/me/AI/Projects/${slug}` });
+          fixture.details[slug] = { ...fixture.details.security, name: slug, display_name: name, description, model: null, path: `/home/me/AI/Projects/${slug}` };
+          return fixture.details[slug];
+        },
+        permission_list: ({ filter }) => {
+          const shown = grants.filter((g) => !filter || g.path.toLowerCase().includes(filter.toLowerCase()));
+          return { project: "security", session_id: "security-1", total: shown.length, page: 1, page_size: 25, grants: shown };
+        },
+        permission_grant: ({ path }) => {
+          if (path.includes("missing"))
+            return Promise.reject({ kind: "InvalidPermissionPath", message: `invalid permission path '${path}'` });
+          const existing = grants.find((g) => g.path === path);
+          if (!existing) grants.unshift({ path, category: "temporary", status: "active", granted_at: "1794690300" });
+          return { project: "security", path, created: !existing };
+        },
+        permission_revoke: ({ path }) => {
+          const index = grants.findIndex((g) => g.path === path && g.category === "temporary");
+          if (index < 0) return Promise.reject({ kind: "PermissionGrantNotFound", message: `no active temporary permission found for '${path}'` });
+          grants.splice(index, 1);
+          return { project: "security", path };
+        },
         workspace_config: () => fixture.config,
         workspace_validate: () => fixture.validation,
         project_show: ({ name }) =>

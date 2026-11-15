@@ -414,7 +414,7 @@ app does.
 
 ### Choosing the workspace folder
 
-AI Workspace keeps its workspace in `~/AI` unless you say otherwise. To use another folder, create it and name it in `~/.config/ai-workspace/config.toml` (or under `$XDG_CONFIG_HOME`), a small file you can write by hand:
+AI Workspace keeps its workspace in `~/AI` unless you say otherwise. To use another folder, create it and choose it in the app's Configuration tab (**Workspace folder**). The choice is saved in `~/.config/ai-workspace/config.toml` (or under `$XDG_CONFIG_HOME`), a small file you can also write by hand:
 
 ```toml
 workspace_root = "/home/you/ai-local/workspaces"
@@ -436,9 +436,8 @@ How a release is made is described in [docs/release.md](docs/release.md).
 
 The command-line front end is kept in the repository and tested, but no longer
 released (ADR-0010). Run it from a checkout with `cargo run -- <args>`; the
-commands below are written as the binary is named, `ai-workspace`. It can still
-do what the app cannot yet: create projects, grant and revoke permissions, and
-save the workspace folder.
+commands below are written as the binary is named, `ai-workspace`. The app does
+the same things from its window (ADR-0011).
 
 ## Workspace Manager Commands (v0.2)
 

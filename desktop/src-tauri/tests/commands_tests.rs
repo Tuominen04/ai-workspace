@@ -128,3 +128,73 @@ fn chat_commands_without_a_session_answer_plainly() {
     let closed = commands::session_close(&open).expect("closing nothing is fine");
     assert!(closed.is_none());
 }
+
+#[test]
+fn init_creates_a_workspace_and_keeps_an_existing_configuration() {
+    let engine = test_engine("init");
+    let first = commands::init(&engine).expect("init should succeed");
+    assert!(first.config_created);
+    assert!(engine.paths().workspace_config_file().exists());
+    let again = commands::init(&engine).expect("init twice is fine");
+    assert!(!again.config_created, "an existing configuration is kept");
+
+    let _ = std::fs::remove_dir_all(&engine.paths().root);
+}
+
+#[test]
+fn a_project_is_created_and_a_bad_name_refused() {
+    let engine = test_engine("create");
+    commands::init(&engine).expect("init should succeed");
+
+    let created = commands::create_project(&engine, "Home Lab", Some("  Router notes  "))
+        .expect("project should be created");
+    assert_eq!(created.name, "home-lab");
+    assert_eq!(created.description, "Router notes");
+    assert_eq!(commands::status(&engine).expect("status").projects.len(), 1);
+
+    let refused = commands::create_project(&engine, "Config", None).expect_err("reserved name");
+    assert_eq!(refused.kind, "InvalidProjectName");
+
+    let _ = std::fs::remove_dir_all(&engine.paths().root);
+}
+
+#[test]
+fn permissions_are_granted_listed_and_revoked() {
+    let engine = test_engine("permissions");
+    commands::init(&engine).expect("init should succeed");
+    commands::create_project(&engine, "Router", None).expect("project should be created");
+    let outside = engine.paths().root.join("outside");
+    std::fs::create_dir_all(&outside).expect("test should make a folder to grant");
+    let outside_text = outside.display().to_string();
+
+    let granted = commands::grant(&engine, "router", &outside_text).expect("grant should work");
+    assert!(granted.created);
+    let again = commands::grant(&engine, "router", &outside_text).expect("grants are idempotent");
+    assert!(!again.created);
+
+    let page = commands::permissions(&engine, "router", None, None, None).expect("list");
+    assert_eq!(page.total, 3, "Base, the project and the temporary grant");
+    let temporary = page
+        .grants
+        .iter()
+        .find(|grant| grant.category == "temporary")
+        .expect("the temporary grant is listed");
+    assert_eq!(temporary.status, "active");
+
+    let filtered =
+        commands::permissions(&engine, "router", Some("outside"), None, None).expect("filter");
+    assert_eq!(filtered.total, 1);
+
+    commands::revoke(&engine, "router", &temporary.path).expect("revoke should work");
+    let after = commands::permissions(&engine, "router", None, None, None).expect("list");
+    assert!(after.grants.iter().all(|grant| grant.category == "default"));
+
+    let missing = engine.paths().root.join("does-not-exist");
+    let denied = commands::grant(&engine, "router", &missing.display().to_string())
+        .expect_err("a missing path is refused");
+    assert_eq!(denied.kind, "InvalidPermissionPath");
+    let empty = commands::grant(&engine, "router", "  ").expect_err("an empty path is refused");
+    assert_eq!(empty.kind, "Shell");
+
+    let _ = std::fs::remove_dir_all(&engine.paths().root);
+}

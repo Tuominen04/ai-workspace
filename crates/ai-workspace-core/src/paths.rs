@@ -66,7 +66,13 @@ impl WorkspacePaths {
         if let Some(explicit_root) = env_root_override() {
             return Ok((Self::from_root(explicit_root), RootSource::Environment));
         }
+        Self::detect_saved_with_source()
+    }
 
+    /// Resolves the workspace folder as if `AI_WORKSPACE_HOME` were not set:
+    /// the user config file's `workspace_root`, else `~/AI`. For a front end
+    /// that has been asked to use the saved folder for the rest of its run.
+    pub fn detect_saved_with_source() -> Result<(Self, RootSource)> {
         let config_file = user_config_file()?;
         if let Some(root) = read_user_root(&config_file)? {
             return Ok((Self::from_root(root), RootSource::UserConfig(config_file)));

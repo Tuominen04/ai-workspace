@@ -358,6 +358,66 @@ instead of collecting two packages.
 
 Status
 
-Accepted. Supersedes the packaging part of ADR-0006 (the `cargo-generate-rpm`
+Accepted; the gaps listed under "What users lose for now" are closed by
+ADR-0011. Supersedes the packaging part of ADR-0006 (the `cargo-generate-rpm`
 package of the command line); the tag-triggered draft release, the command
 name and the license stand.
+
+---
+
+## ADR-0011
+
+The desktop app gains the workspace's write operations, so the installed app
+(ADR-0010) can do what the command line did:
+
+- **Create a project** (name and optional description), from the sidebar.
+- **Permissions**, a tab per project: the default and temporary grants with
+  their status, filtered and paged; **grant** temporary access to a path;
+  **revoke** a temporary grant. Grants live in the project's permission
+  session exactly as with the command line, and ending a chat session in that
+  project revokes them, as before.
+- **Choose the workspace folder**, in the Configuration tab: it is saved in
+  `~/.config/ai-workspace/config.toml` (ADR-0007). When `AI_WORKSPACE_HOME` is
+  set, the app says that the variable still wins.
+- **Initialize the workspace**: create the standard layout and default
+  configuration, from the Configuration tab when the file is missing and from
+  validation issues whose fix is to initialize.
+
+How:
+
+- **One core call per command, as before.** Each command calls the existing
+  `Engine` method (`create_project`, `grant`, `revoke`, `permissions`, `init`)
+  or `set_workspace_root`, so the validation gate, idempotent grants, denied
+  paths, audit events and canonical paths behave exactly as on the command
+  line. The project is always named explicitly: the window always has one
+  selected.
+- **Changing the workspace folder closes an open chat session first.** The
+  session belongs to the old workspace; closing it revokes its temporary grants
+  there instead of leaving them behind.
+- **Switch now.** When `AI_WORKSPACE_HOME` is set, saving a folder does not
+  change the folder in use, because the variable keeps its priority
+  (ADR-0007) and an app cannot unset its parent shell's variable. The app then
+  offers **Switch now**: until it restarts, it resolves the workspace as if
+  the variable were not set (saved folder, else `~/AI`) and says so wherever
+  it names the folder's source. The choice is held in memory only, so a
+  restart honours the variable again. The core gains `Engine::open_saved()`
+  for this; the variable's priority everywhere else is unchanged. Switching
+  also closes an open chat session first.
+- **Paths are typed or pasted.** No file dialog yet, so the app's permissions
+  stay at `core:default`; a folder picker (Tauri's dialog plugin) can come
+  later and would be its own small decision.
+- **Errors are shown where the action was taken** (a denied path under the
+  grant field, a refused gate with a pointer to Validation), using the core's
+  messages.
+
+Reason
+
+ADR-0010 made the desktop app the only thing installed, which left creating
+projects, permissions and the workspace folder to a command line that is no
+longer installed. These are the operations the core already exposes; the app
+only needs to call them and show the results, so this extends ADR-0009's shell
+without new engine behavior.
+
+Status
+
+Accepted

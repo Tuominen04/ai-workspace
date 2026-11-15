@@ -2,9 +2,13 @@ import { engine } from "../lib/engine";
 import { useLoad } from "../lib/useLoad";
 import { counted, fixText, issueWhere } from "../lib/words";
 import { Failure } from "./Failure";
+import { InitButton } from "./InitButton";
 
-/** A validation run: pass, or every issue with how to clear it. Never blocks anything itself. */
-export function ValidationPanel() {
+/**
+ * A validation run: pass, or every issue with how to clear it, with a button where the fix is
+ * to initialize. Never blocks anything itself.
+ */
+export function ValidationPanel({ onChanged }: { onChanged: () => void }) {
   const [validation, rerun] = useLoad(() => engine.workspace.validate(), "validate");
 
   return (
@@ -38,6 +42,16 @@ export function ValidationPanel() {
                   {issueWhere(issue)} · <code>{issue.code}</code> · <span className="path">{issue.path}</span>
                 </div>
                 <div className="fix">{fixText(issue.fix)}</div>
+                {issue.fix.kind === "run" && issue.fix.action === "init" && (
+                  <div>
+                    <InitButton
+                      onDone={() => {
+                        rerun();
+                        onChanged();
+                      }}
+                    />
+                  </div>
+                )}
               </li>
             ))}
           </ul>

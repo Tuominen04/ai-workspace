@@ -9,9 +9,16 @@ import { invoke } from "@tauri-apps/api/core";
 import type { CommandError } from "./bindings/CommandError";
 import type { Fix } from "./bindings/Fix";
 import type { FixAction } from "./bindings/FixAction";
+import type { Grant } from "./bindings/Grant";
+import type { GrantDone } from "./bindings/GrantDone";
+import type { InitDone } from "./bindings/InitDone";
 import type { Issue } from "./bindings/Issue";
+import type { PermissionPage } from "./bindings/PermissionPage";
 import type { ProjectDetails } from "./bindings/ProjectDetails";
 import type { ProjectSummary } from "./bindings/ProjectSummary";
+import type { RevokeDone } from "./bindings/RevokeDone";
+import type { RootSaved } from "./bindings/RootSaved";
+import type { SwitchDone } from "./bindings/SwitchDone";
 import type { SearchHit } from "./bindings/SearchHit";
 import type { SearchResults } from "./bindings/SearchResults";
 import type { SessionClosed } from "./bindings/SessionClosed";
@@ -25,9 +32,16 @@ export type {
   CommandError,
   Fix,
   FixAction,
+  Grant,
+  GrantDone,
+  InitDone,
   Issue,
+  PermissionPage,
   ProjectDetails,
   ProjectSummary,
+  RevokeDone,
+  RootSaved,
+  SwitchDone,
   SearchHit,
   SearchResults,
   SessionClosed,
@@ -93,9 +107,24 @@ export const engine = {
     /** Ranked matches in what may be read: Base, and with a project its Knowledge and Session. */
     search: (query: string, project: string | null, limit?: number) =>
       call<SearchResults>("workspace_search", { query, project, limit: limit ?? null }),
+    /** Creates the standard layout and, if missing, the default configuration. */
+    init: () => call<InitDone>("workspace_init"),
+    /** Saves another workspace folder; ends an open chat session first. */
+    setRoot: (path: string) => call<RootSaved>("workspace_set_root", { path }),
+    /** Ignore AI_WORKSPACE_HOME until the app restarts and use the saved folder; ends an open chat session first. */
+    switchToSaved: () => call<SwitchDone>("workspace_switch_to_saved"),
   },
   project: {
     show: (name: string) => call<ProjectDetails>("project_show", { name }),
+    create: (name: string, description: string) =>
+      call<ProjectDetails>("project_create", { name, description }),
+  },
+  permissions: {
+    /** One page of a project's grants, optionally filtered by path. */
+    list: (project: string, filter: string, page: number) =>
+      call<PermissionPage>("permission_list", { project, filter, page, pageSize: null }),
+    grant: (project: string, path: string) => call<GrantDone>("permission_grant", { project, path }),
+    revoke: (project: string, path: string) => call<RevokeDone>("permission_revoke", { project, path }),
   },
   chat: {
     /** Opens a session in a project, closing any open one first. May take a while: it can start Ollama. */

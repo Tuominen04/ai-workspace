@@ -13,8 +13,8 @@ use ai_workspace_core::paths::{RootSource, WorkspacePaths};
 use ai_workspace_core::runtime::RuntimeStatus;
 use ai_workspace_core::search::SearchOutcome;
 use ai_workspace_core::workspace::{
-    Action, Project, ProjectMetadata, SuggestedFix, ValidationIssue, ValidationResult,
-    ValidationSeverity,
+    Action, PermissionCategory, PermissionGrant, PermissionStatus, PermissionViewSnapshot, Project,
+    ProjectMetadata, SuggestedFix, ValidationIssue, ValidationResult, ValidationSeverity,
 };
 use serde::Serialize;
 use std::path::Path;
@@ -371,4 +371,115 @@ impl WorkspaceSettings {
             recorded_config: config.config_path.clone(),
         }
     }
+}
+
+/// One grant in a project's permission session.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct Grant {
+    /// The canonical path; pass it back to revoke.
+    pub path: String,
+    /// "default" (Base and the project, always granted) or "temporary".
+    pub category: String,
+    /// "active", or "unavailable" when the path has disappeared since it was granted.
+    pub status: String,
+    /// Unix seconds.
+    pub granted_at: String,
+}
+
+impl From<&PermissionGrant> for Grant {
+    fn from(grant: &PermissionGrant) -> Self {
+        Self {
+            path: grant.canonical_path.clone(),
+            category: match grant.category {
+                PermissionCategory::Default => "default",
+                PermissionCategory::Temporary => "temporary",
+            }
+            .to_string(),
+            status: match grant.status {
+                PermissionStatus::Active => "active",
+                PermissionStatus::Unavailable => "unavailable",
+            }
+            .to_string(),
+            granted_at: grant.granted_at.clone(),
+        }
+    }
+}
+
+/// One page of a project's permissions.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct PermissionPage {
+    pub project: String,
+    pub session_id: String,
+    /// Grants matching the filter, across all pages.
+    pub total: u32,
+    pub page: u32,
+    pub page_size: u32,
+    pub grants: Vec<Grant>,
+}
+
+impl PermissionPage {
+    pub fn new(project: &Project, snapshot: &PermissionViewSnapshot) -> Self {
+        Self {
+            project: project.name.clone(),
+            session_id: snapshot.session_id.clone(),
+            total: count(snapshot.total_count),
+            page: count(snapshot.page),
+            page_size: count(snapshot.page_size),
+            grants: snapshot.entries.iter().map(Grant::from).collect(),
+        }
+    }
+}
+
+/// What granting did.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct GrantDone {
+    pub project: String,
+    pub path: String,
+    /// `false` when the path was already granted (grants are idempotent).
+    pub created: bool,
+}
+
+/// What revoking did.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct RevokeDone {
+    pub project: String,
+    pub path: String,
+}
+
+/// What initializing did.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct InitDone {
+    pub root: String,
+    pub config_file: String,
+    /// `true` if the configuration file was written now, `false` if one was kept.
+    pub config_created: bool,
+}
+
+/// What saving a workspace folder did.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct RootSaved {
+    /// The canonical folder saved.
+    pub root: String,
+    /// The settings file it was saved in.
+    pub config_file: String,
+    /// Set when `AI_WORKSPACE_HOME` is set and so still decides the folder: what it names.
+    pub env_override: Option<String>,
+    /// The chat session that was ended because it belonged to the previous folder.
+    pub session_closed: Option<SessionClosed>,
+}
+
+/// What **Switch now** did: the folder now in use, and why.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct SwitchDone {
+    pub root: String,
+    pub root_source: String,
+    /// The chat session that was ended because it belonged to the previous folder.
+    pub session_closed: Option<SessionClosed>,
 }

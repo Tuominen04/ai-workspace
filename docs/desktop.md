@@ -7,25 +7,32 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
 
 ## What it does
 
-The first version is read-only plus chat:
-
 - **Sidebar** — the workspace folder, where that choice came from, and the projects. Choosing
-  a project scopes the other tabs to it.
+  a project scopes the other tabs to it. **New project** creates one (name and an optional
+  description).
 - **Overview** — the workspace's folders, or the chosen project's description, model and folders.
-- **Validation** — a validation run, with how to clear each issue.
+- **Validation** — a validation run, with how to clear each issue. Where the fix is to
+  initialize the workspace, a button does it.
 - **Search** — ranked results from Base knowledge and the chosen project's Knowledge and
   Session folders.
+- **Chat** — a session in the chosen project: opening it grants the project's default
+  permissions and builds the first context; each message rebuilds the context from what was
+  asked; ending it revokes temporary permissions. Quitting the app ends an open session too.
+- **Permissions** — the chosen project's grants: the defaults (Base and the project) and any
+  temporary ones, with their status, a filter and pages. **Grant** gives temporary access to
+  a path you type or paste; **Revoke** takes a temporary grant away. Paths that do not exist
+  are refused, and every change is written to `Logs/permissions-events.log`.
 - **Configuration** — the workspace configuration (`Config/workspace.toml`): the folder in
   use and why, the configuration file, the default model, the project file name and the
-  folders new projects get. Read-only; edit the file to change it.
-- **Chat** — a session in the chosen project, like `ai-workspace` with no arguments: opening it
-  grants the project's default permissions and builds the first context; each message rebuilds
-  the context from what was asked; ending it revokes temporary permissions. Quitting the app
-  ends an open session too.
+  folders new projects get. **Workspace folder** saves another folder in
+  `~/.config/ai-workspace/config.toml` (an open chat session is ended first). If
+  `AI_WORKSPACE_HOME` is set it still takes precedence; the app says so and offers
+  **Switch now**, which ignores the variable until the app restarts. When the
+  configuration file is missing, **Initialize** creates the standard layout and defaults.
 - **Theme** — System, Light or Dark, at the bottom of the sidebar.
 
-Creating projects, granting permissions and choosing the workspace folder are not in the app
-yet; the command line, run from source (`cargo run -- <args>`), still does them.
+Project details, search and permission changes are refused while validation reports blocking
+issues, as on the command line.
 
 The app finds the workspace as follows: `AI_WORKSPACE_HOME`, else `workspace_root` in
 `~/.config/ai-workspace/config.toml`, else `~/AI`.

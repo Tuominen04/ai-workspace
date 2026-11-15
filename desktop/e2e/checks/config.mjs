@@ -27,7 +27,10 @@ const browser = await launch();
   await page.goto(URL);
   await page.getByRole("tab", { name: "Configuration" }).click();
   await page.getByRole("alert").waitFor();
-  check("a missing file is explained", (await page.locator(".content").textContent()).includes("Initializing the workspace creates one"));
+  check("a missing file is explained", (await page.locator(".content").textContent()).includes("has no configuration file yet"));
+  await page.getByRole("button", { name: "Initialize the workspace" }).click();
+  await page.waitForFunction(() => window.__calls.some((c) => c.command === "workspace_init"));
+  check("Initialize runs from the Configuration tab", true);
   await page.close();
 }
 

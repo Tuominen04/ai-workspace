@@ -13,12 +13,20 @@ pub mod dto;
 pub fn run() {
     let app = tauri::Builder::default()
         .manage(commands::OpenSession::default())
+        .manage(commands::RootChoice::default())
         .invoke_handler(tauri::generate_handler![
             commands::workspace_status,
             commands::workspace_config,
             commands::workspace_validate,
             commands::project_show,
             commands::workspace_search,
+            commands::workspace_init,
+            commands::workspace_set_root,
+            commands::workspace_switch_to_saved,
+            commands::project_create,
+            commands::permission_list,
+            commands::permission_grant,
+            commands::permission_revoke,
             commands::chat_open,
             commands::chat_send,
             commands::chat_close,
