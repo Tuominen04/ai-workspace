@@ -274,8 +274,8 @@ comes from `[workspace.package]` (`tauri.conf.json` and `package.json` carry
 none of their own), so one tag still versions every artifact.
 
 The first version is **read-only plus chat**: workspace status and projects,
-a project's details, validation results, search, and a chat window driving
-`Session`. Creating projects and changing permissions stay in the CLI for now.
+a project's details, the workspace configuration, validation results, search,
+and a chat window driving `Session`. Creating projects and changing permissions stay in the CLI for now.
 
 - **Commands are thin.** Each Tauri command calls one `Engine` or `Session`
   method and converts the result to a wire type in `dto.rs`. The core's own

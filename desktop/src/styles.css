@@ -93,6 +93,12 @@ h2 {
   font-size: 18px;
 }
 
+h3 {
+  margin: 8px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 code {
   font-family: ui-monospace, "SF Mono", "Cascadia Mono", monospace;
   font-size: 12px;
@@ -272,6 +278,11 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* Panels space their children with `gap`; paragraphs add no margins of their own. */
+.panel > p {
+  margin: 0;
 }
 
 .panel-head {

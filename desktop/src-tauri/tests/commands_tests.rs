@@ -39,6 +39,31 @@ fn status_lists_projects_and_says_where_the_root_came_from() {
 }
 
 #[test]
+fn configuration_is_read_and_a_missing_file_is_reported() {
+    let engine = test_engine("config");
+    engine.init().expect("init should succeed");
+
+    let settings = commands::settings(&engine).expect("settings should load");
+    assert_eq!(
+        settings.active_root,
+        engine.paths().root.display().to_string()
+    );
+    assert_eq!(settings.project_metadata_file, "project.toml");
+    assert_eq!(
+        settings.default_project_directories,
+        ["Knowledge", "Specs", "Resources", "Session"]
+    );
+    assert!(settings.config_file.ends_with("workspace.toml"));
+
+    std::fs::remove_file(engine.paths().workspace_config_file())
+        .expect("test should remove the workspace config");
+    let missing = commands::settings(&engine).expect_err("a missing file is an error");
+    assert_eq!(missing.kind, "ConfigMissing");
+
+    let _ = std::fs::remove_dir_all(&engine.paths().root);
+}
+
+#[test]
 fn search_returns_hits_and_refuses_an_empty_query() {
     let engine = test_engine("search");
     engine.init().expect("init should succeed");

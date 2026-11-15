@@ -10,7 +10,7 @@
 
 use crate::dto::{
     CommandError, ProjectDetails, SearchResults, SessionClosed, SessionInfo, Validation,
-    WorkspaceStatus,
+    WorkspaceSettings, WorkspaceStatus,
 };
 use ai_workspace_core::{Engine, Session};
 use std::sync::Mutex;
@@ -30,6 +30,15 @@ pub fn status(engine: &Engine) -> Outcome<WorkspaceStatus> {
         engine.paths(),
         engine.root_source(),
         &projects,
+    ))
+}
+
+pub fn settings(engine: &Engine) -> Outcome<WorkspaceSettings> {
+    let config = engine.config()?;
+    Ok(WorkspaceSettings::new(
+        engine.paths(),
+        engine.root_source(),
+        &config,
     ))
 }
 
@@ -119,6 +128,11 @@ fn engine() -> Outcome<Engine> {
 #[tauri::command]
 pub async fn workspace_status() -> Outcome<WorkspaceStatus> {
     status(&engine()?)
+}
+
+#[tauri::command]
+pub async fn workspace_config() -> Outcome<WorkspaceSettings> {
+    settings(&engine()?)
 }
 
 #[tauri::command]

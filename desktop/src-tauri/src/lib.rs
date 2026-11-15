@@ -15,6 +15,7 @@ pub fn run() {
         .manage(commands::OpenSession::default())
         .invoke_handler(tauri::generate_handler![
             commands::workspace_status,
+            commands::workspace_config,
             commands::workspace_validate,
             commands::project_show,
             commands::workspace_search,
