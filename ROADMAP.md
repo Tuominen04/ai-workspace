@@ -79,7 +79,9 @@ Fedora `.rpm` built from a version tag.
 
 Command renamed to `ai-workspace`.
 
-The next user-interface step (TUI or desktop app) is undecided.
+The next user-interface step is a Tauri desktop app (ADR-0009), started
+after the engine was split from the CLI (ADR-0008) and ahead of project
+agents.
 
 ---
 

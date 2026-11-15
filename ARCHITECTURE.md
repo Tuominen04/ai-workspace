@@ -67,6 +67,10 @@ crates/ai-workspace-core     Layers 2–6 (library ai_workspace_core)
 crates/ai-workspace-cli      Layer 1 (binary ai-workspace)
     app.rs                   Argument parsing, usage text, command dispatch
     ui.rs                    Rendering and terminal prompts
+
+desktop/                     Layer 1 (Tauri desktop app, ADR-0009)
+    src-tauri/               crate ai-workspace-desktop: window, commands, wire types (dto.rs)
+    src/                     React + TypeScript interface; src/lib/engine.ts is its only bridge
 ```
 
 The core returns data and never prints, reads the terminal, or names the command; a front end
@@ -98,8 +102,8 @@ Possible implementations
 
 The UI should never contain business logic.
 
-Implemented by `crates/ai-workspace-cli`. A second front end (for example a desktop app)
-would be another crate that depends on the core.
+Implemented by `crates/ai-workspace-cli` (the command line) and `desktop/` (a Tauri desktop
+app, ADR-0009). Both depend on the core and neither holds engine logic.
 
 ---
 
