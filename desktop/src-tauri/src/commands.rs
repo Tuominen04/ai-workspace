@@ -9,9 +9,10 @@
 //! Ollama, and a reply can take as long as the model needs, and neither may freeze the window.
 
 use crate::dto::{
-    CommandError, ProjectDetails, SearchResults, SessionClosed, SessionInfo, Validation,
-    WorkspaceSettings, WorkspaceStatus,
+    CommandError, GrantDone, InitDone, PermissionPage, ProjectDetails, RevokeDone, RootSaved,
+    SearchResults, SessionClosed, SessionInfo, Validation, WorkspaceSettings, WorkspaceStatus,
 };
+use ai_workspace_core::workspace::PermissionViewOptions;
 use ai_workspace_core::{Engine, Session};
 use std::sync::Mutex;
 
@@ -62,6 +63,85 @@ pub fn search(
     }
     let limit = limit.unwrap_or(DEFAULT_SEARCH_LIMIT).max(1) as usize;
     Ok(SearchResults::from(&engine.search(query, project, limit)?))
+}
+
+/// Grants shown per page when the interface asks for no particular size.
+pub const DEFAULT_PAGE_SIZE: u32 = 25;
+
+pub fn init(engine: &Engine) -> Outcome<InitDone> {
+    let report = engine.init()?;
+    Ok(InitDone {
+        root: engine.paths().root.display().to_string(),
+        config_file: report.config_path.display().to_string(),
+        config_created: report.config_created,
+    })
+}
+
+pub fn create_project(
+    engine: &Engine,
+    name: &str,
+    description: Option<&str>,
+) -> Outcome<ProjectDetails> {
+    let description = description.map(str::trim).filter(|text| !text.is_empty());
+    let created = engine.create_project(name, description)?;
+    Ok(ProjectDetails::new(&created.project, &created.metadata))
+}
+
+pub fn permissions(
+    engine: &Engine,
+    project: &str,
+    filter: Option<&str>,
+    page: Option<u32>,
+    page_size: Option<u32>,
+) -> Outcome<PermissionPage> {
+    let options = PermissionViewOptions {
+        filter: filter
+            .map(str::trim)
+            .filter(|text| !text.is_empty())
+            .map(str::to_string),
+        page: page.unwrap_or(1).max(1) as usize,
+        page_size: page_size.unwrap_or(DEFAULT_PAGE_SIZE).max(1) as usize,
+    };
+    let (project, snapshot) = engine.permissions(Some(project), options)?;
+    Ok(PermissionPage::new(&project, &snapshot))
+}
+
+pub fn grant(engine: &Engine, project: &str, path: &str) -> Outcome<GrantDone> {
+    let path = path.trim();
+    if path.is_empty() {
+        return Err(CommandError::shell("type or paste the path to grant"));
+    }
+    let (project, result) = engine.grant(Some(project), path)?;
+    Ok(GrantDone {
+        project: project.name,
+        path: result.grant.canonical_path,
+        created: result.created,
+    })
+}
+
+pub fn revoke(engine: &Engine, project: &str, path: &str) -> Outcome<RevokeDone> {
+    let (project, result) = engine.revoke(Some(project), path)?;
+    Ok(RevokeDone {
+        project: project.name,
+        path: result.revoked_path,
+    })
+}
+
+/// Saves `path` as the workspace folder. A chat session belongs to the folder it was opened
+/// in, so an open one is ended first, revoking its temporary grants there.
+pub fn set_root(open: &OpenSession, path: &str) -> Outcome<RootSaved> {
+    let path = path.trim();
+    if path.is_empty() {
+        return Err(CommandError::shell("type or paste the folder to use"));
+    }
+    let session_closed = session_close(open)?;
+    let report = ai_workspace_core::set_workspace_root(path)?;
+    Ok(RootSaved {
+        root: report.root.display().to_string(),
+        config_file: report.config_file.display().to_string(),
+        env_override: report.env_override.map(|p| p.display().to_string()),
+        session_closed,
+    })
 }
 
 /// Opens a session in `name`, closing any session already open first.
@@ -152,6 +232,44 @@ pub async fn workspace_search(
     limit: Option<u32>,
 ) -> Outcome<SearchResults> {
     search(&engine()?, &query, project.as_deref(), limit)
+}
+
+#[tauri::command]
+pub async fn workspace_init() -> Outcome<InitDone> {
+    init(&engine()?)
+}
+
+#[tauri::command]
+pub async fn workspace_set_root(
+    open: tauri::State<'_, OpenSession>,
+    path: String,
+) -> Outcome<RootSaved> {
+    set_root(&open, &path)
+}
+
+#[tauri::command]
+pub async fn project_create(name: String, description: Option<String>) -> Outcome<ProjectDetails> {
+    create_project(&engine()?, &name, description.as_deref())
+}
+
+#[tauri::command]
+pub async fn permission_list(
+    project: String,
+    filter: Option<String>,
+    page: Option<u32>,
+    page_size: Option<u32>,
+) -> Outcome<PermissionPage> {
+    permissions(&engine()?, &project, filter.as_deref(), page, page_size)
+}
+
+#[tauri::command]
+pub async fn permission_grant(project: String, path: String) -> Outcome<GrantDone> {
+    grant(&engine()?, &project, &path)
+}
+
+#[tauri::command]
+pub async fn permission_revoke(project: String, path: String) -> Outcome<RevokeDone> {
+    revoke(&engine()?, &project, &path)
 }
 
 #[tauri::command]
