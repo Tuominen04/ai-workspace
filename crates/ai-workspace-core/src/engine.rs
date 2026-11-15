@@ -56,6 +56,15 @@ impl Engine {
         Ok(Self::at(paths, source))
     }
 
+    /// Like [`Engine::open`], but ignores `AI_WORKSPACE_HOME`: the saved
+    /// folder, else `~/AI`. The variable's priority is the rule (ADR-0007);
+    /// this is for a front end the person has explicitly asked to use the
+    /// saved folder anyway (ADR-0011).
+    pub fn open_saved() -> Result<Self> {
+        let (paths, source) = WorkspacePaths::detect_saved_with_source()?;
+        Ok(Self::at(paths, source))
+    }
+
     /// An engine for an already resolved workspace folder.
     pub fn at(paths: WorkspacePaths, source: RootSource) -> Self {
         Self { paths, source }

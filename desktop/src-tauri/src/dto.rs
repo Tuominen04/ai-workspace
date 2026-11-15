@@ -473,3 +473,13 @@ pub struct RootSaved {
     /// The chat session that was ended because it belonged to the previous folder.
     pub session_closed: Option<SessionClosed>,
 }
+
+/// What **Switch now** did: the folder now in use, and why.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct SwitchDone {
+    pub root: String,
+    pub root_source: String,
+    /// The chat session that was ended because it belonged to the previous folder.
+    pub session_closed: Option<SessionClosed>,
+}

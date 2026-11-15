@@ -82,10 +82,10 @@ function Workspace() {
           {tab === "Permissions" && <PermissionsPanel project={project} />}
           {tab === "Configuration" && (
             <ConfigPanel
-              onChanged={(saved) => {
-                if (saved?.session_closed) setSession(null);
+              onChanged={(change) => {
+                if (change.sessionClosed) setSession(null);
                 // Another workspace has other projects; the old selection may not exist there.
-                if (saved) setProject(null);
+                if (change.folder) setProject(null);
                 refresh();
               }}
             />

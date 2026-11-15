@@ -2,7 +2,7 @@
 //! `XDG_CONFIG_HOME`. Those are process-wide, so this lives in its own test binary (its own
 //! process) and is the only test in it.
 
-use aiw_desktop::commands::{self, OpenSession};
+use aiw_desktop::commands::{self, OpenSession, RootChoice};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[test]
@@ -27,7 +27,9 @@ fn saving_a_folder_writes_the_settings_and_reports_an_override() {
     }
 
     let open = OpenSession::default();
-    let saved = commands::set_root(&open, &chosen.display().to_string()).expect("save works");
+    let choice = RootChoice::default();
+    let saved =
+        commands::set_root(&choice, &open, &chosen.display().to_string()).expect("save works");
     let canonical = std::fs::canonicalize(&chosen).expect("chosen folder exists");
     assert_eq!(saved.root, canonical.display().to_string());
     assert!(saved.env_override.is_none());
@@ -36,7 +38,7 @@ fn saving_a_folder_writes_the_settings_and_reports_an_override() {
         .expect("the settings file is written");
     assert!(settings.contains(&canonical.display().to_string()));
 
-    let missing = commands::set_root(&open, &base.join("nope").display().to_string())
+    let missing = commands::set_root(&choice, &open, &base.join("nope").display().to_string())
         .expect_err("a missing folder is refused");
     assert_eq!(missing.kind, "InvalidWorkspaceRoot");
 
@@ -44,7 +46,8 @@ fn saving_a_folder_writes_the_settings_and_reports_an_override() {
     unsafe {
         std::env::set_var("AI_WORKSPACE_HOME", base.join("elsewhere"));
     }
-    let overridden = commands::set_root(&open, &chosen.display().to_string()).expect("saved");
+    let overridden =
+        commands::set_root(&choice, &open, &chosen.display().to_string()).expect("saved");
     assert!(
         overridden.env_override.is_some(),
         "the variable still decides, and says so"

@@ -18,6 +18,7 @@ import type { ProjectDetails } from "./bindings/ProjectDetails";
 import type { ProjectSummary } from "./bindings/ProjectSummary";
 import type { RevokeDone } from "./bindings/RevokeDone";
 import type { RootSaved } from "./bindings/RootSaved";
+import type { SwitchDone } from "./bindings/SwitchDone";
 import type { SearchHit } from "./bindings/SearchHit";
 import type { SearchResults } from "./bindings/SearchResults";
 import type { SessionClosed } from "./bindings/SessionClosed";
@@ -40,6 +41,7 @@ export type {
   ProjectSummary,
   RevokeDone,
   RootSaved,
+  SwitchDone,
   SearchHit,
   SearchResults,
   SessionClosed,
@@ -109,6 +111,8 @@ export const engine = {
     init: () => call<InitDone>("workspace_init"),
     /** Saves another workspace folder; ends an open chat session first. */
     setRoot: (path: string) => call<RootSaved>("workspace_set_root", { path }),
+    /** Ignore AI_WORKSPACE_HOME until the app restarts and use the saved folder; ends an open chat session first. */
+    switchToSaved: () => call<SwitchDone>("workspace_switch_to_saved"),
   },
   project: {
     show: (name: string) => call<ProjectDetails>("project_show", { name }),

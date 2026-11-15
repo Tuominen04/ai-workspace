@@ -82,4 +82,26 @@ const browser = await launch();
   await page.close();
 }
 
+{
+  // AI_WORKSPACE_HOME set: saving warns and offers Switch now.
+  const page = await browser.newPage({ viewport: { width: 1100, height: 750 }, deviceScaleFactor: SHOTS ? 2 : 1 });
+  const { FIXTURE } = await import("../support.mjs");
+  const fixture = structuredClone(FIXTURE);
+  fixture.envOverride = "/tmp/ai-test";
+  await stubEngine(page, { fixture });
+  await page.goto(URL);
+  await page.getByRole("tab", { name: "Configuration" }).click();
+  await page.getByLabel("New workspace folder").fill("/home/me/ai-local/workspaces");
+  await page.getByRole("button", { name: "Use this folder" }).click();
+  await page.getByText("still decides the folder").waitFor();
+  check("an overriding AI_WORKSPACE_HOME is reported", true);
+  await page.getByRole("button", { name: "Switch now" }).click();
+  await page.getByRole("status", { name: "Switched" }).waitFor();
+  const text = await page.getByRole("status", { name: "Switched" }).textContent();
+  check("Switch now uses the saved folder and says the variable is ignored", text.includes("/home/me/ai-local/workspaces") && text.includes("ignored until the app restarts"));
+  check("the Switch now button goes away once switched", (await page.getByRole("button", { name: "Switch now" }).count()) === 0);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/switch-now.png` });
+  await page.close();
+}
+
 await finish(browser);

@@ -10,16 +10,49 @@
 
 use crate::dto::{
     CommandError, GrantDone, InitDone, PermissionPage, ProjectDetails, RevokeDone, RootSaved,
-    SearchResults, SessionClosed, SessionInfo, Validation, WorkspaceSettings, WorkspaceStatus,
+    SearchResults, SessionClosed, SessionInfo, SwitchDone, Validation, WorkspaceSettings,
+    WorkspaceStatus,
 };
 use ai_workspace_core::workspace::PermissionViewOptions;
 use ai_workspace_core::{Engine, Session};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 type Outcome<T> = Result<T, CommandError>;
 
 /// Search results shown when the interface asks for no particular number.
 pub const DEFAULT_SEARCH_LIMIT: u32 = 10;
+
+/// Whether the person chose **Switch now**: ignore `AI_WORKSPACE_HOME` until the app restarts
+/// and use the saved folder (ADR-0011). In memory only, so a restart honours the variable again.
+#[derive(Default)]
+pub struct RootChoice(AtomicBool);
+
+impl RootChoice {
+    pub fn ignoring_env(&self) -> bool {
+        self.0.load(Ordering::SeqCst)
+    }
+}
+
+/// The workspace as this run should see it: the usual lookup, or the saved folder once the
+/// person has switched. Resolved afresh on each call, touching nothing on disk.
+pub fn resolve(choice: &RootChoice) -> Outcome<Engine> {
+    if choice.ignoring_env() {
+        Ok(Engine::open_saved()?)
+    } else {
+        Ok(Engine::open()?)
+    }
+}
+
+/// Where the folder came from, in words, saying when the variable is being ignored.
+pub fn source_text(choice: &RootChoice, described: String) -> String {
+    match ai_workspace_core::paths::env_root_override() {
+        Some(_) if choice.ignoring_env() => {
+            format!("{described} (AI_WORKSPACE_HOME ignored until the app restarts)")
+        }
+        _ => described,
+    }
+}
 
 /// The one open session, if any. Opening another closes it; so does quitting the app.
 #[derive(Default)]
@@ -129,7 +162,7 @@ pub fn revoke(engine: &Engine, project: &str, path: &str) -> Outcome<RevokeDone>
 
 /// Saves `path` as the workspace folder. A chat session belongs to the folder it was opened
 /// in, so an open one is ended first, revoking its temporary grants there.
-pub fn set_root(open: &OpenSession, path: &str) -> Outcome<RootSaved> {
+pub fn set_root(choice: &RootChoice, open: &OpenSession, path: &str) -> Outcome<RootSaved> {
     let path = path.trim();
     if path.is_empty() {
         return Err(CommandError::shell("type or paste the folder to use"));
@@ -139,7 +172,25 @@ pub fn set_root(open: &OpenSession, path: &str) -> Outcome<RootSaved> {
     Ok(RootSaved {
         root: report.root.display().to_string(),
         config_file: report.config_file.display().to_string(),
-        env_override: report.env_override.map(|p| p.display().to_string()),
+        // Once switched, the variable no longer decides, so there is nothing to warn about.
+        env_override: report
+            .env_override
+            .filter(|_| !choice.ignoring_env())
+            .map(|p| p.display().to_string()),
+        session_closed,
+    })
+}
+
+/// **Switch now**: from here until the app restarts, use the saved folder (else `~/AI`) even
+/// though `AI_WORKSPACE_HOME` is set. An open chat session belongs to the old folder, so it is
+/// ended first.
+pub fn switch_to_saved(choice: &RootChoice, open: &OpenSession) -> Outcome<SwitchDone> {
+    let session_closed = session_close(open)?;
+    choice.0.store(true, Ordering::SeqCst);
+    let engine = resolve(choice)?;
+    Ok(SwitchDone {
+        root: engine.paths().root.display().to_string(),
+        root_source: source_text(choice, engine.root_source().describe()),
         session_closed,
     })
 }
@@ -199,85 +250,117 @@ fn lock(open: &OpenSession) -> Outcome<std::sync::MutexGuard<'_, Option<Session>
 
 // ---- Tauri wrappers -------------------------------------------------------------------------
 
-/// The workspace, resolved afresh on each call so a changed setting is picked up without a
-/// restart. Resolving touches nothing on disk.
-fn engine() -> Outcome<Engine> {
-    Ok(Engine::open()?)
+type Choice<'a> = tauri::State<'a, RootChoice>;
+
+#[tauri::command]
+pub async fn workspace_status(choice: Choice<'_>) -> Outcome<WorkspaceStatus> {
+    let mut status = status(&resolve(&choice)?)?;
+    status.root_source = source_text(&choice, status.root_source);
+    Ok(status)
 }
 
 #[tauri::command]
-pub async fn workspace_status() -> Outcome<WorkspaceStatus> {
-    status(&engine()?)
+pub async fn workspace_config(choice: Choice<'_>) -> Outcome<WorkspaceSettings> {
+    let mut settings = settings(&resolve(&choice)?)?;
+    settings.root_source = source_text(&choice, settings.root_source);
+    Ok(settings)
 }
 
 #[tauri::command]
-pub async fn workspace_config() -> Outcome<WorkspaceSettings> {
-    settings(&engine()?)
+pub async fn workspace_validate(choice: Choice<'_>) -> Outcome<Validation> {
+    validate(&resolve(&choice)?)
 }
 
 #[tauri::command]
-pub async fn workspace_validate() -> Outcome<Validation> {
-    validate(&engine()?)
-}
-
-#[tauri::command]
-pub async fn project_show(name: String) -> Outcome<ProjectDetails> {
-    project_details(&engine()?, &name)
+pub async fn project_show(choice: Choice<'_>, name: String) -> Outcome<ProjectDetails> {
+    project_details(&resolve(&choice)?, &name)
 }
 
 #[tauri::command]
 pub async fn workspace_search(
+    choice: Choice<'_>,
+
     query: String,
     project: Option<String>,
     limit: Option<u32>,
 ) -> Outcome<SearchResults> {
-    search(&engine()?, &query, project.as_deref(), limit)
+    search(&resolve(&choice)?, &query, project.as_deref(), limit)
 }
 
 #[tauri::command]
-pub async fn workspace_init() -> Outcome<InitDone> {
-    init(&engine()?)
+pub async fn workspace_init(choice: Choice<'_>) -> Outcome<InitDone> {
+    init(&resolve(&choice)?)
 }
 
 #[tauri::command]
 pub async fn workspace_set_root(
+    choice: Choice<'_>,
     open: tauri::State<'_, OpenSession>,
     path: String,
 ) -> Outcome<RootSaved> {
-    set_root(&open, &path)
+    set_root(&choice, &open, &path)
 }
 
 #[tauri::command]
-pub async fn project_create(name: String, description: Option<String>) -> Outcome<ProjectDetails> {
-    create_project(&engine()?, &name, description.as_deref())
+pub async fn workspace_switch_to_saved(
+    choice: Choice<'_>,
+    open: tauri::State<'_, OpenSession>,
+) -> Outcome<SwitchDone> {
+    switch_to_saved(&choice, &open)
+}
+
+#[tauri::command]
+pub async fn project_create(
+    choice: Choice<'_>,
+    name: String,
+    description: Option<String>,
+) -> Outcome<ProjectDetails> {
+    create_project(&resolve(&choice)?, &name, description.as_deref())
 }
 
 #[tauri::command]
 pub async fn permission_list(
+    choice: Choice<'_>,
+
     project: String,
     filter: Option<String>,
     page: Option<u32>,
     page_size: Option<u32>,
 ) -> Outcome<PermissionPage> {
-    permissions(&engine()?, &project, filter.as_deref(), page, page_size)
+    permissions(
+        &resolve(&choice)?,
+        &project,
+        filter.as_deref(),
+        page,
+        page_size,
+    )
 }
 
 #[tauri::command]
-pub async fn permission_grant(project: String, path: String) -> Outcome<GrantDone> {
-    grant(&engine()?, &project, &path)
+pub async fn permission_grant(
+    choice: Choice<'_>,
+    project: String,
+    path: String,
+) -> Outcome<GrantDone> {
+    grant(&resolve(&choice)?, &project, &path)
 }
 
 #[tauri::command]
-pub async fn permission_revoke(project: String, path: String) -> Outcome<RevokeDone> {
-    revoke(&engine()?, &project, &path)
+pub async fn permission_revoke(
+    choice: Choice<'_>,
+    project: String,
+    path: String,
+) -> Outcome<RevokeDone> {
+    revoke(&resolve(&choice)?, &project, &path)
 }
 
 #[tauri::command]
 pub async fn chat_open(
+    choice: Choice<'_>,
     open: tauri::State<'_, OpenSession>,
     project: String,
 ) -> Outcome<SessionInfo> {
-    session_open(&engine()?, &open, &project)
+    session_open(&resolve(&choice)?, &open, &project)
 }
 
 #[tauri::command]

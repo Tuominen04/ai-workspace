@@ -25,8 +25,9 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
 - **Configuration** — the workspace configuration (`Config/workspace.toml`): the folder in
   use and why, the configuration file, the default model, the project file name and the
   folders new projects get. **Workspace folder** saves another folder in
-  `~/.config/ai-workspace/config.toml` (an open chat session is ended first); if
-  `AI_WORKSPACE_HOME` is set it still takes precedence, and the app says so. When the
+  `~/.config/ai-workspace/config.toml` (an open chat session is ended first). If
+  `AI_WORKSPACE_HOME` is set it still takes precedence; the app says so and offers
+  **Switch now**, which ignores the variable until the app restarts. When the
   configuration file is missing, **Initialize** creates the standard layout and defaults.
 - **Theme** — System, Light or Dark, at the bottom of the sidebar.
 

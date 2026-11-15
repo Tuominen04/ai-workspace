@@ -120,7 +120,17 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
         workspace_set_root: ({ path }) =>
           path.includes("nope")
             ? Promise.reject({ kind: "InvalidWorkspaceRoot", message: `cannot use '${path}' as the workspace folder: it does not exist` })
-            : { root: path, config_file: "/home/me/.config/ai-workspace/config.toml", env_override: null, session_closed: null },
+            : {
+                root: path,
+                config_file: "/home/me/.config/ai-workspace/config.toml",
+                env_override: fixture.envOverride ?? null,
+                session_closed: null,
+              },
+        workspace_switch_to_saved: () => ({
+          root: "/home/me/ai-local/workspaces",
+          root_source: "user config file /home/me/.config/ai-workspace/config.toml (AI_WORKSPACE_HOME ignored until the app restarts)",
+          session_closed: null,
+        }),
         project_create: ({ name, description }) => {
           if (name === "Config")
             return Promise.reject({ kind: "InvalidProjectName", message: "invalid project name 'Config'" });
