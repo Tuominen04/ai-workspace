@@ -505,6 +505,76 @@ button:focus-visible {
   resize: vertical;
 }
 
+.new-project {
+  align-self: flex-start;
+}
+
+.new-project-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.notice {
+  color: var(--ok);
+  background: var(--ok-soft);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 0;
+}
+
+.notice p {
+  margin: 0;
+}
+
+.grants {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.grant {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.grant-path {
+  flex: 1;
+  min-width: 0;
+}
+
+.grant .fixed {
+  padding: 0 12px;
+}
+
+.badge.warn {
+  color: var(--warn);
+  background: transparent;
+  border: 1px solid var(--warn);
+}
+
+.kind.temporary {
+  background: var(--ok-soft);
+}
+
+.pager {
+  justify-content: center;
+}
+
 .no-runtime {
   max-width: 560px;
   margin: 15vh auto;

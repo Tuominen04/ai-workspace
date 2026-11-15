@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 
-import type { WorkspaceStatus } from "../lib/engine";
+import { engine, type WorkspaceStatus } from "../lib/engine";
+import { failureOf, type FailureInfo } from "../lib/failure";
 import { applyTheme, isTheme, savedTheme, THEMES, themeLabel, type Theme } from "../lib/theme";
 import type { Loaded } from "../lib/useLoad";
 import { Failure } from "./Failure";
@@ -10,10 +11,12 @@ type Props = {
   selected: string | null;
   onSelect: (project: string | null) => void;
   onRefresh: () => void;
+  /** A project was created: read the workspace again and select it. */
+  onCreated: (project: string) => void;
 };
 
 /** The workspace folder and its projects. Choosing one scopes the other panels to it. */
-export function Sidebar({ status, selected, onSelect, onRefresh }: Props) {
+export function Sidebar({ status, selected, onSelect, onRefresh, onCreated }: Props) {
   return (
     <aside className="sidebar">
       <header>
@@ -55,13 +58,9 @@ export function Sidebar({ status, selected, onSelect, onRefresh }: Props) {
                 {project.name}
               </button>
             ))}
-            {status.value.projects.length === 0 && (
-              <p className="muted small">
-                No projects yet. Creating projects from this window is coming; for now a project is
-                made with the command line from source.
-              </p>
-            )}
+            {status.value.projects.length === 0 && <p className="muted small">No projects yet.</p>}
           </nav>
+          <NewProject onCreated={onCreated} />
         </>
       )}
 
@@ -92,5 +91,68 @@ function ThemePicker() {
         ))}
       </select>
     </label>
+  );
+}
+
+/** "New project": a name and an optional description, created in the workspace. */
+function NewProject({ onCreated }: { onCreated: (project: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<FailureInfo | null>(null);
+
+  if (!open) {
+    return (
+      <button type="button" className="quiet new-project" onClick={() => setOpen(true)}>
+        + New project
+      </button>
+    );
+  }
+
+  async function create(event: FormEvent) {
+    event.preventDefault();
+    if (name.trim() === "") return;
+    setBusy(true);
+    setFailure(null);
+    try {
+      const created = await engine.project.create(name, description);
+      setOpen(false);
+      setName("");
+      setDescription("");
+      onCreated(created.name);
+    } catch (thrown) {
+      setFailure(failureOf(thrown));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="new-project-form" onSubmit={create} aria-label="New project">
+      <div className="label">New project</div>
+      <input
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+        placeholder="Name"
+        aria-label="Project name"
+        autoFocus
+      />
+      <input
+        value={description}
+        onChange={(event) => setDescription(event.target.value)}
+        placeholder="Description (optional)"
+        aria-label="Project description"
+      />
+      <div className="row">
+        <button type="submit" disabled={busy || name.trim() === ""}>
+          {busy ? "Creating…" : "Create"}
+        </button>
+        <button type="button" className="quiet" onClick={() => setOpen(false)} disabled={busy}>
+          Cancel
+        </button>
+      </div>
+      {failure && <Failure message={failure.message} kind={failure.kind} />}
+    </form>
   );
 }

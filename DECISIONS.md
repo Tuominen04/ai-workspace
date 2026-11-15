@@ -358,7 +358,8 @@ instead of collecting two packages.
 
 Status
 
-Accepted. Supersedes the packaging part of ADR-0006 (the `cargo-generate-rpm`
+Accepted; the gaps listed under "What users lose for now" are closed by
+ADR-0011. Supersedes the packaging part of ADR-0006 (the `cargo-generate-rpm`
 package of the command line); the tag-triggered draft release, the command
 name and the license stand.
 

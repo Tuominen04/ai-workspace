@@ -1,13 +1,26 @@
-import { engine } from "../lib/engine";
+import { useState, type FormEvent } from "react";
+
+import { engine, type RootSaved } from "../lib/engine";
+import { failureOf, type FailureInfo } from "../lib/failure";
 import { useLoad } from "../lib/useLoad";
 import { Failure } from "./Failure";
+import { InitButton } from "./InitButton";
+
+type Props = {
+  /** The workspace changed (initialized, or another folder chosen): read it again. */
+  onChanged: (saved: RootSaved | null) => void;
+};
 
 /**
- * The workspace configuration, read-only: what `Config/workspace.toml` says, and which folder
- * is in use. Settings are changed in the file itself for now.
+ * The workspace configuration: what `Config/workspace.toml` says and which folder is in use;
+ * choosing another workspace folder; initializing a workspace that has no configuration.
  */
-export function ConfigPanel() {
+export function ConfigPanel({ onChanged }: Props) {
   const [settings, reload] = useLoad(() => engine.workspace.config(), "config");
+  const changed = (saved: RootSaved | null) => {
+    reload();
+    onChanged(saved);
+  };
 
   return (
     <section className="panel">
@@ -23,13 +36,19 @@ export function ConfigPanel() {
         <>
           <Failure message={settings.message} kind={settings.kind} />
           {settings.kind === "ConfigMissing" && (
-            <p className="muted">
-              The workspace has no configuration file yet. Initializing the workspace creates
-              one with the defaults.
-            </p>
+            <>
+              <p className="muted">
+                The workspace has no configuration file yet. Initializing it creates the
+                standard folders and a configuration with the defaults.
+              </p>
+              <div>
+                <InitButton onDone={() => changed(null)} />
+              </div>
+            </>
           )}
         </>
       )}
+      <WorkspaceFolder onSaved={changed} />
       {settings.state === "ready" && (
         <>
           <dl className="facts">
@@ -69,5 +88,67 @@ export function ConfigPanel() {
         </>
       )}
     </section>
+  );
+}
+
+/** Choose another workspace folder; it is saved in the per-user settings file. */
+function WorkspaceFolder({ onSaved }: { onSaved: (saved: RootSaved) => void }) {
+  const [path, setPath] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState<RootSaved | null>(null);
+  const [failure, setFailure] = useState<FailureInfo | null>(null);
+
+  async function save(event: FormEvent) {
+    event.preventDefault();
+    if (path.trim() === "" || busy) return;
+    setBusy(true);
+    setFailure(null);
+    setSaved(null);
+    try {
+      const result = await engine.workspace.setRoot(path);
+      setSaved(result);
+      setPath("");
+      onSaved(result);
+    } catch (thrown) {
+      setFailure(failureOf(thrown));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <h3>Workspace folder</h3>
+      <p className="muted small">
+        Use another existing folder as the workspace. It is remembered in
+        ~/.config/ai-workspace/config.toml; an open chat session is ended first.
+      </p>
+      <form className="search" onSubmit={save} aria-label="Workspace folder">
+        <input
+          value={path}
+          onChange={(event) => setPath(event.target.value)}
+          placeholder="Folder, e.g. ~/ai-local/workspaces"
+          aria-label="New workspace folder"
+        />
+        <button type="submit" disabled={busy || path.trim() === ""}>
+          {busy ? "Saving…" : "Use this folder"}
+        </button>
+      </form>
+      {failure && <Failure message={failure.message} kind={failure.kind} />}
+      {saved && (
+        <div className="notice" role="status">
+          <p>Workspace folder set to {saved.root}.</p>
+          {saved.session_closed && (
+            <p>The chat session in {saved.session_closed.project} was ended.</p>
+          )}
+          {saved.env_override && (
+            <p>
+              AI_WORKSPACE_HOME is set to {saved.env_override} and still decides the folder.
+              Unset it to use the saved one.
+            </p>
+          )}
+        </div>
+      )}
+    </>
   );
 }

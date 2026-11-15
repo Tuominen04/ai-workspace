@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { ChatPanel } from "./components/ChatPanel";
 import { ConfigPanel } from "./components/ConfigPanel";
+import { PermissionsPanel } from "./components/PermissionsPanel";
 import { Failure } from "./components/Failure";
 import { Overview } from "./components/Overview";
 import { SearchPanel } from "./components/SearchPanel";
@@ -10,7 +11,7 @@ import { ValidationPanel } from "./components/ValidationPanel";
 import { engine, isDesktopRuntime, type SessionInfo } from "./lib/engine";
 import { useLoad } from "./lib/useLoad";
 
-const TABS = ["Overview", "Validation", "Search", "Chat", "Configuration"] as const;
+const TABS = ["Overview", "Validation", "Search", "Chat", "Permissions", "Configuration"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function App() {
@@ -37,7 +38,17 @@ function Workspace() {
 
   return (
     <div className="app">
-      <Sidebar status={status} selected={project} onSelect={setProject} onRefresh={refresh} />
+      <Sidebar
+        status={status}
+        selected={project}
+        onSelect={setProject}
+        onRefresh={refresh}
+        onCreated={(created) => {
+          refresh();
+          setProject(created);
+          setTab("Overview");
+        }}
+      />
       <main className="main">
         <div className="tabs" role="tablist">
           {TABS.map((name) => (
@@ -65,10 +76,20 @@ function Workspace() {
             ) : (
               <p className="muted panel">Reading the workspace…</p>
             ))}
-          {tab === "Validation" && <ValidationPanel />}
+          {tab === "Validation" && <ValidationPanel onChanged={refresh} />}
           {tab === "Search" && <SearchPanel project={project} />}
           {tab === "Chat" && <ChatPanel project={project} session={session} onSession={setSession} />}
-          {tab === "Configuration" && <ConfigPanel />}
+          {tab === "Permissions" && <PermissionsPanel project={project} />}
+          {tab === "Configuration" && (
+            <ConfigPanel
+              onChanged={(saved) => {
+                if (saved?.session_closed) setSession(null);
+                // Another workspace has other projects; the old selection may not exist there.
+                if (saved) setProject(null);
+                refresh();
+              }}
+            />
+          )}
         </div>
       </main>
     </div>
