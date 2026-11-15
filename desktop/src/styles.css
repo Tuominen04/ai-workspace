@@ -74,6 +74,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -429,6 +433,10 @@ button:focus-visible {
 
 .snippet {
   margin: 0;
+}
+
+.tab-page {
+  height: 100%;
 }
 
 .chat {

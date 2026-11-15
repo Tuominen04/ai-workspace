@@ -78,7 +78,12 @@ function Workspace() {
             ))}
           {tab === "Validation" && <ValidationPanel onChanged={refresh} />}
           {tab === "Search" && <SearchPanel project={project} />}
-          {tab === "Chat" && <ChatPanel project={project} session={session} onSession={setSession} />}
+          {/* Always mounted, only hidden on other tabs: the conversation, a half-typed message
+              and a reply still on its way survive switching tabs, until the session ends or the
+              app closes. */}
+          <div className="tab-page" hidden={tab !== "Chat"}>
+            <ChatPanel project={project} session={session} onSession={setSession} />
+          </div>
           {tab === "Permissions" && <PermissionsPanel project={project} />}
           {tab === "Configuration" && (
             <ConfigPanel
