@@ -138,6 +138,7 @@ export function ChatPanel({ project, session, onSession }: Props) {
         <ContextList title="Base" files={session.base_files} />
         <ContextList title="Project" files={session.project_files} />
         <ContextList title="Session" files={session.session_files} />
+        <ContextList title="Skipped (names look like secrets)" files={session.skipped_files} />
       </details>
 
       {project !== null && project !== session.project && (

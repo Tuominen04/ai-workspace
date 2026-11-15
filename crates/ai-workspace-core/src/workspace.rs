@@ -532,11 +532,47 @@ fn unix_timestamp() -> u64 {
         .unwrap_or(0)
 }
 
+/// The Markdown files under `root` that may be read, as paths relative to it. Files and
+/// folders whose names look like secrets are left out (see [`looks_like_secret`]).
 pub fn collect_markdown_files(root: &Path, max_depth: usize) -> Result<Vec<PathBuf>> {
-    let mut files = Vec::new();
-    collect_markdown_files_recursive(root, root, max_depth, &mut files)?;
-    files.sort();
-    Ok(files)
+    Ok(scan_markdown_files(root, max_depth)?.files)
+}
+
+/// What [`scan_markdown_files`] found, both lists relative to the root and sorted.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MarkdownScan {
+    /// Markdown files that may be read.
+    pub files: Vec<PathBuf>,
+    /// Files and folders left out because their names look like secrets.
+    pub skipped: Vec<PathBuf>,
+}
+
+/// Markdown files under `root`, up to `max_depth` levels, with what the block list skipped.
+pub fn scan_markdown_files(root: &Path, max_depth: usize) -> Result<MarkdownScan> {
+    let mut scan = MarkdownScan::default();
+    collect_markdown_files_recursive(root, root, max_depth, &mut scan)?;
+    scan.files.sort();
+    scan.skipped.sort();
+    Ok(scan)
+}
+
+/// The built-in block list (ADR-0012): names that look like keys, credentials or secrets are
+/// never read into context or search, even inside granted folders. Applies to file and folder
+/// names, case-insensitively: `*.key`, `*.pem`, `*.p12`, `*.kdbx`, `id_rsa*`, `id_ed25519*`,
+/// `.env*`, and anything containing `secret`, `password` or `token`.
+pub fn looks_like_secret(name: &str) -> bool {
+    let name = name.to_ascii_lowercase();
+    let blocked_extension = Path::new(&name)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| matches!(ext, "key" | "pem" | "p12" | "kdbx"));
+    blocked_extension
+        || name.starts_with("id_rsa")
+        || name.starts_with("id_ed25519")
+        || name.starts_with(".env")
+        || ["secret", "password", "token"]
+            .iter()
+            .any(|word| name.contains(word))
 }
 
 pub fn initialize_permission_session(
@@ -926,7 +962,7 @@ fn collect_markdown_files_recursive(
     root: &Path,
     current: &Path,
     depth_left: usize,
-    files: &mut Vec<PathBuf>,
+    scan: &mut MarkdownScan,
 ) -> Result<()> {
     if depth_left == 0 {
         return Ok(());
@@ -936,16 +972,27 @@ fn collect_markdown_files_recursive(
         let entry = entry?;
         let file_type = entry.file_type()?;
         let path = entry.path();
+        let relative = path.strip_prefix(root).unwrap_or(&path).to_path_buf();
+        let secret = looks_like_secret(&entry.file_name().to_string_lossy());
 
         if file_type.is_file() {
             if path.extension().is_some_and(|ext| ext == "md") {
-                files.push(path.strip_prefix(root).unwrap_or(&path).to_path_buf());
+                if secret {
+                    scan.skipped.push(relative);
+                } else {
+                    scan.files.push(relative);
+                }
             }
             continue;
         }
 
         if file_type.is_dir() {
-            collect_markdown_files_recursive(root, &path, depth_left - 1, files)?;
+            if secret {
+                // A folder named like a secret is not entered at all.
+                scan.skipped.push(relative);
+            } else {
+                collect_markdown_files_recursive(root, &path, depth_left - 1, scan)?;
+            }
         }
     }
 

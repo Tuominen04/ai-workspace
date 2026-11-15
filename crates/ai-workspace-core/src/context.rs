@@ -1,7 +1,7 @@
 use crate::error::Result;
 use crate::paths::WorkspacePaths;
 use crate::search::{self, SourceKind};
-use crate::workspace::{Project, collect_markdown_files};
+use crate::workspace::{MarkdownScan, Project, collect_markdown_files, scan_markdown_files};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -16,6 +16,8 @@ pub struct ContextSnapshot {
     pub assembled_content: String,
     pub source_count: usize,
     pub total_bytes: usize,
+    /// Files and folders left out because their names look like secrets (ADR-0012).
+    pub skipped_files: Vec<PathBuf>,
 }
 
 impl ContextSnapshot {
@@ -43,16 +45,30 @@ pub fn build_context_snapshot(
     project: Option<&Project>,
     query: Option<&str>,
 ) -> Result<ContextSnapshot> {
-    let base_files = collect_markdown_files(paths.base_knowledge_path(), 2)?;
+    let mut skipped_files = Vec::new();
+    let mut take = |root: &Path, scan: MarkdownScan| {
+        skipped_files.extend(scan.skipped.iter().map(|path| root.join(path)));
+        scan.files
+    };
+    let base_files = take(
+        paths.base_knowledge_path(),
+        scan_markdown_files(paths.base_knowledge_path(), 2)?,
+    );
     let mut project_files = Vec::new();
     let mut session_files = Vec::new();
     let project_root = project.map(|project| project.path.clone());
 
     if let Some(project) = project {
-        project_files =
-            collect_markdown_files(&project.path.join("Knowledge"), 2).unwrap_or_default();
-        session_files =
-            collect_markdown_files(&project.path.join("Session"), 2).unwrap_or_default();
+        let knowledge = project.path.join("Knowledge");
+        project_files = take(
+            &knowledge,
+            scan_markdown_files(&knowledge, 2).unwrap_or_default(),
+        );
+        let session = project.path.join("Session");
+        session_files = take(
+            &session,
+            scan_markdown_files(&session, 2).unwrap_or_default(),
+        );
     }
 
     let mut all_sources = Vec::new();
@@ -158,6 +174,7 @@ pub fn build_context_snapshot(
         assembled_content,
         source_count: selected_sources.len(),
         total_bytes,
+        skipped_files,
     })
 }
 

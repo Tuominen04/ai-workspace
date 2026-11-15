@@ -24,7 +24,9 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
   The chat names the model it talks to (the project's `model` in `project.toml`, else the
   workspace default) and whether the model's own instructions are kept: a model built from a
   Modelfile with a `SYSTEM` prompt, such as a security advisor, keeps those rules, and the
-  workspace context follows them (ADR-0012).
+  workspace context follows them (ADR-0012). Files whose names look like secrets (such as
+  `wifi-password.md` or anything in a `secrets/` folder) are never read; the context list shows
+  them under "Skipped".
 - **Permissions** — the chosen project's grants: the defaults (Base and the project) and any
   temporary ones, with their status, a filter and pages. **Grant** gives temporary access to
   a path you type or paste; **Revoke** takes a temporary grant away. Paths that do not exist

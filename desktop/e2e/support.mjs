@@ -100,6 +100,7 @@ export const FIXTURE = {
       "/home/me/AI/Projects/security/Knowledge/ssh.md",
     ],
     session_files: [],
+    skipped_files: ["/home/me/AI/Projects/security/Knowledge/wifi-password.md"],
   },
 };
 

@@ -239,6 +239,7 @@ fn agent_instructions_come_first_and_the_context_follows() {
         assembled_content: "--- router.md ---\nSSH only from the LAN.".to_string(),
         source_count: 1,
         total_bytes: 40,
+        skipped_files: Vec::new(),
     };
 
     let with_agent = snapshot.as_system_prompt_for(Some("You are a security advisor."));

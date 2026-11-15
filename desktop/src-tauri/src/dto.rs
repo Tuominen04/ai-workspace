@@ -311,6 +311,8 @@ pub struct SessionInfo {
     pub base_files: Vec<String>,
     pub project_files: Vec<String>,
     pub session_files: Vec<String>,
+    /// Files and folders left out because their names look like secrets.
+    pub skipped_files: Vec<String>,
 }
 
 impl SessionInfo {
@@ -333,6 +335,7 @@ impl SessionInfo {
             base_files: paths(&context.base_files),
             project_files: paths(&context.project_files),
             session_files: paths(&context.session_files),
+            skipped_files: paths(&context.skipped_files),
         }
     }
 }
