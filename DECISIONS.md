@@ -421,3 +421,55 @@ without new engine behavior.
 Status
 
 Accepted
+
+---
+
+## ADR-0012
+
+Project agents (Step C of `docs/plans/core-split-and-agents.md`): a project
+can run an Ollama agent, such as the maintainer's `sec` security advisor,
+over its own files, and keep a record of what was done. Decided with the
+maintainer; built as separate pull requests and released together as 0.8.0.
+
+1. **The agent is an Ollama model, named in the project.** `model` in
+   `project.toml` (already read by `resolve_model`) names it; Ollama stays the
+   only owner of agents and their Modelfiles. When a session opens, the core
+   asks Ollama for the model's own `SYSTEM` instructions (`POST /api/show`)
+   and the system message becomes those instructions **followed by** the
+   workspace context. Before this, the context alone was sent as the system
+   message, and Ollama used it in place of the Modelfile's `SYSTEM`, so the
+   agent's rules were lost. If Ollama cannot say, the session goes on with the
+   context alone and says so. The desktop app shows which model a session
+   uses and whether its own instructions are included, and lets a project's
+   model be set from the Overview tab.
+2. **Markdown only.** Context keeps coming from `.md` files in Base and the
+   project's Knowledge and Session folders; raw configs, logs and scripts are
+   not read. Material the agent should see goes into notes. Widening this is a
+   later decision.
+3. **A built-in block list.** Files whose names look like secrets (`*.key`,
+   `*.pem`, `id_rsa*`, `id_ed25519*`, `*.p12`, `*.kdbx`, `.env*`, `*secret*`,
+   `*password*`, `*token*`) are never read into context or search, even inside
+   granted folders. A session lists what it skipped.
+4. **Fit the model's window.** The context's byte budget follows the model's
+   `num_ctx` (from `/api/show`) instead of the fixed 12,000 bytes, keeping
+   room for the conversation. A file that does not fit whole is cut, with a
+   visible `[truncated: N of M bytes shown]` marker, so both the model and the
+   person know only part was seen.
+5. **Session notes, offered, never automatic.** Ending a session in the
+   desktop app offers to save a short Markdown note, drafted by the model and
+   editable first, into `Projects/<name>/Session/`, where later sessions pick
+   it up as context. Nothing is written without the person's OK, in line with
+   the no-automatic-writes rule.
+
+Reason
+
+The maintainer's goal is an advisor that knows the history of their security
+work and keeps its own rules. Each point removes one of the four obstacles the
+plan found: replaced instructions, unreadable or unsafe files, a context too
+small and cut silently, and no memory between sessions. Ollama keeps owning
+models, the filesystem keeps being the only store, and every write stays
+explicit.
+
+Status
+
+Accepted
