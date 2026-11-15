@@ -87,17 +87,30 @@ agents.
 
 ## v0.7
 
+Desktop app
+
+A Tauri desktop app on the core library (ADR-0008, ADR-0009): projects,
+validation, search, chat, permissions, configuration, workspace folder.
+
+It is the only thing released, as the `ai-workspace` package and command;
+the command line stays in the repository as a developer tool (ADR-0010,
+ADR-0011).
+
+---
+
+## v0.8
+
 Runtime abstraction
 
 Support multiple runtimes.
 
 ---
 
-## v0.8
+## v0.9
 
 Project management
 
-Create
+Create (done in v0.7)
 
 Delete
 
@@ -107,7 +120,7 @@ Clone
 
 ---
 
-## v0.9
+## v0.10
 
 Documentation
 

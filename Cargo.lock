@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "ai-workspace-cli"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "ai-workspace-core",
  "assert_cmd",
@@ -28,7 +28,7 @@ dependencies = [
 
 [[package]]
 name = "ai-workspace-core"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -38,7 +38,7 @@ dependencies = [
 
 [[package]]
 name = "ai-workspace-desktop"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "ai-workspace-core",
  "serde",
