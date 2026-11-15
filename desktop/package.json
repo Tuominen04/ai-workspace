@@ -1,0 +1,37 @@
+{
+  "name": "ai-workspace-desktop",
+  "private": true,
+  "type": "module",
+  "license": "MIT OR Apache-2.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "e2e": "node e2e/run.mjs",
+    "bindings": "cargo test -p ai-workspace-desktop",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10",
+    "@tauri-apps/cli": "^2",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6",
+    "eslint": "^10",
+    "eslint-plugin-react-hooks": "^7",
+    "globals": "^17",
+    "jsdom": "^31.0.1",
+    "playwright": "^1.65.0",
+    "typescript": "^6",
+    "typescript-eslint": "^8",
+    "vite": "^8",
+    "vitest": "^5"
+  }
+}

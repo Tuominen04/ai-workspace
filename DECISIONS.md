@@ -246,3 +246,118 @@ avoided because of the boundary.
 Status
 
 Accepted
+
+---
+
+## ADR-0009
+
+A desktop app is the next front end, ahead of project agents, so visual work
+can be seen and tested as it grows. It is a Tauri 2 app on the core library
+from ADR-0008, built with the same stack as the maintainer's Learning Corner:
+React 19 and TypeScript, bundled by Vite, with the wire types generated from
+Rust by `ts-rs`.
+
+Layout, in this repository:
+
+```txt
+desktop/                    the interface (npm package, private): index.html, src/, e2e/
+desktop/src/lib/engine.ts   the only file that calls Tauri's `invoke`
+desktop/src/lib/bindings/   TypeScript generated from the shell's wire types
+desktop/src-tauri/          crate ai-workspace-desktop: window, commands, wire types
+```
+
+`desktop/src-tauri` is a member of the Cargo workspace but not a default
+member, so `cargo build`, `cargo run` and `cargo test` at the root still build
+only the core and the CLI and need no WebKitGTK. The desktop crate is built
+with `--workspace`, `-p ai-workspace-desktop`, or the Tauri CLI. Its version
+comes from `[workspace.package]` (`tauri.conf.json` and `package.json` carry
+none of their own), so one tag still versions every artifact.
+
+The first version is **read-only plus chat**: workspace status and projects,
+a project's details, the workspace configuration, validation results, search,
+and a chat window driving `Session`. Creating projects and changing permissions stay in the CLI for now.
+
+- **Commands are thin.** Each Tauri command calls one `Engine` or `Session`
+  method and converts the result to a wire type in `dto.rs`. The core's own
+  types are not sent across, so the interface's contract is the generated
+  bindings, and CI fails when they are stale.
+- **One session at a time.** The open `Session` lives in the shell's state.
+  Opening another closes the first, and the shell closes it when the app exits,
+  so temporary grants never outlive the window.
+- **No blocking in the window.** Opening a session (which may start Ollama)
+  and sending a message run off the main thread.
+- **No network from the webview.** The content security policy allows only
+  the app's own files, and the capability list is `core:default`. Ollama is
+  reached from Rust, as in the CLI.
+- **The theme is the interface's only state.** System, Light or Dark is kept in
+  the webview's local storage: a display preference of the computer, not
+  workspace state, so it stays out of the workspace folder.
+- **Validation fixes stay structured.** `SuggestedFix` crosses as data (kind,
+  action, text); the interface words it. The desktop names no CLI command.
+- **Tests.** Shell tests call the command functions against temporary
+  workspaces and regenerate the bindings. Interface logic has `vitest` tests.
+  Browser checks run the interface in Chromium with a stub engine behind
+  `invoke`, as Learning Corner does. Ollama is never needed.
+- **Packaging** is a separate pull request, and ADR-0010 settles it: the
+  desktop app is the only package released.
+
+Reason
+
+A window makes progress visible and gives the maintainer something to try
+without reading terminal output. Reusing Learning Corner's stack means one set
+of tools, conventions and test patterns across both projects; JavaScript
+tooling is a build-time cost only, and the installed app stays offline. The
+core split made this possible without moving engine logic: the shell only
+converts and renders. Read-only plus chat is the smallest version that is
+useful every day and exercises every part of the core's API that returns data.
+
+Status
+
+Accepted
+
+---
+
+## ADR-0010
+
+Only the desktop app is released. It is the `ai-workspace` package and the
+`ai-workspace` command: `/usr/bin/ai-workspace` opens the window, and the
+applications menu lists it as **AI Workspace**. The command-line front end is
+no longer packaged; its code stays in `crates/ai-workspace-cli`, CI keeps
+testing it, and it is run from source (`cargo run -- <args>`) as a developer
+tool.
+
+- **Package.** Built by Tauri's bundler from the `bundle` section of
+  `desktop/src-tauri/tauri.conf.json`. Tauri derives the RPM's name from
+  `productName` ("AI Workspace") and the installed binary's from
+  `mainBinaryName` ("ai-workspace"); neither may change without changing the
+  package. The cargo binary is still `ai-workspace-desktop`, so `cargo run -p
+  ai-workspace-desktop` and the CLI's `cargo run` do not clash; `npm run tauri
+  build` writes `target/release/ai-workspace`, the path a release build of the
+  CLI also uses, so locally the last build wins.
+- **Upgrade.** Because the package keeps the name `ai-workspace`, a newer
+  release replaces an installed command-line package on `dnf upgrade`. The
+  release must carry a higher version than the installed 0.6.0.
+- **Release workflow.** Builds and smoke-tests only this package: it installs
+  in Fedora, `ai-workspace` resolves to `/usr/bin/ai-workspace`, the menu entry
+  exists, and the binary links. `cargo-generate-rpm` is no longer used; the
+  CLI crate's `[package.metadata.generate-rpm]` stays in place, unused, should
+  the command line be released again.
+- **What users lose for now.** The installed app has no way yet to create
+  projects, grant or revoke permissions, or choose the workspace folder; those
+  were command-line features. Until the desktop app gains them, the folder is
+  chosen with `AI_WORKSPACE_HOME` or by editing
+  `~/.config/ai-workspace/config.toml`, and the rest is done from source.
+
+Reason
+
+The maintainer wants one thing to install and use, and the window is that
+thing. Keeping the command line as code costs little (CI already tests it) and
+keeps a scriptable front end on the core. Reusing the `ai-workspace` name
+for the package and the command means an installed system upgrades in place
+instead of collecting two packages.
+
+Status
+
+Accepted. Supersedes the packaging part of ADR-0006 (the `cargo-generate-rpm`
+package of the command line); the tag-triggered draft release, the command
+name and the license stand.

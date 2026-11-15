@@ -1,7 +1,9 @@
 # Releases
 
 A release of AI Workspace is one Fedora package, `ai-workspace-<version>.x86_64.rpm`,
-attached to a GitHub release together with a `SHA256SUMS` file. It is built by
+attached to a GitHub release together with a `SHA256SUMS` file. The package is the
+desktop app (`docs/desktop.md`), installed as the `ai-workspace` command (ADR-0010). The
+command-line front end is not released; it is run from source. It is built by
 `.github/workflows/release.yml`; nobody builds a release by hand.
 
 Installing a release is covered in the [README](../README.md#install).
@@ -56,8 +58,9 @@ The workflow ends without creating anything when:
 - the tagged commit is not on `main`;
 - the tag does not equal `version` in the root `Cargo.toml` (the message states both);
 - any test fails, or `Cargo.lock` is out of date;
-- the package does not install on Fedora, or the installed command does not
-  report `ai-workspace <version>`.
+- the package does not install on Fedora, is not `ai-workspace <version>`,
+  does not provide the `ai-workspace` command or its menu entry, or the binary
+  is missing a library.
 
 To retry after fixing the cause, delete the tag
 (`git push --delete origin v<version>` and `git tag -d v<version>`) and push
@@ -68,28 +71,31 @@ it again from the fixed `main`.
 Two jobs:
 
 - **build** (read-only access): checks the tag, runs
-  `cargo test --locked --workspace`, builds with
-  `cargo build --release --locked -p ai-workspace-cli`, packages with
-  `cargo generate-rpm -p crates/ai-workspace-cli --auto-req builtin`, installs the package in a Fedora
-  container and runs `ai-workspace --version`, then writes `SHA256SUMS`.
+  `cargo test --locked --workspace` (the core, the command line and the
+  desktop shell), builds the package with `npm ci && npm run tauri build` in
+  `desktop/`, installs it in a Fedora container and checks it there, then
+  writes `SHA256SUMS`.
 - **draft** (write access): takes the finished files and creates the draft
   release. It checks out no code and runs no project code.
 
 ## Building the package locally
 
-For checking the package, not for releasing it:
+For checking the package, not for releasing it (needs the packages listed in
+`docs/desktop.md`):
 
 ```bash
-cargo install --locked cargo-generate-rpm@0.21.1   # once
-cargo build --release --locked -p ai-workspace-cli
-cargo generate-rpm -p crates/ai-workspace-cli --auto-req builtin
-rpm -qip target/generate-rpm/ai-workspace-*.rpm   # name, version, license
-rpm -qlp target/generate-rpm/ai-workspace-*.rpm   # the three installed files
+cd desktop
+npm ci
+npm run tauri build
+rpm -qip "../target/release/bundle/rpm/AI Workspace-"*.rpm   # name, version, license
+rpm -qlp "../target/release/bundle/rpm/AI Workspace-"*.rpm   # the installed files
 ```
 
-The package is described under `[package.metadata.generate-rpm]` in
-`crates/ai-workspace-cli/Cargo.toml`; its version, license and summary come
-from that crate, which takes version and license from the workspace.
+The package is described by the `bundle` section of
+`desktop/src-tauri/tauri.conf.json`. Its name `ai-workspace` comes from
+`productName` ("AI Workspace") and the installed binary's from `mainBinaryName`;
+Tauri names the file after the product, and the workflow renames it to
+`ai-workspace-<version>.x86_64.rpm`. The version comes from the workspace.
 
 ## Not included yet
 

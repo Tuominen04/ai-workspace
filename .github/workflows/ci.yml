@@ -19,6 +19,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # The core and the CLI. They need no WebKitGTK, so this job installs none.
   check:
     runs-on: ubuntu-24.04
     steps:
@@ -30,13 +31,78 @@ jobs:
           components: rustfmt, clippy
 
       - name: Format
-        run: cargo fmt --check
+        run: cargo fmt --all --check
 
       - name: Lint
-        run: cargo clippy --locked --workspace --all-targets -- -D warnings
+        run: cargo clippy --locked --workspace --exclude ai-workspace-desktop --all-targets -- -D warnings
 
       # Tests that run the binary set AI_WORKSPACE_HOME, HOME and XDG_CONFIG_HOME to
       # temporary folders, and the runtime tests use a local mock server, so no Ollama
       # is needed here.
       - name: Test
-        run: cargo test --locked --workspace
+        run: cargo test --locked --workspace --exclude ai-workspace-desktop
+
+  # The desktop app's Rust shell (ADR-0009).
+  desktop-shell:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Tauri's Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev
+
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+          components: clippy
+
+      - name: Lint
+        run: cargo clippy --locked -p ai-workspace-desktop --all-targets -- -D warnings
+
+      # Regenerating the bindings is part of the tests, so this also refreshes
+      # desktop/src/lib/bindings/.
+      - name: Tests and binding generation
+        run: cargo test --locked -p ai-workspace-desktop
+
+      # A stale committed copy means the interface is typed against a contract that no
+      # longer exists. Catching it here is the point of generating rather than hand-writing.
+      - name: Bindings are current
+        run: git diff --exit-code -- desktop/src/lib/bindings
+
+  # The desktop app's interface: lint, types, unit tests and a production build.
+  desktop-interface:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  # The interface in a real Chromium with a stub engine; no shell, workspace or Ollama.
+  desktop-e2e:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e

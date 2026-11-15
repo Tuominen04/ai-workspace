@@ -21,8 +21,9 @@ ai-workspace-core = { path = "../ai-workspace-core" }
 assert_cmd.workspace = true
 predicates.workspace = true
 
-# The Fedora package, built by `cargo generate-rpm --auto-req builtin`
-# (see docs/release.md). Version, license and summary come from [package].
+# Not used since ADR-0010: releases ship only the desktop app. Kept so the command line
+# can be packaged again with `cargo generate-rpm -p crates/ai-workspace-cli --auto-req builtin`.
+# Version, license and summary come from [package].
 [package.metadata.generate-rpm]
 name = "ai-workspace"
 # The package runs no install scripts, so it does not need a shell.
