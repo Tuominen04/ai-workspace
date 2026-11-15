@@ -133,5 +133,5 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --draft \
             --verify-tag \
-            --title "ai-workspace ${GITHUB_REF_NAME#v}" \
+            --title "${GITHUB_REF_NAME#v}" \
             --generate-notes
