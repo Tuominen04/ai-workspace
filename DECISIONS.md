@@ -298,12 +298,8 @@ and a chat window driving `Session`. Creating projects and changing permissions 
   workspaces and regenerate the bindings. Interface logic has `vitest` tests.
   Browser checks run the interface in Chromium with a stub engine behind
   `invoke`, as Learning Corner does. Ollama is never needed.
-- **Packaging** is a separate pull request: the release workflow builds a
-  second RPM, `ai-workspace-desktop`, with Tauri's bundler. The CLI package is
-  unchanged. Tauri derives the RPM's name from `productName`, so the product
-  is "AI Workspace Desktop" (the window title stays "AI Workspace"); a product
-  name of "AI Workspace" would have produced a package named `ai-workspace`,
-  colliding with the CLI's.
+- **Packaging** is a separate pull request, and ADR-0010 settles it: the
+  desktop app is the only package released.
 
 Reason
 
@@ -318,3 +314,50 @@ useful every day and exercises every part of the core's API that returns data.
 Status
 
 Accepted
+
+---
+
+## ADR-0010
+
+Only the desktop app is released. It is the `ai-workspace` package and the
+`ai-workspace` command: `/usr/bin/ai-workspace` opens the window, and the
+applications menu lists it as **AI Workspace**. The command-line front end is
+no longer packaged; its code stays in `crates/ai-workspace-cli`, CI keeps
+testing it, and it is run from source (`cargo run -- <args>`) as a developer
+tool.
+
+- **Package.** Built by Tauri's bundler from the `bundle` section of
+  `desktop/src-tauri/tauri.conf.json`. Tauri derives the RPM's name from
+  `productName` ("AI Workspace") and the installed binary's from
+  `mainBinaryName` ("ai-workspace"); neither may change without changing the
+  package. The cargo binary is still `ai-workspace-desktop`, so `cargo run -p
+  ai-workspace-desktop` and the CLI's `cargo run` do not clash; `npm run tauri
+  build` writes `target/release/ai-workspace`, the path a release build of the
+  CLI also uses, so locally the last build wins.
+- **Upgrade.** Because the package keeps the name `ai-workspace`, a newer
+  release replaces an installed command-line package on `dnf upgrade`. The
+  release must carry a higher version than the installed 0.6.0.
+- **Release workflow.** Builds and smoke-tests only this package: it installs
+  in Fedora, `ai-workspace` resolves to `/usr/bin/ai-workspace`, the menu entry
+  exists, and the binary links. `cargo-generate-rpm` is no longer used; the
+  CLI crate's `[package.metadata.generate-rpm]` stays in place, unused, should
+  the command line be released again.
+- **What users lose for now.** The installed app has no way yet to create
+  projects, grant or revoke permissions, or choose the workspace folder; those
+  were command-line features. Until the desktop app gains them, the folder is
+  chosen with `AI_WORKSPACE_HOME` or by editing
+  `~/.config/ai-workspace/config.toml`, and the rest is done from source.
+
+Reason
+
+The maintainer wants one thing to install and use, and the window is that
+thing. Keeping the command line as code costs little (CI already tests it) and
+keeps a scriptable front end on the core. Reusing the `ai-workspace` name
+for the package and the command means an installed system upgrades in place
+instead of collecting two packages.
+
+Status
+
+Accepted. Supersedes the packaging part of ADR-0006 (the `cargo-generate-rpm`
+package of the command line); the tag-triggered draft release, the command
+name and the license stand.

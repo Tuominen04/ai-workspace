@@ -1,6 +1,7 @@
 # Desktop app
 
-The desktop app is a window onto the same workspace the `ai-workspace` command uses. It is a
+The desktop app is what AI Workspace installs: the `ai-workspace` command opens it
+(ADR-0010). It is a
 Tauri 2 app on the core library (ADR-0008, ADR-0009): the Rust shell in `desktop/src-tauri`
 calls the core, and the React interface in `desktop/src` shows what comes back.
 
@@ -16,29 +17,24 @@ The first version is read-only plus chat:
   Session folders.
 - **Configuration** — the workspace configuration (`Config/workspace.toml`): the folder in
   use and why, the configuration file, the default model, the project file name and the
-  folders new projects get. Read-only; edit the file or use the command line to change it.
+  folders new projects get. Read-only; edit the file to change it.
 - **Chat** — a session in the chosen project, like `ai-workspace` with no arguments: opening it
   grants the project's default permissions and builds the first context; each message rebuilds
   the context from what was asked; ending it revokes temporary permissions. Quitting the app
   ends an open session too.
 - **Theme** — System, Light or Dark, at the bottom of the sidebar.
 
-Creating projects and granting permissions are still done with the command line.
+Creating projects, granting permissions and choosing the workspace folder are not in the app
+yet; the command line, run from source (`cargo run -- <args>`), still does them.
 
-The app finds the workspace exactly as the command does: `AI_WORKSPACE_HOME`, else the folder
-saved by `ai-workspace config set-root`, else `~/AI`.
+The app finds the workspace as follows: `AI_WORKSPACE_HOME`, else `workspace_root` in
+`~/.config/ai-workspace/config.toml`, else `~/AI`.
 
 ## Installing
 
-Each release has a second package, `ai-workspace-desktop-<version>.x86_64.rpm`:
-
-```bash
-sudo dnf install ./ai-workspace-desktop-<version>.x86_64.rpm
-```
-
-It installs `/usr/bin/ai-workspace-desktop`, an **AI Workspace Desktop** entry in the
-applications menu, an icon and the two license texts. `dnf` pulls in WebKitGTK and GTK.
-Removing it (`sudo dnf remove ai-workspace-desktop`) leaves the workspace untouched.
+Releases ship it as the `ai-workspace` package; see the [README](../README.md#install).
+It installs `/usr/bin/ai-workspace`, an **AI Workspace** entry in the applications menu,
+an icon and the two license texts. `dnf` pulls in WebKitGTK and GTK.
 
 ## Running it from source
 

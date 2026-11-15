@@ -4,7 +4,7 @@ import { Failure } from "./Failure";
 
 /**
  * The workspace configuration, read-only: what `Config/workspace.toml` says, and which folder
- * is in use. Settings are changed in the file itself or with the command line for now.
+ * is in use. Settings are changed in the file itself for now.
  */
 export function ConfigPanel() {
   const [settings, reload] = useLoad(() => engine.workspace.config(), "config");

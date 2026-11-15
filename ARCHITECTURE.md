@@ -102,8 +102,9 @@ Possible implementations
 
 The UI should never contain business logic.
 
-Implemented by `crates/ai-workspace-cli` (the command line) and `desktop/` (a Tauri desktop
-app, ADR-0009). Both depend on the core and neither holds engine logic.
+Implemented by `desktop/` (a Tauri desktop app, ADR-0009; the released app, installed as the
+`ai-workspace` command, ADR-0010) and `crates/ai-workspace-cli` (the command line, kept and
+tested but run from source). Both depend on the core and neither holds engine logic.
 
 ---
 

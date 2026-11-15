@@ -1,6 +1,7 @@
 name: Release
 
-# Pushing a version tag builds the Fedora package and opens a draft release with it. Nothing
+# Pushing a version tag builds the Fedora package (the desktop app, installed as the
+# `ai-workspace` command; ADR-0010) and opens a draft release with it. Nothing
 # is published until the maintainer reads the draft and presses Publish.
 #
 # See docs/release.md for the procedure and specs/007-release-packaging/ for the design.
@@ -70,47 +71,22 @@ jobs:
       - name: Test
         run: cargo test --locked --workspace
 
-      - name: Build
-        run: cargo build --release --locked -p ai-workspace-cli
-
-      # `--auto-req builtin` records the libraries the binary needs without RPM tooling
-      # on the runner. The package is described in the CLI crate's Cargo.toml.
+      # The released app (ADR-0010): the desktop app, installed as the `ai-workspace`
+      # command and package. Tauri's bundler builds the interface, the binary and the rpm;
+      # the package name comes from productName in tauri.conf.json, the binary name from
+      # mainBinaryName, and the version from the workspace. The CLI crate is tested above
+      # but not packaged.
       - name: Package
-        run: |
-          cargo install --locked cargo-generate-rpm@0.21.1
-          cargo generate-rpm -p crates/ai-workspace-cli --auto-req builtin
-
-      # Install the package on the system it is for and run the command, so a package
-      # that does not install or does not start never reaches a release.
-      - name: Smoke test on Fedora
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          docker run --rm \
-            --volume "$PWD/target/generate-rpm:/pkg:ro" \
-            --env VERSION="$version" \
-            registry.fedoraproject.org/fedora:44 \
-            bash -euc '
-              dnf install -y /pkg/ai-workspace-*.rpm
-              [ "$(command -v ai-workspace)" = /usr/bin/ai-workspace ]
-              got=$(ai-workspace --version)
-              [ "$got" = "ai-workspace $VERSION" ] \
-                || { echo "::error::installed command says \"$got\", expected \"ai-workspace $VERSION\""; exit 1; }
-              ai-workspace --help >/dev/null
-            '
-
-      # The desktop app (ADR-0009), as a second package. Tauri's bundler builds the interface,
-      # the binary and the rpm; the package's name, ai-workspace-desktop, comes from
-      # productName in tauri.conf.json, and its version from the workspace.
-      - name: Package the desktop app
         working-directory: desktop
         run: |
           npm ci
           npm run tauri build -- --ci -- --locked
 
       # Install it on Fedora: it must resolve its libraries (WebKitGTK, GTK) from the
-      # distribution and put its launcher in the applications menu. A window cannot be
-      # opened here, so this checks the binary links rather than that it draws.
-      - name: Smoke test the desktop app on Fedora
+      # distribution, be the `ai-workspace` command, and put its launcher in the
+      # applications menu. A window cannot be opened here, so this checks the binary links
+      # rather than that it draws.
+      - name: Smoke test on Fedora
         run: |
           version="${GITHUB_REF_NAME#v}"
           docker run --rm \
@@ -119,24 +95,23 @@ jobs:
             registry.fedoraproject.org/fedora:44 \
             bash -euc '
               dnf install -y /pkg/*.rpm
-              got=$(rpm -q --queryformat "%{NAME} %{VERSION}" ai-workspace-desktop)
-              [ "$got" = "ai-workspace-desktop $VERSION" ] \
-                || { echo "::error::installed package is \"$got\", expected \"ai-workspace-desktop $VERSION\""; exit 1; }
-              [ -x /usr/bin/ai-workspace-desktop ]
-              ls /usr/share/applications/*.desktop | grep -q "AI Workspace Desktop"
-              if ldd /usr/bin/ai-workspace-desktop | grep "not found"; then
-                echo "::error::the desktop app is missing libraries on Fedora"; exit 1
+              got=$(rpm -q --queryformat "%{NAME} %{VERSION}" ai-workspace)
+              [ "$got" = "ai-workspace $VERSION" ] \
+                || { echo "::error::installed package is \"$got\", expected \"ai-workspace $VERSION\""; exit 1; }
+              [ "$(command -v ai-workspace)" = /usr/bin/ai-workspace ]
+              ls /usr/share/applications/*.desktop | grep -q "AI Workspace"
+              if ldd /usr/bin/ai-workspace | grep "not found"; then
+                echo "::error::ai-workspace is missing libraries on Fedora"; exit 1
               fi
             '
 
+      # Tauri names the file after the product, a space included; rename it to what the
+      # install guide tells people to look for.
       - name: Collect and checksum
         run: |
           version="${GITHUB_REF_NAME#v}"
           mkdir dist-release
-          cp target/generate-rpm/ai-workspace-*.rpm "dist-release/ai-workspace-$version.x86_64.rpm"
-          # Tauri names the file after the product, spaces included; rename it to what the
-          # install guide tells people to look for.
-          cp target/release/bundle/rpm/*.rpm "dist-release/ai-workspace-desktop-$version.x86_64.rpm"
+          cp target/release/bundle/rpm/*.rpm "dist-release/ai-workspace-$version.x86_64.rpm"
           cd dist-release
           sha256sum -- * > SHA256SUMS
           cat SHA256SUMS

@@ -57,7 +57,8 @@ export function Sidebar({ status, selected, onSelect, onRefresh }: Props) {
             ))}
             {status.value.projects.length === 0 && (
               <p className="muted small">
-                No projects yet. Create one with the command line for now.
+                No projects yet. Creating projects from this window is coming; for now a project is
+                made with the command line from source.
               </p>
             )}
           </nav>

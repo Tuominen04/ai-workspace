@@ -391,67 +391,54 @@ The system should feel like a natural extension of Fedora rather than another we
 
 ## Install
 
-AI Workspace is installed as the `ai-workspace` command from a Fedora package.
+AI Workspace is installed from a Fedora package as the `ai-workspace` command, which
+opens the desktop app.
 
 1. Download `ai-workspace-<version>.x86_64.rpm` and `SHA256SUMS` from the project's
    [releases](https://github.com/Tuominen04/ai-workspace/releases).
 2. Optionally [verify the download](docs/release.md#verifying-a-download).
-3. Install it:
+3. Install it (`dnf` pulls in WebKitGTK and GTK):
 
    ```bash
    sudo dnf install ./ai-workspace-<version>.x86_64.rpm
    ```
 
-4. Open a new terminal and check it: `ai-workspace --version`.
+4. Open **AI Workspace** from the applications menu, or run `ai-workspace`.
 
-The package installs the command and the two license texts, nothing else. It
-does not create, move, or delete a workspace, and removing it
+The package installs the app, its menu entry and icon, and the two license
+texts. It does not create, move, or delete a workspace, and removing it
 (`sudo dnf remove ai-workspace`) leaves your workspace folder untouched.
+Releases up to 0.6 installed a command-line `ai-workspace` instead; upgrading
+replaces it with the app. See [docs/desktop.md](docs/desktop.md) for what the
+app does.
 
 ### Choosing the workspace folder
 
-`ai-workspace` keeps its workspace in `~/AI` unless you say otherwise. To use another folder, create it and then save it once:
-
-```bash
-mkdir -p ~/ai-local/workspaces
-ai-workspace config set-root ~/ai-local/workspaces
-ai-workspace init        # creates the standard layout there if it is not set up yet
-```
-
-The choice is stored in `~/.config/ai-workspace/config.toml` (or under `$XDG_CONFIG_HOME`), a small file you can read and edit by hand:
+AI Workspace keeps its workspace in `~/AI` unless you say otherwise. To use another folder, create it and name it in `~/.config/ai-workspace/config.toml` (or under `$XDG_CONFIG_HOME`), a small file you can write by hand:
 
 ```toml
 workspace_root = "/home/you/ai-local/workspaces"
 ```
 
-The folder is looked up in this order, and `ai-workspace status` and `ai-workspace config show` print which one was used:
+The folder is looked up in this order, and the app's sidebar and Configuration tab show which one was used:
 
 1. the `AI_WORKSPACE_HOME` environment variable, if set (handy for testing against a scratch folder);
 2. `workspace_root` in the config file above;
 3. `~/AI`.
 
-To go back to `~/AI`, delete the config file. Installing, upgrading or removing the package never touches it or your workspace.
-
-The command was called `ai` before v0.6. If you copied an `ai` binary into
-`~/.local/bin` by hand, delete it; the package does not remove it.
+To go back to `~/AI`, delete the config file. Installing, upgrading or removing the package never touches it or your workspace. (From source, `cargo run -- config set-root PATH` writes the file for you.)
 
 How a release is made is described in [docs/release.md](docs/release.md).
 
 ---
 
-## Desktop App
+## Command line (from source)
 
-A desktop window onto the same workspace: projects, validation, search and
-chat. It comes as a second package from the same releases:
-
-```bash
-sudo dnf install ./ai-workspace-desktop-<version>.x86_64.rpm
-```
-
-Then open **AI Workspace Desktop** from the applications menu, or run
-`ai-workspace-desktop`. It finds the workspace the same way the command does.
-See [docs/desktop.md](docs/desktop.md) for what it does and how to run it from
-source.
+The command-line front end is kept in the repository and tested, but no longer
+released (ADR-0010). Run it from a checkout with `cargo run -- <args>`; the
+commands below are written as the binary is named, `ai-workspace`. It can still
+do what the app cannot yet: create projects, grant and revoke permissions, and
+save the workspace folder.
 
 ## Workspace Manager Commands (v0.2)
 
