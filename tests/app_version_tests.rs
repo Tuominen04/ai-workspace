@@ -44,3 +44,25 @@ fn usage_errors_name_the_command_ai_workspace() {
         "usage: ai-workspace project show PROJECT",
     ));
 }
+
+#[test]
+fn help_into_a_closed_pipe_does_not_panic() {
+    // A pipe whose reading end is already closed, like `ai-workspace --help | head`
+    // after `head` has exited. Every write to it fails with "broken pipe".
+    let (reader, writer) = std::io::pipe().expect("pipe should open");
+    drop(reader);
+
+    let output = std::process::Command::new(assert_cmd::cargo::cargo_bin("ai-workspace"))
+        .arg("--help")
+        .stdout(writer)
+        .output()
+        .expect("binary should run");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success(),
+        "status {:?}, stderr:\n{stderr}",
+        output.status
+    );
+    assert!(stderr.is_empty(), "expected no stderr, got:\n{stderr}");
+}

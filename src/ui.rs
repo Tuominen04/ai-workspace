@@ -10,17 +10,38 @@ use crate::workspace::{
     PermissionStatus, PermissionViewSnapshot, Project, ProjectMetadata, ValidationIssue,
     ValidationResult, ValidationSeverity,
 };
+use std::fmt;
 use std::io::{self, Write};
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// Writes command output to stdout without panicking when stdout fails.
+///
+/// `println!` panics when the reader has gone away, which turned
+/// `ai-workspace --help | head` into a crash. A closed pipe is not an error
+/// here: the reader asked for no more, so the rest of the output is dropped
+/// and the command carries on to its normal end (so `Drop` still stops a
+/// runtime this process started). Any other write failure is reported on
+/// stderr once and the command carries on the same way.
+pub fn write_stdout(args: fmt::Arguments<'_>) {
+    static REPORTED: AtomicBool = AtomicBool::new(false);
+
+    if let Err(error) = io::stdout().lock().write_fmt(args)
+        && error.kind() != io::ErrorKind::BrokenPipe
+        && !REPORTED.swap(true, Ordering::Relaxed)
+    {
+        eprintln!("error: could not write output: {error}");
+    }
+}
 
 pub fn render_startup_banner(paths: &WorkspacePaths) {
-    println!("AI Workspace");
-    println!("Root: {}", paths.root.display());
+    outln!("AI Workspace");
+    outln!("Root: {}", paths.root.display());
 }
 
 pub fn render_projects(projects: &[Project]) {
-    println!("Available workspaces:");
+    outln!("Available workspaces:");
     for (index, project) in projects.iter().enumerate() {
-        println!("  {}. {}", index + 1, project.name);
+        outln!("  {}. {}", index + 1, project.name);
     }
 }
 
@@ -30,7 +51,7 @@ pub fn prompt_for_selection(projects: &[Project]) -> Result<usize> {
     }
 
     loop {
-        print!("Select workspace [1-{}] or q to quit: ", projects.len());
+        out!("Select workspace [1-{}] or q to quit: ", projects.len());
         io::stdout().flush()?;
 
         let mut input = String::new();
@@ -43,7 +64,7 @@ pub fn prompt_for_selection(projects: &[Project]) -> Result<usize> {
 
         match value.parse::<usize>() {
             Ok(number) if number >= 1 && number <= projects.len() => return Ok(number - 1),
-            _ => println!(
+            _ => outln!(
                 "Invalid selection. Enter a number between 1 and {}.",
                 projects.len()
             ),
@@ -56,46 +77,46 @@ pub fn render_session_summary(
     context: &ContextSnapshot,
     runtime: &RuntimeStatus,
 ) {
-    println!();
-    println!("Workspace: {}", project.name);
-    println!("Project path: {}", project.path.display());
-    println!("Runtime: {}", runtime.detail);
-    println!("Base context files: {}", context.base_files.len());
-    println!("Project context files: {}", context.project_files.len());
-    println!("Session context files: {}", context.session_files.len());
-    println!("Total context sources: {}", context.source_count);
-    println!("AI access policy: read-only base scope (~/AI/Base)");
+    outln!();
+    outln!("Workspace: {}", project.name);
+    outln!("Project path: {}", project.path.display());
+    outln!("Runtime: {}", runtime.detail);
+    outln!("Base context files: {}", context.base_files.len());
+    outln!("Project context files: {}", context.project_files.len());
+    outln!("Session context files: {}", context.session_files.len());
+    outln!("Total context sources: {}", context.source_count);
+    outln!("AI access policy: read-only base scope (~/AI/Base)");
 
     if !context.base_files.is_empty() {
-        println!("Base context:");
+        outln!("Base context:");
         for file in &context.base_files {
-            println!("  - {}", file.display());
+            outln!("  - {}", file.display());
         }
     }
 
     if !context.project_files.is_empty() {
-        println!("Project context:");
+        outln!("Project context:");
         for file in &context.project_files {
-            println!("  - {}", file.display());
+            outln!("  - {}", file.display());
         }
     }
 
     if !context.session_files.is_empty() {
-        println!("Session context:");
+        outln!("Session context:");
         for file in &context.session_files {
-            println!("  - {}", file.display());
+            outln!("  - {}", file.display());
         }
     }
 
-    println!();
+    outln!();
 }
 
 pub fn render_chat_ready() {
-    println!("Session is active. Ask a question, or type 'exit' to close the workspace.");
+    outln!("Session is active. Ask a question, or type 'exit' to close the workspace.");
 }
 
 pub fn render_no_runtime_notice() {
-    println!("Session is active. Press Enter to close the workspace.");
+    outln!("Session is active. Press Enter to close the workspace.");
 }
 
 pub fn wait_for_exit() -> Result<()> {
@@ -106,7 +127,7 @@ pub fn wait_for_exit() -> Result<()> {
 
 pub fn prompt_for_chat_message() -> Result<Option<String>> {
     loop {
-        print!("> ");
+        out!("> ");
         io::stdout().flush()?;
 
         let mut input = String::new();
@@ -130,36 +151,36 @@ pub fn prompt_for_chat_message() -> Result<Option<String>> {
 }
 
 pub fn render_ai_response(content: &str) {
-    println!("[AI] {content}");
-    println!();
+    outln!("[AI] {content}");
+    outln!();
 }
 
 pub fn render_chat_error(message: &str) {
-    println!("Could not reach the AI runtime: {message}");
-    println!("You can try again, or type 'exit' to close the workspace.");
+    outln!("Could not reach the AI runtime: {message}");
+    outln!("You can try again, or type 'exit' to close the workspace.");
 }
 
 pub fn render_status(paths: &WorkspacePaths, source: &RootSource, projects: &[Project]) {
-    println!("AI Workspace status");
-    println!("Root: {}", paths.root.display());
-    println!("Root chosen by: {}", source.describe());
-    println!("Base: {}", paths.base.display());
-    println!("Projects: {}", paths.projects.display());
-    println!("Discovered workspaces: {}", projects.len());
+    outln!("AI Workspace status");
+    outln!("Root: {}", paths.root.display());
+    outln!("Root chosen by: {}", source.describe());
+    outln!("Base: {}", paths.base.display());
+    outln!("Projects: {}", paths.projects.display());
+    outln!("Discovered workspaces: {}", projects.len());
 
     for project in projects {
-        println!("- {} ({})", project.name, project.path.display());
+        outln!("- {} ({})", project.name, project.path.display());
     }
 }
 
 pub fn render_init(paths: &WorkspacePaths, config_path: &std::path::Path, config_created: bool) {
-    println!("Initialized workspace root at {}", paths.root.display());
-    println!("Base layout: {}", paths.base.display());
-    println!("Projects directory: {}", paths.projects.display());
+    outln!("Initialized workspace root at {}", paths.root.display());
+    outln!("Base layout: {}", paths.base.display());
+    outln!("Projects directory: {}", paths.projects.display());
     if config_created {
-        println!("Workspace config created: {}", config_path.display());
+        outln!("Workspace config created: {}", config_path.display());
     } else {
-        println!("Workspace config kept: {}", config_path.display());
+        outln!("Workspace config kept: {}", config_path.display());
     }
 }
 
@@ -168,19 +189,19 @@ pub fn render_workspace_config(
     paths: &WorkspacePaths,
     source: &RootSource,
 ) {
-    println!("Workspace configuration");
-    println!("Active root: {}", paths.root.display());
-    println!("Root chosen by: {}", source.describe());
-    println!("Root: {}", config.root_path);
-    println!("Base: {}", config.base_path);
-    println!("Projects: {}", config.projects_path);
-    println!("Cache: {}", config.cache_path);
-    println!("Logs: {}", config.logs_path);
-    println!("Config: {}", config.config_path);
-    println!("Project metadata file: {}", config.project_metadata_file);
-    println!("Default project directories:");
+    outln!("Workspace configuration");
+    outln!("Active root: {}", paths.root.display());
+    outln!("Root chosen by: {}", source.describe());
+    outln!("Root: {}", config.root_path);
+    outln!("Base: {}", config.base_path);
+    outln!("Projects: {}", config.projects_path);
+    outln!("Cache: {}", config.cache_path);
+    outln!("Logs: {}", config.logs_path);
+    outln!("Config: {}", config.config_path);
+    outln!("Project metadata file: {}", config.project_metadata_file);
+    outln!("Default project directories:");
     for directory in &config.default_project_directories {
-        println!("- {}", directory);
+        outln!("- {}", directory);
     }
 }
 
@@ -189,13 +210,13 @@ pub fn render_workspace_root_set(
     config_file: &std::path::Path,
     env_override: Option<&std::path::Path>,
 ) {
-    println!("Workspace folder set to {}", root.display());
-    println!("Saved in {}", config_file.display());
-    println!(
+    outln!("Workspace folder set to {}", root.display());
+    outln!("Saved in {}", config_file.display());
+    outln!(
         "Run `{COMMAND_NAME} init` to create the standard layout there if it is not set up yet."
     );
     if let Some(env_root) = env_override {
-        println!(
+        outln!(
             "Note: {} is set to {} and takes precedence. Unset it to use the saved folder.",
             crate::paths::WORKSPACE_ROOT_ENV,
             env_root.display()
@@ -204,33 +225,33 @@ pub fn render_workspace_root_set(
 }
 
 pub fn render_project_created(project: &CreatedProject) {
-    println!("Project created: {}", project.project.name);
-    println!("Path: {}", project.project.path.display());
-    println!("Description: {}", project.metadata.description);
+    outln!("Project created: {}", project.project.name);
+    outln!("Path: {}", project.project.path.display());
+    outln!("Description: {}", project.metadata.description);
 }
 
 pub fn render_project_details(project: &Project, metadata: &ProjectMetadata) {
-    println!("Project: {}", project.name);
-    println!("Path: {}", project.path.display());
-    println!("Display name: {}", metadata.display_name);
-    println!("Description: {}", metadata.description);
-    println!("Created at: {}", metadata.created_at);
-    println!("Knowledge dir: {}", metadata.knowledge_dir);
-    println!("Specs dir: {}", metadata.specs_dir);
-    println!("Resources dir: {}", metadata.resources_dir);
-    println!("Session dir: {}", metadata.session_dir);
+    outln!("Project: {}", project.name);
+    outln!("Path: {}", project.path.display());
+    outln!("Display name: {}", metadata.display_name);
+    outln!("Description: {}", metadata.description);
+    outln!("Created at: {}", metadata.created_at);
+    outln!("Knowledge dir: {}", metadata.knowledge_dir);
+    outln!("Specs dir: {}", metadata.specs_dir);
+    outln!("Resources dir: {}", metadata.resources_dir);
+    outln!("Session dir: {}", metadata.session_dir);
 }
 
 pub fn render_validation_result(result: &ValidationResult) {
-    println!("Workspace validation");
-    println!("Checked projects: {}", result.checked_projects);
+    outln!("Workspace validation");
+    outln!("Checked projects: {}", result.checked_projects);
 
     if result.valid {
-        println!("Status: PASS");
+        outln!("Status: PASS");
         return;
     }
 
-    println!(
+    outln!(
         "Status: FAIL (blocking issues: {})",
         result.blocking_issue_count()
     );
@@ -240,31 +261,31 @@ pub fn render_validation_result(result: &ValidationResult) {
     }
 
     for project in &result.project_issues {
-        println!("Project issues: {}", project.project_id);
+        outln!("Project issues: {}", project.project_id);
         for issue in &project.issues {
             render_issue(issue);
         }
     }
 
-    println!("Gated commands blocked: {COMMAND_NAME} project create, {COMMAND_NAME} project show");
-    println!("Run `{COMMAND_NAME} validate` after fixes to clear blocking issues.");
+    outln!("Gated commands blocked: {COMMAND_NAME} project create, {COMMAND_NAME} project show");
+    outln!("Run `{COMMAND_NAME} validate` after fixes to clear blocking issues.");
 }
 
 pub fn render_validation_gate_block(action: &str, result: &ValidationResult) {
-    println!(
+    outln!(
         "Cannot run {}: workspace validation has {} blocking issue(s).",
         action,
         result.blocking_issue_count()
     );
-    println!("Run `{COMMAND_NAME} validate` to inspect and clear blocking issues first.");
+    outln!("Run `{COMMAND_NAME} validate` to inspect and clear blocking issues first.");
 }
 
 pub fn render_permission_grant(project: &Project, result: &PermissionGrantResult) {
-    println!("Project: {}", project.name);
+    outln!("Project: {}", project.name);
     if result.created {
-        println!("Permission granted: {}", result.grant.canonical_path);
+        outln!("Permission granted: {}", result.grant.canonical_path);
     } else {
-        println!(
+        outln!(
             "Permission already active (idempotent): {}",
             result.grant.canonical_path
         );
@@ -272,20 +293,22 @@ pub fn render_permission_grant(project: &Project, result: &PermissionGrantResult
 }
 
 pub fn render_permission_revoke(project: &Project, result: &PermissionRevokeResult) {
-    println!("Project: {}", project.name);
-    println!("Permission revoked: {}", result.revoked_path);
+    outln!("Project: {}", project.name);
+    outln!("Permission revoked: {}", result.revoked_path);
 }
 
 pub fn render_permission_view(project: &Project, snapshot: &PermissionViewSnapshot) {
-    println!("Project: {}", project.name);
-    println!("Session: {}", snapshot.session_id);
-    println!(
+    outln!("Project: {}", project.name);
+    outln!("Session: {}", snapshot.session_id);
+    outln!(
         "Permissions: total={} page={} page_size={}",
-        snapshot.total_count, snapshot.page, snapshot.page_size
+        snapshot.total_count,
+        snapshot.page,
+        snapshot.page_size
     );
 
     if snapshot.entries.is_empty() {
-        println!("No permissions in this view.");
+        outln!("No permissions in this view.");
         return;
     }
 
@@ -298,40 +321,41 @@ pub fn render_permission_view(project: &Project, snapshot: &PermissionViewSnapsh
             PermissionStatus::Active => "active",
             PermissionStatus::Unavailable => "unavailable",
         };
-        println!("- [{}][{}] {}", category, status, grant.canonical_path);
+        outln!("- [{}][{}] {}", category, status, grant.canonical_path);
     }
 }
 
 pub fn render_permission_session_closed(project: &Project, revoked_count: usize) {
-    println!(
+    outln!(
         "Session cleanup for project {}: revoked {} temporary permission(s).",
-        project.name, revoked_count
+        project.name,
+        revoked_count
     );
 }
 
 pub fn render_search_results(outcome: &SearchOutcome) {
-    println!(
+    outln!(
         "Search: \"{}\"  ({} result(s))",
         outcome.query_text,
         outcome.results.len()
     );
-    println!();
+    outln!();
 
     for (index, result) in outcome.results.iter().enumerate() {
-        println!(
+        outln!(
             "{}. [{}] {}   score: {:.1}",
             index + 1,
             result.source_kind.as_str(),
             result.path.display(),
             result.relevance_score
         );
-        println!("   \"{}\"", result.snippet);
+        outln!("   \"{}\"", result.snippet);
     }
 }
 
 pub fn render_no_search_results(outcome: &SearchOutcome) {
-    println!("Search: \"{}\"  (0 results)", outcome.query_text);
-    println!(
+    outln!("Search: \"{}\"  (0 results)", outcome.query_text);
+    outln!(
         "No documents matched. Try a different term, or check `{COMMAND_NAME} permission view` if you expected a path to be included."
     );
 }
@@ -342,13 +366,13 @@ fn render_issue(issue: &ValidationIssue) {
         ValidationSeverity::Warning => "WARN",
     };
 
-    println!(
+    outln!(
         "[{}] {} ({}) at {}",
         severity,
         issue.message,
         issue.code,
         issue.path.display()
     );
-    println!("  Scope: {}:{}", issue.scope, issue.subject);
-    println!("  Fix: {}", issue.suggested_fix);
+    outln!("  Scope: {}:{}", issue.scope, issue.subject);
+    outln!("  Fix: {}", issue.suggested_fix);
 }
