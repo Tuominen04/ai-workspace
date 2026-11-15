@@ -153,5 +153,5 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --draft \
             --verify-tag \
-            --title "${GITHUB_REF_NAME#v}" \
+            --title "v${GITHUB_REF_NAME#v}" \
             --generate-notes
