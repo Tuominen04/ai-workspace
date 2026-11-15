@@ -1,5 +1,8 @@
 [workspace]
-members = ["crates/*"]
+members = ["crates/*", "desktop/src-tauri"]
+# The desktop app needs WebKitGTK to build, so plain `cargo build`/`test`/`run` at the root
+# build only the core and the CLI. Use `--workspace` or `-p ai-workspace-desktop` for it.
+default-members = ["crates/*"]
 resolver = "3"
 
 # Shared by every crate; the release version lives here only.

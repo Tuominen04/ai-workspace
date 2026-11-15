@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "What the interface may do. Deliberately minimal: the app's own commands and Tauri's core defaults. The interface makes no network requests and touches no files; everything goes through the shell's commands, which call the core.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
