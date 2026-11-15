@@ -1,6 +1,6 @@
 ---
 description: "Use when writing or reviewing Rust source files for the workspace core, project manager, runtime manager, search, permissions, context, or UI layers. Covers layering, errors, and module boundaries."
-applyTo: "src/**/*.rs"
+applyTo: "crates/**/*.rs"
 ---
 # Rust Guidelines
 

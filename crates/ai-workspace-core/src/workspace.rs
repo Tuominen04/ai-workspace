@@ -1,4 +1,3 @@
-use crate::COMMAND_NAME;
 use crate::config::WorkspaceConfig;
 use crate::error::{AppError, Result};
 use crate::paths::WorkspacePaths;
@@ -55,7 +54,26 @@ pub struct ValidationIssue {
     pub path: PathBuf,
     pub code: String,
     pub message: String,
-    pub suggested_fix: String,
+    pub suggested_fix: SuggestedFix,
+}
+
+/// A workspace operation a validation fix can point to. A front end decides
+/// how to offer it (a command line, a button).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Action {
+    Init,
+    Validate,
+}
+
+/// How to clear a validation issue, without naming any front end's command.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SuggestedFix {
+    /// Run `action` to achieve `purpose`, e.g. Init, "recreate the standard workspace layout".
+    Run { action: Action, purpose: String },
+    /// Do `fix` by hand, then run `action` again.
+    FixThenRerun { fix: String, action: Action },
+    /// A manual step with nothing to run afterwards.
+    Manual(String),
 }
 
 #[derive(Debug, Clone)]
@@ -354,9 +372,10 @@ pub fn validate_workspace(paths: &WorkspacePaths) -> Result<ValidationResult> {
                 path: path.clone(),
                 code: "WS-MISSING-PATH".to_string(),
                 message: format!("required workspace path is missing: {}", path.display()),
-                suggested_fix: format!(
-                    "run `{COMMAND_NAME} init` to recreate the standard workspace layout"
-                ),
+                suggested_fix: SuggestedFix::Run {
+                    action: Action::Init,
+                    purpose: "recreate the standard workspace layout".to_string(),
+                },
             });
         }
     }
@@ -371,9 +390,10 @@ pub fn validate_workspace(paths: &WorkspacePaths) -> Result<ValidationResult> {
                 path,
                 code: "WS-CONFIG-MISSING".to_string(),
                 message: "workspace configuration file is missing".to_string(),
-                suggested_fix: format!(
-                    "run `{COMMAND_NAME} init` to bootstrap default workspace configuration"
-                ),
+                suggested_fix: SuggestedFix::Run {
+                    action: Action::Init,
+                    purpose: "bootstrap default workspace configuration".to_string(),
+                },
             });
             crate::config::WorkspaceConfig::default_for_paths(paths)
         }
@@ -385,9 +405,10 @@ pub fn validate_workspace(paths: &WorkspacePaths) -> Result<ValidationResult> {
                 path,
                 code: "WS-CONFIG-INVALID".to_string(),
                 message: format!("workspace configuration is invalid: {reason}"),
-                suggested_fix: format!(
-                    "fix Config/workspace.toml and rerun `{COMMAND_NAME} validate`"
-                ),
+                suggested_fix: SuggestedFix::FixThenRerun {
+                    fix: "fix Config/workspace.toml".to_string(),
+                    action: Action::Validate,
+                },
             });
             crate::config::WorkspaceConfig::default_for_paths(paths)
         }
@@ -414,10 +435,10 @@ pub fn validate_workspace(paths: &WorkspacePaths) -> Result<ValidationResult> {
                             path: dir,
                             code: "PROJECT-DIR-MISSING".to_string(),
                             message: format!("required project directory is missing: {folder}"),
-                            suggested_fix: format!(
+                            suggested_fix: SuggestedFix::Manual(format!(
                                 "recreate '{folder}' under project {}",
                                 project.name
-                            ),
+                            )),
                         });
                     }
                 }
@@ -430,9 +451,10 @@ pub fn validate_workspace(paths: &WorkspacePaths) -> Result<ValidationResult> {
                     path,
                     code: "PROJECT-PERMISSION".to_string(),
                     message: "permission denied while reading project metadata".to_string(),
-                    suggested_fix: format!(
-                        "adjust file permissions and rerun `{COMMAND_NAME} validate`"
-                    ),
+                    suggested_fix: SuggestedFix::FixThenRerun {
+                        fix: "adjust file permissions".to_string(),
+                        action: Action::Validate,
+                    },
                 });
             }
             Err(error) => {
@@ -443,7 +465,10 @@ pub fn validate_workspace(paths: &WorkspacePaths) -> Result<ValidationResult> {
                     path: project.path.clone(),
                     code: "PROJECT-METADATA-INVALID".to_string(),
                     message: format!("project metadata could not be loaded: {error}"),
-                    suggested_fix: format!("fix project.toml and rerun `{COMMAND_NAME} validate`"),
+                    suggested_fix: SuggestedFix::FixThenRerun {
+                        fix: "fix project.toml".to_string(),
+                        action: Action::Validate,
+                    },
                 });
             }
         }

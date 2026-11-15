@@ -1,14 +1,15 @@
 use crate::COMMAND_NAME;
-use crate::config::WorkspaceConfig;
-use crate::context::ContextSnapshot;
-use crate::error::{AppError, Result};
-use crate::paths::{RootSource, WorkspacePaths};
-use crate::runtime::RuntimeStatus;
-use crate::search::SearchOutcome;
-use crate::workspace::{
-    CreatedProject, PermissionCategory, PermissionGrantResult, PermissionRevokeResult,
-    PermissionStatus, PermissionViewSnapshot, Project, ProjectMetadata, ValidationIssue,
-    ValidationResult, ValidationSeverity,
+use ai_workspace_core::SetRootReport;
+use ai_workspace_core::config::WorkspaceConfig;
+use ai_workspace_core::context::ContextSnapshot;
+use ai_workspace_core::error::{AppError, Result};
+use ai_workspace_core::paths::{RootSource, WorkspacePaths};
+use ai_workspace_core::runtime::RuntimeStatus;
+use ai_workspace_core::search::SearchOutcome;
+use ai_workspace_core::workspace::{
+    Action, CreatedProject, PermissionCategory, PermissionGrantResult, PermissionRevokeResult,
+    PermissionStatus, PermissionViewSnapshot, Project, ProjectMetadata, SuggestedFix,
+    ValidationIssue, ValidationResult, ValidationSeverity,
 };
 use std::fmt;
 use std::io::{self, Write};
@@ -205,20 +206,16 @@ pub fn render_workspace_config(
     }
 }
 
-pub fn render_workspace_root_set(
-    root: &std::path::Path,
-    config_file: &std::path::Path,
-    env_override: Option<&std::path::Path>,
-) {
-    outln!("Workspace folder set to {}", root.display());
-    outln!("Saved in {}", config_file.display());
+pub fn render_workspace_root_set(report: &SetRootReport) {
+    outln!("Workspace folder set to {}", report.root.display());
+    outln!("Saved in {}", report.config_file.display());
     outln!(
         "Run `{COMMAND_NAME} init` to create the standard layout there if it is not set up yet."
     );
-    if let Some(env_root) = env_override {
+    if let Some(env_root) = &report.env_override {
         outln!(
             "Note: {} is set to {} and takes precedence. Unset it to use the saved folder.",
-            crate::paths::WORKSPACE_ROOT_ENV,
+            ai_workspace_core::paths::WORKSPACE_ROOT_ENV,
             env_root.display()
         );
     }
@@ -374,5 +371,26 @@ fn render_issue(issue: &ValidationIssue) {
         issue.path.display()
     );
     outln!("  Scope: {}:{}", issue.scope, issue.subject);
-    outln!("  Fix: {}", issue.suggested_fix);
+    outln!("  Fix: {}", describe_fix(&issue.suggested_fix));
+}
+
+fn describe_fix(fix: &SuggestedFix) -> String {
+    match fix {
+        SuggestedFix::Run { action, purpose } => {
+            format!("run `{}` to {purpose}", action_command(*action))
+        }
+        SuggestedFix::FixThenRerun { fix, action } => {
+            format!("{fix} and rerun `{}`", action_command(*action))
+        }
+        SuggestedFix::Manual(step) => step.clone(),
+    }
+}
+
+/// The command line that performs a core `Action`.
+fn action_command(action: Action) -> String {
+    let subcommand = match action {
+        Action::Init => "init",
+        Action::Validate => "validate",
+    };
+    format!("{COMMAND_NAME} {subcommand}")
 }

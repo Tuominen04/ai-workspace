@@ -139,3 +139,110 @@ change at the maintainer's request).
 Status
 
 Accepted
+
+---
+
+## ADR-0008
+
+The engine is split from the command-line front end into two crates of one
+Cargo workspace (resolver 3) in this repository:
+
+- `crates/ai-workspace-core` (library `ai_workspace_core`): all engine
+  behavior. It returns data and never prints, reads the terminal, or knows the
+  command's name.
+- `crates/ai-workspace-cli` (package `ai-workspace-cli`, binary
+  `ai-workspace`): argument parsing, rendering, prompts, usage text and
+  `COMMAND_NAME`. The installed command and the RPM stay `ai-workspace`.
+
+Cargo enforces the direction: the core cannot depend on the CLI. Version,
+edition and license live once, in `[workspace.package]`.
+
+The core's front-end API:
+
+```rust
+pub struct Engine { /* WorkspacePaths + RootSource */ }
+impl Engine {
+    pub fn open() -> Result<Engine>;                    // resolves the root (ADR-0007)
+    pub fn at(paths: WorkspacePaths, source: RootSource) -> Engine;  // an already resolved root
+    pub fn paths(&self) -> &WorkspacePaths;
+    pub fn root_source(&self) -> &RootSource;
+    pub fn init(&self) -> Result<InitReport>;
+    pub fn projects(&self) -> Result<Vec<Project>>;     // creates the layout and config if missing
+    pub fn config(&self) -> Result<WorkspaceConfig>;
+    pub fn validate(&self) -> Result<ValidationResult>;
+    pub fn create_project(&self, name: &str, description: Option<&str>) -> Result<CreatedProject>;
+    pub fn project_details(&self, name: &str) -> Result<(Project, ProjectMetadata)>;
+    pub fn grant(&self, project: Option<&str>, path: &str) -> Result<(Project, PermissionGrantResult)>;
+    pub fn revoke(&self, project: Option<&str>, path: &str) -> Result<(Project, PermissionRevokeResult)>;
+    pub fn permissions(&self, project: Option<&str>, options: PermissionViewOptions)
+        -> Result<(Project, PermissionViewSnapshot)>;
+    pub fn search(&self, query: &str, project: Option<&str>, limit: usize) -> Result<SearchOutcome>;
+}
+pub fn set_workspace_root(path: &str) -> Result<SetRootReport>;   // needs no workspace
+
+pub struct Session { /* project, model, runtime, chat history */ }
+impl Session {
+    pub fn open(engine: &Engine, project: &Project) -> Result<Session>;
+    pub fn summary(&self) -> SessionSummary<'_>;        // project, first context, runtime status
+    pub fn can_chat(&self) -> bool;                     // a runtime is available
+    pub fn send(&mut self, message: &str) -> Result<String>;
+    pub fn close(self) -> Result<usize>;                // temporary grants revoked
+}
+```
+
+How the design points were settled:
+
+- **Validation gate.** `AppError::ValidationGateBlocked` carries the
+  `GatedOperation` that was refused and the full `ValidationResult`, so any
+  front end can render the blocking issues. The CLI prints the same two lines
+  as before and then the error.
+- **Hints that name the command.** `ValidationIssue::suggested_fix` is a
+  `SuggestedFix` value (run an `Action` such as `Init` or `Validate`, fix
+  something by hand and rerun one, or a plain manual step) instead of text
+  containing "run `ai-workspace init`". The CLI turns an `Action` into a
+  command line. Errors whose wording is CLI vocabulary (the gate, the missing
+  `--project`) are worded by the CLI; the core's `Display` stays neutral.
+  Usage errors, including an empty search query, belong to the CLI's argument
+  parser and leave the core. One exception stays: the per-user config file's
+  first-line comment names `ai-workspace config set-root`, because that file
+  and its folder are named after the product, not after a front end.
+- **Who owns the runtime.** `Session` owns the `RuntimeManager`, so closing or
+  dropping a session stops an Ollama the session started. Dropping a session
+  that was not closed also closes its permission session, so an error or a
+  panic in a front end no longer leaves temporary grants behind.
+- **Streaming.** Unchanged: one non-streaming reply per turn (ADR-0004).
+- **Platform differences.** The home and per-user config folder lookups sit in
+  one small `platform` module inside `paths.rs`. Only Linux behavior exists;
+  macOS and Windows are not added.
+- **Public surface.** `Engine`, `Session`, their report types and the data
+  types they return are the API front ends use. The lower modules (`paths`,
+  `config`, `workspace`, `context`, `search`, `runtime`) stay public for now,
+  because the existing integration tests drive them directly and are the
+  regression oracle for this split; narrowing them is follow-up work once
+  those tests go through `Engine`.
+
+Tests that only use the library live in the core crate; tests that run the
+binary live in the CLI crate. They pass unchanged apart from where they live
+and the crate name in their `use` lines. The CLI's output stays byte-for-byte
+the same.
+
+Reason
+
+`session.rs` did the work and printed it in the same functions, and its chat
+loop and project selection read stdin. A second front end, most likely a
+Tauri desktop app (not decided), could only get printed text back. A crate
+boundary makes "business logic never depends on UI" (`ARCHITECTURE.md` rule
+4) something the compiler checks. One repository is chosen over a separate
+engine repository because the core's API is about to change repeatedly
+(sessions, project agents), one tag should release every artifact, and a
+solo maintainer would pay for every contract change three times across two
+repositories. A crate can be lifted into its own repository later, mostly
+mechanically.
+
+Revisit if another project needs to depend on the core, a front end is seen
+reaching around the core's public API, or core changes start being batched or
+avoided because of the boundary.
+
+Status
+
+Accepted

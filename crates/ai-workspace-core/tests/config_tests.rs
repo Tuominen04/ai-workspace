@@ -1,6 +1,6 @@
-use ai_workspace::config::{ensure_default_workspace_config, load_workspace_config};
-use ai_workspace::error::AppError;
-use ai_workspace::paths::WorkspacePaths;
+use ai_workspace_core::config::{ensure_default_workspace_config, load_workspace_config};
+use ai_workspace_core::error::AppError;
+use ai_workspace_core::paths::WorkspacePaths;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn test_paths(name: &str) -> WorkspacePaths {

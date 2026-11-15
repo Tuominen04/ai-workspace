@@ -12,11 +12,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "ai-workspace"
+name = "ai-workspace-cli"
 version = "0.6.0"
 dependencies = [
+ "ai-workspace-core",
  "assert_cmd",
  "predicates 2.1.5",
+]
+
+[[package]]
+name = "ai-workspace-core"
+version = "0.6.0"
+dependencies = [
  "serde",
  "serde_json",
  "toml",

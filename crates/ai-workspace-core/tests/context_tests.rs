@@ -1,7 +1,7 @@
-use ai_workspace::config::WorkspaceConfig;
-use ai_workspace::context::build_context_snapshot;
-use ai_workspace::paths::WorkspacePaths;
-use ai_workspace::workspace::{create_project, inspect_project};
+use ai_workspace_core::config::WorkspaceConfig;
+use ai_workspace_core::context::build_context_snapshot;
+use ai_workspace_core::paths::WorkspacePaths;
+use ai_workspace_core::workspace::{create_project, inspect_project};
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -93,7 +93,7 @@ fn context_snapshot_includes_project_context_when_base_sources_are_abundant() {
         snapshot.project_files.len() >= 3,
         "all project context files should be selected"
     );
-    assert!(snapshot.source_count <= ai_workspace::context::DEFAULT_MAX_CONTEXT_SOURCES);
+    assert!(snapshot.source_count <= ai_workspace_core::context::DEFAULT_MAX_CONTEXT_SOURCES);
 
     let _ = fs::remove_dir_all(&paths.root);
 }
@@ -120,8 +120,8 @@ fn context_snapshot_stays_bounded_and_deterministic() {
     let snapshot = build_context_snapshot(&paths, Some(&project), None)
         .expect("context snapshot should build");
 
-    assert!(snapshot.source_count <= ai_workspace::context::DEFAULT_MAX_CONTEXT_SOURCES);
-    assert!(snapshot.total_bytes <= ai_workspace::context::DEFAULT_MAX_CONTEXT_BYTES);
+    assert!(snapshot.source_count <= ai_workspace_core::context::DEFAULT_MAX_CONTEXT_SOURCES);
+    assert!(snapshot.total_bytes <= ai_workspace_core::context::DEFAULT_MAX_CONTEXT_BYTES);
 
     let _ = fs::remove_dir_all(&paths.root);
 }
@@ -194,7 +194,7 @@ fn context_snapshot_uses_relevance_to_include_a_topic_file_that_fixed_order_woul
         "the topic-relevant base file should be included when ranked by relevance, got: {:?}",
         snapshot.base_files
     );
-    assert!(snapshot.source_count <= ai_workspace::context::DEFAULT_MAX_CONTEXT_SOURCES);
+    assert!(snapshot.source_count <= ai_workspace_core::context::DEFAULT_MAX_CONTEXT_SOURCES);
 
     let _ = fs::remove_dir_all(&paths.root);
 }
@@ -222,7 +222,7 @@ fn context_snapshot_no_project_no_query_matches_v04_fixed_order() {
     );
     assert_eq!(
         first.base_files.len(),
-        ai_workspace::context::DEFAULT_MAX_CONTEXT_SOURCES
+        ai_workspace_core::context::DEFAULT_MAX_CONTEXT_SOURCES
     );
     assert!(first.project_files.is_empty());
     assert!(first.session_files.is_empty());

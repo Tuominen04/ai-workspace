@@ -1,5 +1,5 @@
-use ai_workspace::error::AppError;
-use ai_workspace::runtime::{ChatMessage, RuntimeManager};
+use ai_workspace_core::error::AppError;
+use ai_workspace_core::runtime::{ChatMessage, RuntimeManager};
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::thread;

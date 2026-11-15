@@ -1,7 +1,8 @@
 use crate::COMMAND_NAME;
-use crate::error::{AppError, Result};
-use crate::paths::WorkspacePaths;
-use crate::session;
+use crate::ui;
+use ai_workspace_core::error::{AppError, GatedOperation, Result};
+use ai_workspace_core::workspace::PermissionViewOptions;
+use ai_workspace_core::{Engine, Session};
 
 const USAGE_CONFIG_SET_ROOT: &str = "config set-root PATH";
 const USAGE_PROJECT_SHOW: &str = "project show PROJECT";
@@ -11,6 +12,43 @@ const USAGE_PERMISSION_VIEW: &str =
     "permission view [--project PROJECT] [--filter TEXT] [--page N] [--page-size N]";
 const USAGE_PERMISSION_REVOKE: &str = "permission revoke [--project PROJECT] --path PATH";
 const USAGE_SEARCH: &str = "search --query TEXT [--project PROJECT] [--limit N]";
+
+/// Reports a failed command: whatever the error carries for the user to read
+/// on stdout first (the blocking issues of a refused gated command), then
+/// `error: ...` on stderr.
+pub fn report_error(error: &AppError) {
+    if let AppError::ValidationGateBlocked { operation, result } = error {
+        ui::render_validation_gate_block(&gated_command(*operation), result);
+    }
+    eprintln!("error: {}", error_message(error));
+}
+
+/// The message for an error, in the CLI's words. Errors whose core wording
+/// would not tell a terminal user what to type are reworded here; everything
+/// else uses the core's message.
+fn error_message(error: &AppError) -> String {
+    match error {
+        AppError::ValidationGateBlocked { operation, .. } => format!(
+            "cannot run {} because workspace validation has blocking issues",
+            gated_command(*operation)
+        ),
+        AppError::MissingProjectContext => "permission command requires a project context; use --project PROJECT or keep only one project".to_string(),
+        other => other.to_string(),
+    }
+}
+
+/// The command line of a gated operation, e.g. `ai-workspace project create`.
+fn gated_command(operation: GatedOperation) -> String {
+    let subcommand = match operation {
+        GatedOperation::Search => "search",
+        GatedOperation::ProjectCreate => "project create",
+        GatedOperation::ProjectShow => "project show",
+        GatedOperation::PermissionGrant => "permission grant",
+        GatedOperation::PermissionRevoke => "permission revoke",
+        GatedOperation::PermissionView => "permission view",
+    };
+    format!("{COMMAND_NAME} {subcommand}")
+}
 
 /// Builds the usage error for one subcommand, prefixed with the command name.
 fn usage_error(usage: &str) -> AppError {
@@ -28,50 +66,141 @@ pub fn run() -> Result<()> {
             print_help();
             Ok(())
         }
-        Command::ConfigSetRoot { path } => session::set_workspace_root(&path),
+        Command::ConfigSetRoot { path } => {
+            let report = ai_workspace_core::set_workspace_root(&path)?;
+            ui::render_workspace_root_set(&report);
+            Ok(())
+        }
         workspace_command => run_workspace_command(workspace_command),
     }
 }
 
 fn run_workspace_command(command: Command) -> Result<()> {
-    let (paths, source) = WorkspacePaths::detect_with_source()?;
+    let engine = Engine::open()?;
 
     match command {
-        Command::Run => session::run_session(&paths),
-        Command::Init => session::init_workspace(&paths),
-        Command::Status => session::print_status(&paths, &source),
-        Command::ConfigShow => session::show_workspace_config(&paths, &source),
-        Command::ProjectCreate { name, description } => {
-            session::create_managed_project(&paths, &name, description.as_deref())
+        Command::Run => run_session(&engine),
+        Command::Init => {
+            let report = engine.init()?;
+            ui::render_init(engine.paths(), &report.config_path, report.config_created);
+            Ok(())
         }
-        Command::ProjectShow { project } => session::show_managed_project(&paths, &project),
+        Command::Status => {
+            let projects = engine.projects()?;
+            ui::render_status(engine.paths(), engine.root_source(), &projects);
+            Ok(())
+        }
+        Command::ConfigShow => {
+            let config = engine.config()?;
+            ui::render_workspace_config(&config, engine.paths(), engine.root_source());
+            Ok(())
+        }
+        Command::ProjectCreate { name, description } => {
+            let created = engine.create_project(&name, description.as_deref())?;
+            ui::render_project_created(&created);
+            Ok(())
+        }
+        Command::ProjectShow { project } => {
+            let (project, metadata) = engine.project_details(&project)?;
+            ui::render_project_details(&project, &metadata);
+            Ok(())
+        }
         Command::PermissionGrant { project, path } => {
-            session::grant_permission(&paths, project.as_deref(), &path)
+            let (project, result) = engine.grant(project.as_deref(), &path)?;
+            ui::render_permission_grant(&project, &result);
+            Ok(())
         }
         Command::PermissionView {
             project,
             filter,
             page,
             page_size,
-        } => session::view_permissions(
-            &paths,
-            project.as_deref(),
-            filter.as_deref(),
-            page,
-            page_size,
-        ),
+        } => {
+            let options = PermissionViewOptions {
+                filter,
+                page,
+                page_size,
+            };
+            let (project, snapshot) = engine.permissions(project.as_deref(), options)?;
+            ui::render_permission_view(&project, &snapshot);
+            Ok(())
+        }
         Command::PermissionRevoke { project, path } => {
-            session::revoke_permission(&paths, project.as_deref(), &path)
+            let (project, result) = engine.revoke(project.as_deref(), &path)?;
+            ui::render_permission_revoke(&project, &result);
+            Ok(())
         }
         Command::Search {
             query,
             project,
             limit,
-        } => session::run_search(&paths, &query, project.as_deref(), limit),
-        Command::Validate => session::validate_workspace_state(&paths),
+        } => {
+            let outcome = engine.search(&query, project.as_deref(), limit)?;
+            if outcome.results.is_empty() {
+                ui::render_no_search_results(&outcome);
+            } else {
+                ui::render_search_results(&outcome);
+            }
+            Ok(())
+        }
+        Command::Validate => {
+            let result = engine.validate()?;
+            ui::render_validation_result(&result);
+            if result.valid {
+                Ok(())
+            } else {
+                Err(AppError::Message("workspace validation failed".to_string()))
+            }
+        }
         // Handled in `run` before a workspace is resolved; never reached.
         Command::Version | Command::Help | Command::ConfigSetRoot { .. } => Ok(()),
     }
+}
+
+/// The interactive session: pick a project, show what the session sees, then
+/// chat until the user leaves (or, without a runtime, wait for Enter).
+fn run_session(engine: &Engine) -> Result<()> {
+    let projects = engine.projects()?;
+
+    ui::render_startup_banner(engine.paths());
+    if projects.is_empty() {
+        outln!(
+            "No workspaces found under {}",
+            engine.paths().projects.display()
+        );
+        outln!("Create a project directory there and rerun {COMMAND_NAME}.");
+        return Err(AppError::Message("no workspaces found".to_string()));
+    }
+
+    ui::render_projects(&projects);
+    let selection = ui::prompt_for_selection(&projects)?;
+    let selected_project = projects.get(selection).ok_or_else(|| {
+        AppError::InvalidSelection("workspace selection was out of range".to_string())
+    })?;
+
+    let mut session = Session::open(engine, selected_project)?;
+    let summary = session.summary();
+    ui::render_session_summary(summary.project, summary.context, summary.runtime);
+
+    if session.can_chat() {
+        ui::render_chat_ready();
+        // A failed prompt (closed stdin, unreadable input) ends the chat the
+        // same way `exit` does.
+        while let Ok(Some(message)) = ui::prompt_for_chat_message() {
+            match session.send(&message) {
+                Ok(reply) => ui::render_ai_response(&reply),
+                Err(error) => ui::render_chat_error(&error.to_string()),
+            }
+        }
+    } else {
+        ui::render_no_runtime_notice();
+        ui::wait_for_exit()?;
+    }
+
+    let revoked = session.close()?;
+    ui::render_permission_session_closed(selected_project, revoked);
+
+    Ok(())
 }
 
 enum Command {
@@ -346,7 +475,7 @@ fn parse_search_command(args: &[String]) -> Result<Command> {
         match args[index].as_str() {
             "--query" => {
                 if index + 1 >= args.len() {
-                    return Err(AppError::EmptySearchQuery);
+                    return Err(usage_error(USAGE_SEARCH));
                 }
                 query = Some(args[index + 1].clone());
                 index += 2;
@@ -380,7 +509,7 @@ fn parse_search_command(args: &[String]) -> Result<Command> {
 
     let query = match query {
         Some(query) if !query.trim().is_empty() => query,
-        _ => return Err(AppError::EmptySearchQuery),
+        _ => return Err(usage_error(USAGE_SEARCH)),
     };
 
     Ok(Command::Search {

@@ -1,7 +1,7 @@
-use ai_workspace::config::WorkspaceConfig;
-use ai_workspace::error::AppError;
-use ai_workspace::paths::WorkspacePaths;
-use ai_workspace::workspace::{
+use ai_workspace_core::config::WorkspaceConfig;
+use ai_workspace_core::error::AppError;
+use ai_workspace_core::paths::WorkspacePaths;
+use ai_workspace_core::workspace::{
     PermissionStatus, PermissionViewOptions, create_project, grant_temporary_permission,
     inspect_project, normalize_project_name, revoke_temporary_permission, validate_workspace,
     view_permissions,
@@ -136,7 +136,7 @@ fn permission_view_marks_deleted_grant_unavailable() {
     let temporary = snapshot
         .entries
         .iter()
-        .find(|entry| entry.category == ai_workspace::workspace::PermissionCategory::Temporary)
+        .find(|entry| entry.category == ai_workspace_core::workspace::PermissionCategory::Temporary)
         .expect("temporary grant entry should be present");
     assert_eq!(temporary.status, PermissionStatus::Unavailable);
 
