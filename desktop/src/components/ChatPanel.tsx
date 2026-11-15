@@ -139,6 +139,17 @@ export function ChatPanel({ project, session, onSession }: Props) {
         <ContextList title="Project" files={session.project_files} />
         <ContextList title="Session" files={session.session_files} />
         <ContextList title="Skipped (names look like secrets)" files={session.skipped_files} />
+        <p className="muted small">Budget: {session.budget}</p>
+        {session.truncated_files.length > 0 && (
+          <div className="context-group">
+            <div className="label">Cut to fit</div>
+            <ul>
+              {session.truncated_files.map((file) => (
+                <li key={file}>{file}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </details>
 
       {project !== null && project !== session.project && (

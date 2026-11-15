@@ -240,6 +240,8 @@ fn agent_instructions_come_first_and_the_context_follows() {
         source_count: 1,
         total_bytes: 40,
         skipped_files: Vec::new(),
+        truncated_files: Vec::new(),
+        budget: Default::default(),
     };
 
     let with_agent = snapshot.as_system_prompt_for(Some("You are a security advisor."));

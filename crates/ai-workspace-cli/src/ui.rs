@@ -88,6 +88,10 @@ pub fn render_session_summary(summary: &SessionSummary<'_>) {
     outln!("Project context files: {}", context.project_files.len());
     outln!("Session context files: {}", context.session_files.len());
     outln!("Total context sources: {}", context.source_count);
+    outln!("Context budget: {}", context.budget);
+    for file in &context.truncated_files {
+        outln!("Cut to fit: {file}");
+    }
     if !context.skipped_files.is_empty() {
         outln!(
             "Skipped because the names look like secrets: {}",

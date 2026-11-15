@@ -4,7 +4,7 @@
 //! ADR-0008.
 
 use crate::config::load_workspace_config;
-use crate::context::{ContextSnapshot, build_context_snapshot};
+use crate::context::{ContextBudget, ContextSnapshot, build_context_snapshot_within};
 use crate::engine::Engine;
 use crate::error::{AppError, Result};
 use crate::paths::WorkspacePaths;
@@ -24,6 +24,7 @@ pub struct Session {
     project: Project,
     model: String,
     agent: AgentInstructions,
+    budget: ContextBudget,
     initial_context: ContextSnapshot,
     runtime_status: RuntimeStatus,
     history: Vec<ChatMessage>,
@@ -94,22 +95,35 @@ impl Session {
         let config = load_workspace_config(&paths)?;
         let (_, metadata) = inspect_project(&paths, &config, &project.name)?;
         let initial_query = initial_context_query(&metadata);
-        let initial_context = build_context_snapshot(&paths, Some(project), Some(&initial_query))?;
         let mut runtime = RuntimeManager::new();
         let runtime_status = runtime.ensure_ollama()?;
 
         let model = resolve_model(&config, &metadata);
-        let agent = if runtime_status.running {
+        let (agent, window) = if runtime_status.running {
             match runtime.show_model(OLLAMA_BASE_URL, &model) {
-                Ok(info) => match info.system {
-                    Some(text) => AgentInstructions::Included(text),
-                    None => AgentInstructions::NoneInModel,
-                },
-                Err(error) => AgentInstructions::Unknown(error.to_string()),
+                Ok(info) => (
+                    match info.system {
+                        Some(text) => AgentInstructions::Included(text),
+                        None => AgentInstructions::NoneInModel,
+                    },
+                    info.num_ctx,
+                ),
+                Err(error) => (AgentInstructions::Unknown(error.to_string()), None),
             }
         } else {
-            AgentInstructions::Unknown("no local runtime is running".to_string())
+            (
+                AgentInstructions::Unknown("no local runtime is running".to_string()),
+                None,
+            )
         };
+        // The model's window decides how much workspace text fits (ADR-0012); unknown keeps
+        // the fixed default.
+        let budget = match window {
+            Some(tokens) => ContextBudget::for_window(tokens, agent.text().map_or(0, str::len)),
+            None => ContextBudget::default(),
+        };
+        let initial_context =
+            build_context_snapshot_within(&paths, Some(project), Some(&initial_query), budget)?;
 
         let history = vec![ChatMessage::system(
             initial_context.as_system_prompt_for(agent.text()),
@@ -117,6 +131,7 @@ impl Session {
         Ok(Self {
             model,
             agent,
+            budget,
             paths,
             project: project.clone(),
             initial_context,
@@ -153,8 +168,12 @@ impl Session {
             ));
         }
 
-        if let Ok(context) = build_context_snapshot(&self.paths, Some(&self.project), Some(message))
-        {
+        if let Ok(context) = build_context_snapshot_within(
+            &self.paths,
+            Some(&self.project),
+            Some(message),
+            self.budget,
+        ) {
             self.history[0] = ChatMessage::system(context.as_system_prompt_for(self.agent.text()));
         }
 
