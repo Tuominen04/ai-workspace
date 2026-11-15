@@ -25,6 +25,18 @@ Creating projects and granting permissions are still done with the command line.
 The app finds the workspace exactly as the command does: `AI_WORKSPACE_HOME`, else the folder
 saved by `ai-workspace config set-root`, else `~/AI`.
 
+## Installing
+
+Each release has a second package, `ai-workspace-desktop-<version>.x86_64.rpm`:
+
+```bash
+sudo dnf install ./ai-workspace-desktop-<version>.x86_64.rpm
+```
+
+It installs `/usr/bin/ai-workspace-desktop`, an **AI Workspace Desktop** entry in the
+applications menu, an icon and the two license texts. `dnf` pulls in WebKitGTK and GTK.
+Removing it (`sudo dnf remove ai-workspace-desktop`) leaves the workspace untouched.
+
 ## Running it from source
 
 Once, on Fedora:

@@ -442,7 +442,16 @@ How a release is made is described in [docs/release.md](docs/release.md).
 ## Desktop App
 
 A desktop window onto the same workspace: projects, validation, search and
-chat. See [docs/desktop.md](docs/desktop.md) to run it from source.
+chat. It comes as a second package from the same releases:
+
+```bash
+sudo dnf install ./ai-workspace-desktop-<version>.x86_64.rpm
+```
+
+Then open **AI Workspace Desktop** from the applications menu, or run
+`ai-workspace-desktop`. It finds the workspace the same way the command does.
+See [docs/desktop.md](docs/desktop.md) for what it does and how to run it from
+source.
 
 ## Workspace Manager Commands (v0.2)
 

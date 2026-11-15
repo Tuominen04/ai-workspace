@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "AI Workspace",
+  "productName": "AI Workspace Desktop",
   "mainBinaryName": "ai-workspace-desktop",
   "identifier": "io.github.tuominen04.AIWorkspace",
   "build": {
@@ -26,7 +26,25 @@
     }
   },
   "bundle": {
-    "active": false,
-    "icon": ["icons/icon.png"]
+    "active": true,
+    "targets": [
+      "rpm"
+    ],
+    "icon": [
+      "icons/icon.png"
+    ],
+    "category": "Utility",
+    "license": "MIT OR Apache-2.0",
+    "shortDescription": "Local-first AI workspace manager for Fedora",
+    "longDescription": "A desktop window onto your AI Workspace: projects, validation, search and chat with a local Ollama model. Your files stay in your workspace folder; nothing leaves the computer.",
+    "linux": {
+      "rpm": {
+        "release": "1",
+        "files": {
+          "/usr/share/licenses/ai-workspace-desktop/LICENSE-MIT": "../../LICENSE-MIT",
+          "/usr/share/licenses/ai-workspace-desktop/LICENSE-APACHE": "../../LICENSE-APACHE"
+        }
+      }
+    }
   }
 }

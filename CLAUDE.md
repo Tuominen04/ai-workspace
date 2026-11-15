@@ -31,7 +31,7 @@ AI_WORKSPACE_HOME=/tmp/ai-test cargo run -- init
 
 ## Releases
 
-A release is a Fedora `.rpm` built by `.github/workflows/release.yml` when a `v<version>` tag is pushed; it lands as a **draft** release the maintainer publishes. The package is described under `[package.metadata.generate-rpm]` in `crates/ai-workspace-cli/Cargo.toml` and built with `cargo generate-rpm -p crates/ai-workspace-cli --auto-req builtin` (`cargo-generate-rpm` 0.21.1). The tag must be on `main` and equal `version` under `[workspace.package]` in the root `Cargo.toml`. See `docs/release.md`. Never push a tag or publish a release without the maintainer asking for it.
+A release is two Fedora `.rpm`s built by `.github/workflows/release.yml` when a `v<version>` tag is pushed; they land as a **draft** release the maintainer publishes. The CLI package is described under `[package.metadata.generate-rpm]` in `crates/ai-workspace-cli/Cargo.toml` and built with `cargo generate-rpm -p crates/ai-workspace-cli --auto-req builtin` (`cargo-generate-rpm` 0.21.1). The desktop package `ai-workspace-desktop` is built by Tauri's bundler (`npm run tauri build` in `desktop/`) from the `bundle` section of `desktop/src-tauri/tauri.conf.json`; its package name comes from `productName` ("AI Workspace Desktop"), so don't rename that without renaming the package. The tag must be on `main` and equal `version` under `[workspace.package]` in the root `Cargo.toml`. See `docs/release.md`. Never push a tag or publish a release without the maintainer asking for it.
 
 ## Architecture
 

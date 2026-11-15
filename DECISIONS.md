@@ -300,7 +300,10 @@ a project's details, validation results, search, and a chat window driving
   `invoke`, as Learning Corner does. Ollama is never needed.
 - **Packaging** is a separate pull request: the release workflow builds a
   second RPM, `ai-workspace-desktop`, with Tauri's bundler. The CLI package is
-  unchanged.
+  unchanged. Tauri derives the RPM's name from `productName`, so the product
+  is "AI Workspace Desktop" (the window title stays "AI Workspace"); a product
+  name of "AI Workspace" would have produced a package named `ai-workspace`,
+  colliding with the CLI's.
 
 Reason
 

@@ -55,10 +55,20 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Tauri's Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
       # The lock is committed; a release contains exactly the dependency versions in it.
       - name: Test
-        # The desktop app is tested by CI and packaged separately; it needs WebKitGTK.
-        run: cargo test --locked --workspace --exclude ai-workspace-desktop
+        run: cargo test --locked --workspace
 
       - name: Build
         run: cargo build --release --locked -p ai-workspace-cli
@@ -88,11 +98,45 @@ jobs:
               ai-workspace --help >/dev/null
             '
 
+      # The desktop app (ADR-0009), as a second package. Tauri's bundler builds the interface,
+      # the binary and the rpm; the package's name, ai-workspace-desktop, comes from
+      # productName in tauri.conf.json, and its version from the workspace.
+      - name: Package the desktop app
+        working-directory: desktop
+        run: |
+          npm ci
+          npm run tauri build -- --ci -- --locked
+
+      # Install it on Fedora: it must resolve its libraries (WebKitGTK, GTK) from the
+      # distribution and put its launcher in the applications menu. A window cannot be
+      # opened here, so this checks the binary links rather than that it draws.
+      - name: Smoke test the desktop app on Fedora
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          docker run --rm \
+            --volume "$PWD/target/release/bundle/rpm:/pkg:ro" \
+            --env VERSION="$version" \
+            registry.fedoraproject.org/fedora:44 \
+            bash -euc '
+              dnf install -y /pkg/*.rpm
+              got=$(rpm -q --queryformat "%{NAME} %{VERSION}" ai-workspace-desktop)
+              [ "$got" = "ai-workspace-desktop $VERSION" ] \
+                || { echo "::error::installed package is \"$got\", expected \"ai-workspace-desktop $VERSION\""; exit 1; }
+              [ -x /usr/bin/ai-workspace-desktop ]
+              ls /usr/share/applications/*.desktop | grep -q "AI Workspace Desktop"
+              if ldd /usr/bin/ai-workspace-desktop | grep "not found"; then
+                echo "::error::the desktop app is missing libraries on Fedora"; exit 1
+              fi
+            '
+
       - name: Collect and checksum
         run: |
           version="${GITHUB_REF_NAME#v}"
           mkdir dist-release
           cp target/generate-rpm/ai-workspace-*.rpm "dist-release/ai-workspace-$version.x86_64.rpm"
+          # Tauri names the file after the product, spaces included; rename it to what the
+          # install guide tells people to look for.
+          cp target/release/bundle/rpm/*.rpm "dist-release/ai-workspace-desktop-$version.x86_64.rpm"
           cd dist-release
           sha256sum -- * > SHA256SUMS
           cat SHA256SUMS
