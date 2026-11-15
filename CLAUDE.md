@@ -19,7 +19,9 @@ cargo test some_test_name    # run a single test by name (substring match)
 cargo run -- <args>          # run the `ai-workspace` CLI, e.g. `cargo run -- status`
 ```
 
-`.github/workflows/ci.yml` runs `cargo fmt --check`, `cargo clippy --locked --workspace --all-targets -- -D warnings` and `cargo test --locked --workspace` on every pull request and push to `main`; run the same three locally before committing (there is no `rustfmt.toml`/`clippy.toml`, so the defaults apply).
+These build only the core and the CLI (`default-members`). The desktop app (`desktop/`, ADR-0009) needs WebKitGTK and Node; from `desktop/`: `npm ci`, `npm run tauri dev` to run it, and `npm run lint && npm run typecheck && npm test && npm run build`, `npm run bindings` (shell tests, regenerates `src/lib/bindings/`), `npm run e2e` (browser checks with a stub engine) to check it. See `docs/desktop.md`.
+
+`.github/workflows/ci.yml` runs, on every pull request and push to `main`: `cargo fmt --all --check`, clippy `-D warnings` and tests for the core and CLI (`--workspace --exclude ai-workspace-desktop`), and separate desktop jobs (shell clippy and tests plus a check that the committed bindings are current; interface lint, typecheck, unit tests and build; browser checks). Run the ones covering what you changed before committing (there is no `rustfmt.toml`/`clippy.toml`, so the defaults apply).
 
 The workspace root is resolved by `WorkspacePaths::detect_with_source` in `paths.rs`: the `AI_WORKSPACE_HOME` env var, else `workspace_root` in the per-user file `~/.config/ai-workspace/config.toml` (written by `ai-workspace config set-root PATH`), else `~/AI`. Set the env var when manually testing `ai-workspace` commands to avoid touching a real workspace; tests that run the binary must also set `HOME` and `XDG_CONFIG_HOME` to a temp directory (see `crates/ai-workspace-cli/tests/root_setting_tests.rs`):
 
@@ -37,6 +39,7 @@ The repository is a **Cargo workspace with two crates** (ADR-0008 in `DECISIONS.
 
 - **`crates/ai-workspace-core`** (library `ai_workspace_core`) — all engine behavior. It returns data and **never prints, reads the terminal, or names the command**: no `println!`/`print!`/stdin, no `COMMAND_NAME`. Cargo prevents it from depending on the CLI.
 - **`crates/ai-workspace-cli`** (package `ai-workspace-cli`, binary `ai-workspace`) — argument parsing, rendering, prompts, usage text. Holds the RPM metadata.
+- **`desktop/`** — the Tauri desktop app (ADR-0009): `desktop/src-tauri` is crate `ai-workspace-desktop` (a workspace member but not a default member), `desktop/src` the React + TypeScript interface. Commands in `commands.rs` are thin: one core call each, converted to wire types in `dto.rs`, from which `ts-rs` generates `desktop/src/lib/bindings/` (never edit those by hand; `npm run bindings` regenerates them). `desktop/src/lib/engine.ts` is the only file that calls `invoke`. The desktop names no CLI command and keeps no workspace state; its only own state is the theme choice in the webview's local storage.
 
 Version, edition and license live once, in `[workspace.package]` in the root `Cargo.toml`. Inside each crate the modules are flat. `PROJECR_STRUCTURE.md` describes an *aspirational* nested layout (`core/`, `project/`, `permissions/`, ...) that does not exist — don't assume those folders, and don't invent them speculatively. `ARCHITECTURE.md` (see its Code Layout section) is the reliable reference.
 
@@ -82,7 +85,7 @@ These apply regardless of which assistant is editing this repo:
 - Do not introduce cloud dependencies unless explicitly requested; the project is offline/local-first by design (no telemetry, no automatic writes, no hidden background services — see `SECURITY.md`).
 - Prefer Rust for implementation, Markdown for knowledge/docs, TOML for configuration — don't introduce other formats/languages without reason.
 - Keep filesystem access confined to the core's `paths.rs`/`workspace.rs`/`config.rs`. Don't add `std::fs` calls in `engine.rs`, `session.rs`, `runtime.rs`, or the CLI crate's `src/`.
-- Keep printing and terminal input in the CLI crate. New engine behavior goes in the core and returns data.
+- Keep printing and terminal input in the CLI crate. New engine behavior goes in the core and returns data; front ends (CLI, desktop) only convert and render.
 
 ## Testing Guidelines (from `CONTRIBUTING.md`)
 

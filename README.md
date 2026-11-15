@@ -439,6 +439,11 @@ How a release is made is described in [docs/release.md](docs/release.md).
 
 ---
 
+## Desktop App
+
+A desktop window onto the same workspace: projects, validation, search and
+chat. See [docs/desktop.md](docs/desktop.md) to run it from source.
+
 ## Workspace Manager Commands (v0.2)
 
 The v0.2 workspace-manager layer adds explicit commands for configuration,

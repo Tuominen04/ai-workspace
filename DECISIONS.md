@@ -289,6 +289,9 @@ a project's details, validation results, search, and a chat window driving
 - **No network from the webview.** The content security policy allows only
   the app's own files, and the capability list is `core:default`. Ollama is
   reached from Rust, as in the CLI.
+- **The theme is the interface's only state.** System, Light or Dark is kept in
+  the webview's local storage: a display preference of the computer, not
+  workspace state, so it stays out of the workspace folder.
 - **Validation fixes stay structured.** `SuggestedFix` crosses as data (kind,
   action, text); the interface words it. The desktop names no CLI command.
 - **Tests.** Shell tests call the command functions against temporary

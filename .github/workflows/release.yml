@@ -57,7 +57,8 @@ jobs:
 
       # The lock is committed; a release contains exactly the dependency versions in it.
       - name: Test
-        run: cargo test --locked --workspace
+        # The desktop app is tested by CI and packaged separately; it needs WebKitGTK.
+        run: cargo test --locked --workspace --exclude ai-workspace-desktop
 
       - name: Build
         run: cargo build --release --locked -p ai-workspace-cli
