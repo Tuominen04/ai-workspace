@@ -84,3 +84,33 @@ fn validation_fixes_name_actions_not_commands() {
 
     let _ = std::fs::remove_dir_all(&engine.paths().root);
 }
+
+#[test]
+fn a_projects_model_is_set_cleared_and_checked() {
+    let engine = test_engine("model");
+    engine.init().expect("init should succeed");
+    engine
+        .create_project("Security", None)
+        .expect("project should be created");
+
+    let (_, metadata) = engine
+        .set_project_model("security", Some("  sec  "))
+        .expect("a model can be set");
+    assert_eq!(metadata.model.as_deref(), Some("sec"));
+    let (_, reread) = engine.project_details("security").expect("details load");
+    assert_eq!(
+        reread.model.as_deref(),
+        Some("sec"),
+        "it is saved in project.toml"
+    );
+
+    let (_, cleared) = engine
+        .set_project_model("security", Some(""))
+        .expect("blank clears it");
+    assert_eq!(cleared.model, None);
+
+    let refused = engine.set_project_model("security", Some("two words"));
+    assert!(matches!(refused, Err(AppError::InvalidModelName(_))));
+
+    let _ = std::fs::remove_dir_all(&engine.paths().root);
+}

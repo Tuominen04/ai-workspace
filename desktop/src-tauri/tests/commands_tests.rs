@@ -198,3 +198,19 @@ fn permissions_are_granted_listed_and_revoked() {
 
     let _ = std::fs::remove_dir_all(&engine.paths().root);
 }
+
+#[test]
+fn a_projects_model_is_set_and_cleared_from_the_app() {
+    let engine = test_engine("set-model");
+    commands::init(&engine).expect("init should succeed");
+    commands::create_project(&engine, "Security", None).expect("project should be created");
+
+    let set = commands::set_project_model(&engine, "security", Some("sec")).expect("set");
+    assert_eq!(set.model.as_deref(), Some("sec"));
+    let cleared = commands::set_project_model(&engine, "security", None).expect("clear");
+    assert_eq!(cleared.model, None);
+    let bad = commands::set_project_model(&engine, "security", Some("a b")).expect_err("bad name");
+    assert_eq!(bad.kind, "InvalidModelName");
+
+    let _ = std::fs::remove_dir_all(&engine.paths().root);
+}

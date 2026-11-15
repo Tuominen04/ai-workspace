@@ -45,6 +45,7 @@ impl From<AppError> for CommandError {
             AppError::ConfigMissing(_) => "ConfigMissing",
             AppError::ConfigInvalid { .. } => "ConfigInvalid",
             AppError::InvalidProjectName(_) => "InvalidProjectName",
+            AppError::InvalidModelName(_) => "InvalidModelName",
             AppError::ProjectNotFound(_) => "ProjectNotFound",
             AppError::ValidationGateBlocked { .. } => "ValidationGateBlocked",
             AppError::PermissionDenied(_) => "PermissionDenied",

@@ -118,6 +118,13 @@ export const engine = {
     show: (name: string) => call<ProjectDetails>("project_show", { name }),
     create: (name: string, description: string) =>
       call<ProjectDetails>("project_create", { name, description }),
+    /** Sets the Ollama model a project uses; `null` returns it to the workspace default. */
+    setModel: (name: string, model: string | null) =>
+      call<ProjectDetails>("project_set_model", { name, model }),
+  },
+  models: {
+    /** Models Ollama has installed, for suggestions; empty when Ollama cannot be asked. */
+    installed: () => call<string[]>("models_installed"),
   },
   permissions: {
     /** One page of a project's grants, optionally filtered by path. */

@@ -234,6 +234,10 @@ pub fn render_project_details(project: &Project, metadata: &ProjectMetadata) {
     outln!("Path: {}", project.path.display());
     outln!("Display name: {}", metadata.display_name);
     outln!("Description: {}", metadata.description);
+    outln!(
+        "Model: {}",
+        metadata.model.as_deref().unwrap_or("workspace default")
+    );
     outln!("Created at: {}", metadata.created_at);
     outln!("Knowledge dir: {}", metadata.knowledge_dir);
     outln!("Specs dir: {}", metadata.specs_dir);
@@ -395,4 +399,14 @@ fn action_command(action: Action) -> String {
         Action::Validate => "validate",
     };
     format!("{COMMAND_NAME} {subcommand}")
+}
+
+pub fn render_project_model_set(project: &Project, metadata: &ProjectMetadata) {
+    match &metadata.model {
+        Some(model) => outln!("Project {} now uses the model {model}.", project.name),
+        None => outln!(
+            "Project {} now uses the workspace's default model.",
+            project.name
+        ),
+    }
 }

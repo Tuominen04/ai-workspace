@@ -104,4 +104,30 @@ const browser = await launch();
   await page.close();
 }
 
+{
+  // Set and clear a project's model from the Overview tab.
+  const page = await browser.newPage({ viewport: { width: 1100, height: 750 }, deviceScaleFactor: SHOTS ? 2 : 1 });
+  await stubEngine(page);
+  await page.goto(URL);
+  await page.getByRole("button", { name: "security" }).click();
+  await page.getByRole("heading", { name: "Security" }).waitFor();
+  await page.getByRole("button", { name: "Change" }).click();
+  await page.getByText("Installed in Ollama: qwen3.6:latest, sec:latest.").waitFor();
+  check("installed models are suggested", true);
+  await page.getByLabel("Model name").fill("bad name");
+  await page.getByRole("button", { name: "Save" }).click();
+  await page.getByRole("alert").waitFor();
+  check("an invalid model name is refused", (await page.getByRole("alert").textContent()).includes("invalid model name"));
+  await page.getByLabel("Model name").fill("qwen3.6:latest");
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/model.png` });
+  await page.getByRole("button", { name: "Save" }).click();
+  await page.locator(".facts").getByText("qwen3.6:latest").waitFor();
+  check("a saved model is shown", true);
+  await page.getByRole("button", { name: "Change" }).click();
+  await page.getByRole("button", { name: "Use default" }).click();
+  await page.locator(".facts").getByText("workspace default").waitFor();
+  check("Use default returns to the workspace default", true);
+  await page.close();
+}
+
 await finish(browser);

@@ -11,6 +11,9 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
   a project scopes the other tabs to it. **New project** creates one (name and an optional
   description).
 - **Overview** — the workspace's folders, or the chosen project's description, model and folders.
+  **Change** next to the model picks the Ollama model the project chats with (installed models
+  are suggested); **Use default** returns it to the workspace default. It is saved as `model`
+  in the project's `project.toml`.
 - **Validation** — a validation run, with how to clear each issue. Where the fix is to
   initialize the workspace, a button does it.
 - **Search** — ranked results from Base knowledge and the chosen project's Knowledge and

@@ -13,7 +13,7 @@ use crate::workspace::{
     CreatedProject, PermissionGrantResult, PermissionRevokeResult, PermissionStatus,
     PermissionViewOptions, PermissionViewSnapshot, Project, ProjectMetadata, ValidationResult,
     collect_markdown_files, create_project, discover_projects, grant_temporary_permission,
-    initialize_permission_session, inspect_project, revoke_temporary_permission,
+    initialize_permission_session, inspect_project, revoke_temporary_permission, set_project_model,
     validate_workspace, view_permissions,
 };
 use std::path::PathBuf;
@@ -123,6 +123,18 @@ impl Engine {
         self.enforce_validation_gate(GatedOperation::ProjectShow)?;
         let config = load_workspace_config(&self.paths)?;
         inspect_project(&self.paths, &config, name)
+    }
+
+    /// Sets the Ollama model `name` uses, or with `None` returns it to the workspace default.
+    pub fn set_project_model(
+        &self,
+        name: &str,
+        model: Option<&str>,
+    ) -> Result<(Project, ProjectMetadata)> {
+        self.paths.ensure_layout()?;
+        self.enforce_validation_gate(GatedOperation::ProjectSetModel)?;
+        let config = load_workspace_config(&self.paths)?;
+        set_project_model(&self.paths, &config, name, model)
     }
 
     /// Grants temporary access to `path` in a project's permission session.

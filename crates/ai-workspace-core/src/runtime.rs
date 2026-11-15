@@ -59,6 +59,17 @@ struct ShowResponse {
     modelfile: Option<String>,
 }
 
+#[derive(Deserialize)]
+struct TagsResponse {
+    #[serde(default)]
+    models: Vec<TagEntry>,
+}
+
+#[derive(Deserialize)]
+struct TagEntry {
+    name: String,
+}
+
 /// What Ollama says about a model (`POST /api/show`), as far as a session needs it.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ModelInfo {
@@ -212,6 +223,21 @@ impl RuntimeManager {
 }
 
 impl RuntimeManager {
+    /// The models Ollama has installed (`GET /api/tags`), sorted by name.
+    pub fn installed_models(&self, base_url: &str) -> Result<Vec<String>> {
+        let text = ureq::get(&format!("{base_url}/api/tags"))
+            .timeout(SHOW_REQUEST_TIMEOUT)
+            .call()
+            .map_err(|error| AppError::RuntimeRequestFailed(error.to_string()))?
+            .into_string()
+            .map_err(|error| AppError::RuntimeRequestFailed(error.to_string()))?;
+        let parsed: TagsResponse = serde_json::from_str(&text)
+            .map_err(|error| AppError::RuntimeRequestFailed(error.to_string()))?;
+        let mut names: Vec<String> = parsed.models.into_iter().map(|model| model.name).collect();
+        names.sort();
+        Ok(names)
+    }
+
     /// Asks Ollama about `model`: its own instructions and its context window.
     pub fn show_model(&self, base_url: &str, model: &str) -> Result<ModelInfo> {
         let body = serde_json::to_vec(&ShowRequest { model })

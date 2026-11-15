@@ -448,6 +448,7 @@ project creation, project inspection, and validation:
 ai-workspace config show
 ai-workspace project create --name NAME [--description TEXT]
 ai-workspace project show PROJECT
+ai-workspace project set-model PROJECT [MODEL]
 ai-workspace validate
 ```
 
