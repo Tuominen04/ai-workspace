@@ -511,3 +511,11 @@ pub struct SwitchDone {
     /// The chat session that was ended because it belonged to the previous folder.
     pub session_closed: Option<SessionClosed>,
 }
+
+/// Where a session note was saved.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct NoteSaved {
+    pub project: String,
+    pub path: String,
+}

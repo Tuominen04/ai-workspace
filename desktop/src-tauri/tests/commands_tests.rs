@@ -214,3 +214,22 @@ fn a_projects_model_is_set_and_cleared_from_the_app() {
 
     let _ = std::fs::remove_dir_all(&engine.paths().root);
 }
+
+#[test]
+fn notes_are_saved_on_request_and_drafting_needs_a_session() {
+    let engine = test_engine("notes");
+    commands::init(&engine).expect("init should succeed");
+    commands::create_project(&engine, "Security", None).expect("project should be created");
+
+    let saved = commands::save_note(&engine, "security", "# Notes\n- one").expect("saved");
+    assert!(saved.path.contains("session-note-"));
+    assert!(std::path::Path::new(&saved.path).exists());
+    let empty = commands::save_note(&engine, "security", " ").expect_err("empty refused");
+    assert_eq!(empty.kind, "Message");
+
+    let open = OpenSession::default();
+    let no_session = commands::session_draft_note(&open).expect_err("no session open");
+    assert_eq!(no_session.kind, "Shell");
+
+    let _ = std::fs::remove_dir_all(&engine.paths().root);
+}

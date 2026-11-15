@@ -178,6 +178,11 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
         chat_send: ({ message }) =>
           new Promise((resolve) => setTimeout(() => resolve(`You asked: ${message}`), 150)),
         chat_close: () => ({ project: fixture.session.project, revoked: 1 }),
+        chat_draft_note: () => "# Router hardening\n- Discussed SSH exposure\n- Next: review the guest VLAN",
+        note_save: ({ project, text }) =>
+          text.trim() === ""
+            ? Promise.reject({ kind: "Message", message: "a session note cannot be empty" })
+            : { project, path: `/home/me/AI/Projects/${project}/Session/session-note-2026-11-15-160000.md` },
       };
       window.__TAURI_INTERNALS__ = {
         invoke: async (command, args) => {

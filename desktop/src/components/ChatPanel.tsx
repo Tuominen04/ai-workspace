@@ -19,7 +19,12 @@ type Props = {
 export function ChatPanel({ project, session, onSession }: Props) {
   const [lines, setLines] = useState<Line[]>([]);
   const [draft, setDraft] = useState("");
-  const [busy, setBusy] = useState<null | "opening" | "waiting" | "closing">(null);
+  const [busy, setBusy] = useState<null | "opening" | "waiting" | "closing" | "drafting" | "saving">(
+    null,
+  );
+  // Ending a session that had answers offers a note first (ADR-0012): "ask", then "edit".
+  const [ending, setEnding] = useState<null | "ask" | "edit">(null);
+  const [noteDraft, setNoteDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
 
@@ -42,22 +47,59 @@ export function ChatPanel({ project, session, onSession }: Props) {
     }
   }
 
-  async function close() {
+  /** "End session": offer a note when there is something to note, else end at once. */
+  function endSession() {
+    const answered = lines.some((line) => line.who === "ai");
+    if (session?.can_chat && answered) {
+      setError(null);
+      setEnding("ask");
+    } else {
+      void close(null);
+    }
+  }
+
+  async function draftNote() {
+    setBusy("drafting");
+    setError(null);
+    try {
+      setNoteDraft(await engine.chat.draftNote());
+      setEnding("edit");
+    } catch (thrown) {
+      setError(`Could not draft a note: ${messageOf(thrown)}`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function saveNoteAndClose() {
+    if (session === null) return;
+    setBusy("saving");
+    setError(null);
+    try {
+      const saved = await engine.notes.save(session.project, noteDraft);
+      await close(saved.path);
+    } catch (thrown) {
+      setError(`Could not save the note: ${messageOf(thrown)}`);
+      setBusy(null);
+    }
+  }
+
+  async function close(savedNote: string | null) {
     setBusy("closing");
     setError(null);
     try {
       const closed = await engine.chat.close();
       onSession(null);
-      setLines(
-        closed
-          ? [
-              {
-                who: "note",
-                text: `Session in ${closed.project} closed; ${counted(closed.revoked, "temporary permission")} revoked.`,
-              },
-            ]
-          : [],
-      );
+      setEnding(null);
+      setNoteDraft("");
+      const notes: Line[] = [];
+      if (savedNote) notes.push({ who: "note", text: `Note saved to ${savedNote}; the next session reads it.` });
+      if (closed)
+        notes.push({
+          who: "note",
+          text: `Session in ${closed.project} closed; ${counted(closed.revoked, "temporary permission")} revoked.`,
+        });
+      setLines(notes);
     } catch (thrown) {
       setError(messageOf(thrown));
     } finally {
@@ -122,7 +164,12 @@ export function ChatPanel({ project, session, onSession }: Props) {
     <section className="panel chat">
       <header className="panel-head">
         <h2>Chat · {session.project}</h2>
-        <button type="button" className="quiet" onClick={close} disabled={busy !== null}>
+        <button
+          type="button"
+          className="quiet"
+          onClick={endSession}
+          disabled={busy !== null || ending !== null}
+        >
           {busy === "closing" ? "Closing…" : "End session"}
         </button>
       </header>
@@ -171,7 +218,45 @@ export function ChatPanel({ project, session, onSession }: Props) {
         <div ref={end} />
       </div>
 
-      {session.can_chat ? (
+      {ending === "ask" ? (
+        <div className="ending" role="group" aria-label="End session">
+          <p>Save a note for next time? The model drafts it and you can edit it before saving.</p>
+          <div className="row">
+            <button type="button" onClick={draftNote} disabled={busy !== null}>
+              {busy === "drafting" ? "Drafting…" : "Draft a note"}
+            </button>
+            <button type="button" className="quiet" onClick={() => close(null)} disabled={busy !== null}>
+              End without a note
+            </button>
+            <button type="button" className="quiet" onClick={() => setEnding(null)} disabled={busy !== null}>
+              Keep chatting
+            </button>
+          </div>
+        </div>
+      ) : ending === "edit" ? (
+        <div className="ending" role="group" aria-label="Edit the session note">
+          <p className="muted small">
+            Saved into this project&apos;s Session folder, where later sessions read it. Edit freely.
+          </p>
+          <textarea
+            value={noteDraft}
+            onChange={(event) => setNoteDraft(event.target.value)}
+            aria-label="Session note"
+            rows={10}
+          />
+          <div className="row">
+            <button type="button" onClick={saveNoteAndClose} disabled={busy !== null || noteDraft.trim() === ""}>
+              {busy === "saving" ? "Saving…" : "Save note and end"}
+            </button>
+            <button type="button" className="quiet" onClick={() => close(null)} disabled={busy !== null}>
+              End without saving
+            </button>
+            <button type="button" className="quiet" onClick={() => setEnding(null)} disabled={busy !== null}>
+              Keep chatting
+            </button>
+          </div>
+        </div>
+      ) : session.can_chat ? (
         <form className="composer" onSubmit={send}>
           <textarea
             value={draft}

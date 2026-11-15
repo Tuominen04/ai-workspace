@@ -524,6 +524,64 @@ fn map_path_error(path: &Path, error: std::io::Error) -> AppError {
     AppError::Io(error)
 }
 
+/// Saves a session note (ADR-0012) as Markdown in the project's Session folder, where later
+/// sessions read it as context. Named `session-note-YYYY-MM-DD-HHMMSS.md` (UTC) from
+/// `unix_seconds`; never overwrites: a name already taken gets `-2`, `-3`, … Returns the path.
+/// Empty text is refused. Called only on the person's explicit say-so.
+pub fn save_session_note(
+    paths: &WorkspacePaths,
+    config: &WorkspaceConfig,
+    project_name: &str,
+    text: &str,
+    unix_seconds: u64,
+) -> Result<PathBuf> {
+    let text = text.trim();
+    if text.is_empty() {
+        return Err(AppError::Message(
+            "a session note cannot be empty".to_string(),
+        ));
+    }
+    let (project, metadata) = inspect_project(paths, config, project_name)?;
+    let session_dir = project.path.join(&metadata.session_dir);
+    fs::create_dir_all(&session_dir).map_err(|error| map_path_error(&session_dir, error))?;
+
+    let stamp = utc_stamp(unix_seconds);
+    let mut path = session_dir.join(format!("session-note-{stamp}.md"));
+    let mut n = 2;
+    while path.exists() {
+        path = session_dir.join(format!("session-note-{stamp}-{n}.md"));
+        n += 1;
+    }
+    fs::write(&path, format!("{text}\n")).map_err(|error| map_path_error(&path, error))?;
+    Ok(path)
+}
+
+/// `YYYY-MM-DD-HHMMSS` in UTC, from Unix seconds (Howard Hinnant's civil-from-days).
+fn utc_stamp(unix_seconds: u64) -> String {
+    let days = (unix_seconds / 86_400) as i64;
+    let secs = unix_seconds % 86_400;
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    format!(
+        "{year:04}-{month:02}-{day:02}-{:02}{:02}{:02}",
+        secs / 3_600,
+        secs % 3_600 / 60,
+        secs % 60
+    )
+}
+
+/// Seconds since the Unix epoch, now.
+pub fn now_unix() -> u64 {
+    unix_timestamp()
+}
+
 fn unix_timestamp() -> u64 {
     use std::time::{SystemTime, UNIX_EPOCH};
     SystemTime::now()

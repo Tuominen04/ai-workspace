@@ -13,6 +13,7 @@ import type { Grant } from "./bindings/Grant";
 import type { GrantDone } from "./bindings/GrantDone";
 import type { InitDone } from "./bindings/InitDone";
 import type { Issue } from "./bindings/Issue";
+import type { NoteSaved } from "./bindings/NoteSaved";
 import type { PermissionPage } from "./bindings/PermissionPage";
 import type { ProjectDetails } from "./bindings/ProjectDetails";
 import type { ProjectSummary } from "./bindings/ProjectSummary";
@@ -36,6 +37,7 @@ export type {
   GrantDone,
   InitDone,
   Issue,
+  NoteSaved,
   PermissionPage,
   ProjectDetails,
   ProjectSummary,
@@ -139,6 +141,12 @@ export const engine = {
     /** One message in the open session; resolves with the model's reply. */
     send: (message: string) => call<string>("chat_send", { message }),
     close: () => call<SessionClosed | null>("chat_close"),
+    /** The model's draft of a note about the open session; nothing is saved. */
+    draftNote: () => call<string>("chat_draft_note"),
+  },
+  notes: {
+    /** Saves a session note into the project's Session folder, on the person's say-so. */
+    save: (project: string, text: string) => call<NoteSaved>("note_save", { project, text }),
   },
 };
 
