@@ -6,16 +6,14 @@
 //! boundary has one definition rather than two that drift. Counts are `u32` so they arrive as
 //! plain numbers.
 
-use ai_workspace_core::AppError;
 use ai_workspace_core::config::WorkspaceConfig;
-use ai_workspace_core::context::ContextSnapshot;
 use ai_workspace_core::paths::{RootSource, WorkspacePaths};
-use ai_workspace_core::runtime::RuntimeStatus;
 use ai_workspace_core::search::SearchOutcome;
 use ai_workspace_core::workspace::{
     Action, PermissionCategory, PermissionGrant, PermissionStatus, PermissionViewSnapshot, Project,
     ProjectMetadata, SuggestedFix, ValidationIssue, ValidationResult, ValidationSeverity,
 };
+use ai_workspace_core::{AgentInstructions, AppError, SessionSummary};
 use serde::Serialize;
 use std::path::Path;
 use ts_rs::TS;
@@ -303,18 +301,34 @@ pub struct SessionInfo {
     pub can_chat: bool,
     /// The runtime's state, in words.
     pub runtime: String,
+    /// The model the session talks to.
+    pub model: String,
+    /// `true` when the model's own instructions come first in every system message.
+    pub agent_included: bool,
+    /// The state of the model's own instructions, in words.
+    pub agent: String,
     pub base_files: Vec<String>,
     pub project_files: Vec<String>,
     pub session_files: Vec<String>,
 }
 
 impl SessionInfo {
-    pub fn new(project: &Project, context: &ContextSnapshot, runtime: &RuntimeStatus) -> Self {
+    pub fn new(summary: &SessionSummary<'_>) -> Self {
+        let SessionSummary {
+            project,
+            context,
+            runtime,
+            model,
+            agent,
+        } = *summary;
         let paths = |files: &[std::path::PathBuf]| files.iter().map(|f| path_text(f)).collect();
         Self {
             project: project.name.clone(),
             can_chat: runtime.running,
             runtime: runtime.detail.clone(),
+            model: model.to_string(),
+            agent_included: matches!(agent, AgentInstructions::Included(_)),
+            agent: agent.to_string(),
             base_files: paths(&context.base_files),
             project_files: paths(&context.project_files),
             session_files: paths(&context.session_files),

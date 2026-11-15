@@ -180,7 +180,7 @@ fn run_session(engine: &Engine) -> Result<()> {
 
     let mut session = Session::open(engine, selected_project)?;
     let summary = session.summary();
-    ui::render_session_summary(summary.project, summary.context, summary.runtime);
+    ui::render_session_summary(&summary);
 
     if session.can_chat() {
         ui::render_chat_ready();

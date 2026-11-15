@@ -1,5 +1,5 @@
 use ai_workspace_core::config::WorkspaceConfig;
-use ai_workspace_core::context::build_context_snapshot;
+use ai_workspace_core::context::{ContextSnapshot, build_context_snapshot};
 use ai_workspace_core::paths::WorkspacePaths;
 use ai_workspace_core::workspace::{create_project, inspect_project};
 use std::fs;
@@ -228,4 +228,34 @@ fn context_snapshot_no_project_no_query_matches_v04_fixed_order() {
     assert!(first.session_files.is_empty());
 
     let _ = fs::remove_dir_all(&paths.root);
+}
+
+#[test]
+fn agent_instructions_come_first_and_the_context_follows() {
+    let snapshot = ContextSnapshot {
+        base_files: Vec::new(),
+        project_files: Vec::new(),
+        session_files: Vec::new(),
+        assembled_content: "--- router.md ---\nSSH only from the LAN.".to_string(),
+        source_count: 1,
+        total_bytes: 40,
+    };
+
+    let with_agent = snapshot.as_system_prompt_for(Some("You are a security advisor."));
+    assert!(with_agent.starts_with("You are a security advisor."));
+    let rules_at = with_agent
+        .find("security advisor")
+        .expect("instructions present");
+    let context_at = with_agent
+        .find("SSH only from the LAN.")
+        .expect("context present");
+    assert!(
+        rules_at < context_at,
+        "the model's rules come before the context"
+    );
+
+    assert_eq!(
+        snapshot.as_system_prompt_for(None),
+        snapshot.as_system_prompt()
+    );
 }

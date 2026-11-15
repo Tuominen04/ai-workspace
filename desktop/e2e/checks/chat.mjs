@@ -15,6 +15,7 @@ await page.getByRole("button", { name: "security" }).click();
 await page.getByRole("button", { name: "Start session in security" }).click();
 await page.getByRole("heading", { name: "Chat · security" }).waitFor();
 check("the session shows the runtime and its context", (await page.locator(".context summary").textContent()).includes("3 context files"));
+check("the session names its model and keeps the model's instructions", (await page.locator(".agent").textContent()).includes("sec") && (await page.locator(".agent").textContent()).includes("own instructions are kept"));
 
 await page.getByLabel("Message").fill("Is SSH open to the internet?");
 await page.keyboard.press("Enter");

@@ -13,6 +13,7 @@ use crate::workspace::{
     Project, ProjectMetadata, initialize_permission_session, inspect_project, resolve_model,
     terminate_permission_session,
 };
+use std::fmt;
 
 /// An open session. Close it with [`Session::close`]; dropping it without
 /// closing still ends its permission session (temporary grants are revoked)
@@ -22,6 +23,7 @@ pub struct Session {
     paths: WorkspacePaths,
     project: Project,
     model: String,
+    agent: AgentInstructions,
     initial_context: ContextSnapshot,
     runtime_status: RuntimeStatus,
     history: Vec<ChatMessage>,
@@ -38,6 +40,46 @@ pub struct SessionSummary<'a> {
     /// The context built for the start of the session, before any message.
     pub context: &'a ContextSnapshot,
     pub runtime: &'a RuntimeStatus,
+    /// The model the session talks to.
+    pub model: &'a str,
+    /// Whether the model's own instructions are part of the system message.
+    pub agent: &'a AgentInstructions,
+}
+
+/// The model's own `SYSTEM` instructions, as far as the session could tell (ADR-0012).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AgentInstructions {
+    /// The model has instructions; they come first in every system message.
+    Included(String),
+    /// The model has no `SYSTEM` instructions; the context is the whole system message.
+    NoneInModel,
+    /// Ollama could not be asked (not running, or the request failed): the session goes on
+    /// with the context alone. The reason, in words.
+    Unknown(String),
+}
+
+impl AgentInstructions {
+    pub fn text(&self) -> Option<&str> {
+        match self {
+            Self::Included(text) => Some(text),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for AgentInstructions {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Included(_) => f.write_str("the model's own instructions are kept"),
+            Self::NoneInModel => f.write_str("the model has no instructions of its own"),
+            Self::Unknown(reason) => {
+                write!(
+                    f,
+                    "the model's own instructions could not be read ({reason})"
+                )
+            }
+        }
+    }
 }
 
 impl Session {
@@ -56,9 +98,25 @@ impl Session {
         let mut runtime = RuntimeManager::new();
         let runtime_status = runtime.ensure_ollama()?;
 
-        let history = vec![ChatMessage::system(initial_context.as_system_prompt())];
+        let model = resolve_model(&config, &metadata);
+        let agent = if runtime_status.running {
+            match runtime.show_model(OLLAMA_BASE_URL, &model) {
+                Ok(info) => match info.system {
+                    Some(text) => AgentInstructions::Included(text),
+                    None => AgentInstructions::NoneInModel,
+                },
+                Err(error) => AgentInstructions::Unknown(error.to_string()),
+            }
+        } else {
+            AgentInstructions::Unknown("no local runtime is running".to_string())
+        };
+
+        let history = vec![ChatMessage::system(
+            initial_context.as_system_prompt_for(agent.text()),
+        )];
         Ok(Self {
-            model: resolve_model(&config, &metadata),
+            model,
+            agent,
             paths,
             project: project.clone(),
             initial_context,
@@ -74,6 +132,8 @@ impl Session {
             project: &self.project,
             context: &self.initial_context,
             runtime: &self.runtime_status,
+            model: &self.model,
+            agent: &self.agent,
         }
     }
 
@@ -95,7 +155,7 @@ impl Session {
 
         if let Ok(context) = build_context_snapshot(&self.paths, Some(&self.project), Some(message))
         {
-            self.history[0] = ChatMessage::system(context.as_system_prompt());
+            self.history[0] = ChatMessage::system(context.as_system_prompt_for(self.agent.text()));
         }
 
         self.history.push(ChatMessage::user(message.to_string()));

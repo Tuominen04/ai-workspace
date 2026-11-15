@@ -8,4 +8,16 @@ export type SessionInfo = { project: string, can_chat: boolean,
 /**
  * The runtime's state, in words.
  */
-runtime: string, base_files: Array<string>, project_files: Array<string>, session_files: Array<string>, };
+runtime: string, 
+/**
+ * The model the session talks to.
+ */
+model: string, 
+/**
+ * `true` when the model's own instructions come first in every system message.
+ */
+agent_included: boolean, 
+/**
+ * The state of the model's own instructions, in words.
+ */
+agent: string, base_files: Array<string>, project_files: Array<string>, session_files: Array<string>, };

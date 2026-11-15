@@ -211,8 +211,7 @@ pub fn session_open(engine: &Engine, open: &OpenSession, name: &str) -> Outcome<
         })?;
 
     let session = Session::open(engine, project)?;
-    let summary = session.summary();
-    let info = SessionInfo::new(summary.project, summary.context, summary.runtime);
+    let info = SessionInfo::new(&session.summary());
     *slot = Some(session);
     Ok(info)
 }

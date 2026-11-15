@@ -25,6 +25,17 @@ impl ContextSnapshot {
             self.assembled_content
         )
     }
+
+    /// The system message for a model with its own instructions (ADR-0012): the model's
+    /// `SYSTEM` text first, unchanged, then the workspace context. Ollama uses a request's
+    /// system message in place of the Modelfile's, so leaving the instructions out would
+    /// drop the agent's rules. Without instructions this is [`Self::as_system_prompt`].
+    pub fn as_system_prompt_for(&self, agent_instructions: Option<&str>) -> String {
+        match agent_instructions {
+            Some(instructions) => format!("{instructions}\n\n---\n\n{}", self.as_system_prompt()),
+            None => self.as_system_prompt(),
+        }
+    }
 }
 
 pub fn build_context_snapshot(

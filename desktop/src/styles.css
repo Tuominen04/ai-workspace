@@ -436,6 +436,16 @@ button:focus-visible {
   max-width: 900px;
 }
 
+.agent {
+  margin: 0;
+  font-size: 13px;
+  color: var(--warn);
+}
+
+.agent.ok {
+  color: var(--muted);
+}
+
 .context {
   background: var(--surface);
   border: 1px solid var(--line);
