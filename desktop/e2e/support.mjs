@@ -73,6 +73,20 @@ export const FIXTURE = {
       },
     ],
   },
+  config: {
+    active_root: "/home/me/AI",
+    root_source: "user config file /home/me/.config/ai-workspace/config.toml",
+    config_file: "/home/me/AI/Config/workspace.toml",
+    default_model: "qwen3.6:latest",
+    project_metadata_file: "project.toml",
+    default_project_directories: ["Knowledge", "Specs", "Resources", "Session"],
+    recorded_root: "/home/me/AI",
+    recorded_base: "/home/me/AI/Base",
+    recorded_projects: "/home/me/AI/Projects",
+    recorded_cache: "/home/me/AI/Cache",
+    recorded_logs: "/home/me/AI/Logs",
+    recorded_config: "/home/me/AI/Config",
+  },
   session: {
     project: "security",
     can_chat: true,
@@ -96,6 +110,7 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
       window.__calls = [];
       const answers = {
         workspace_status: () => fixture.status,
+        workspace_config: () => fixture.config,
         workspace_validate: () => fixture.validation,
         project_show: ({ name }) =>
           fixture.details[name] ?? Promise.reject({ kind: "ProjectNotFound", message: `project '${name}' was not found` }),

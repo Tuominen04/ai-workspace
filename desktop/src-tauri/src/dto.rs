@@ -7,6 +7,7 @@
 //! plain numbers.
 
 use ai_workspace_core::AppError;
+use ai_workspace_core::config::WorkspaceConfig;
 use ai_workspace_core::context::ContextSnapshot;
 use ai_workspace_core::paths::{RootSource, WorkspacePaths};
 use ai_workspace_core::runtime::RuntimeStatus;
@@ -328,4 +329,46 @@ pub struct SessionClosed {
     pub project: String,
     /// Temporary permissions revoked as the session ended.
     pub revoked: u32,
+}
+
+/// The workspace configuration (`Config/workspace.toml`) and which folder is in use.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct WorkspaceSettings {
+    /// The folder in use now, and where that choice came from, in words.
+    pub active_root: String,
+    pub root_source: String,
+    /// The configuration file these settings were read from.
+    pub config_file: String,
+    /// The model used by projects that name none.
+    pub default_model: String,
+    pub project_metadata_file: String,
+    pub default_project_directories: Vec<String>,
+    /// The folders as recorded in the file when it was written. Shown for reference: the
+    /// folders in use always follow `active_root`.
+    pub recorded_root: String,
+    pub recorded_base: String,
+    pub recorded_projects: String,
+    pub recorded_cache: String,
+    pub recorded_logs: String,
+    pub recorded_config: String,
+}
+
+impl WorkspaceSettings {
+    pub fn new(paths: &WorkspacePaths, source: &RootSource, config: &WorkspaceConfig) -> Self {
+        Self {
+            active_root: path_text(&paths.root),
+            root_source: source.describe(),
+            config_file: path_text(&paths.workspace_config_file()),
+            default_model: config.default_model.clone(),
+            project_metadata_file: config.project_metadata_file.clone(),
+            default_project_directories: config.default_project_directories.clone(),
+            recorded_root: config.root_path.clone(),
+            recorded_base: config.base_path.clone(),
+            recorded_projects: config.projects_path.clone(),
+            recorded_cache: config.cache_path.clone(),
+            recorded_logs: config.logs_path.clone(),
+            recorded_config: config.config_path.clone(),
+        }
+    }
 }

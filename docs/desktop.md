@@ -14,6 +14,9 @@ The first version is read-only plus chat:
 - **Validation** — a validation run, with how to clear each issue.
 - **Search** — ranked results from Base knowledge and the chosen project's Knowledge and
   Session folders.
+- **Configuration** — the workspace configuration (`Config/workspace.toml`): the folder in
+  use and why, the configuration file, the default model, the project file name and the
+  folders new projects get. Read-only; edit the file or use the command line to change it.
 - **Chat** — a session in the chosen project, like `ai-workspace` with no arguments: opening it
   grants the project's default permissions and builds the first context; each message rebuilds
   the context from what was asked; ending it revokes temporary permissions. Quitting the app

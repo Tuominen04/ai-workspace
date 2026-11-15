@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { ChatPanel } from "./components/ChatPanel";
+import { ConfigPanel } from "./components/ConfigPanel";
 import { Failure } from "./components/Failure";
 import { Overview } from "./components/Overview";
 import { SearchPanel } from "./components/SearchPanel";
@@ -9,7 +10,7 @@ import { ValidationPanel } from "./components/ValidationPanel";
 import { engine, isDesktopRuntime, type SessionInfo } from "./lib/engine";
 import { useLoad } from "./lib/useLoad";
 
-const TABS = ["Overview", "Validation", "Search", "Chat"] as const;
+const TABS = ["Overview", "Validation", "Search", "Chat", "Configuration"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function App() {
@@ -67,6 +68,7 @@ function Workspace() {
           {tab === "Validation" && <ValidationPanel />}
           {tab === "Search" && <SearchPanel project={project} />}
           {tab === "Chat" && <ChatPanel project={project} session={session} onSession={setSession} />}
+          {tab === "Configuration" && <ConfigPanel />}
         </div>
       </main>
     </div>

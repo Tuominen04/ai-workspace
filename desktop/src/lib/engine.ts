@@ -18,6 +18,7 @@ import type { SessionClosed } from "./bindings/SessionClosed";
 import type { SessionInfo } from "./bindings/SessionInfo";
 import type { Severity } from "./bindings/Severity";
 import type { Validation } from "./bindings/Validation";
+import type { WorkspaceSettings } from "./bindings/WorkspaceSettings";
 import type { WorkspaceStatus } from "./bindings/WorkspaceStatus";
 
 export type {
@@ -33,6 +34,7 @@ export type {
   SessionInfo,
   Severity,
   Validation,
+  WorkspaceSettings,
   WorkspaceStatus,
 };
 
@@ -84,6 +86,8 @@ export const engine = {
   workspace: {
     /** Where the workspace is, why that folder, and its projects. Creates the layout if missing. */
     status: () => call<WorkspaceStatus>("workspace_status"),
+    /** The workspace configuration (`Config/workspace.toml`) and the folder in use. */
+    config: () => call<WorkspaceSettings>("workspace_config"),
     /** A validation run. Always answers; `valid` says whether anything blocks. */
     validate: () => call<Validation>("workspace_validate"),
     /** Ranked matches in what may be read: Base, and with a project its Knowledge and Session. */
