@@ -511,3 +511,41 @@ not what is sent or where it goes: still only `127.0.0.1:11434`.
 Status
 
 Accepted. Supersedes ADR-0004.
+
+---
+
+## ADR-0014
+
+What the model reads. A chat's context, and search, read Markdown from:
+
+- **all of `Base/`** and **the whole selected project folder** (`Knowledge/`,
+  `Specs/`, `Resources/`, `Session/` and the project's top level), three
+  levels deep: what the two default grants cover;
+- **the session's temporary grants**, while they are granted: a granted
+  Markdown file, or the Markdown files in a granted folder, two levels deep.
+  They appear as a "granted" group. A grant inside Base or the project adds
+  nothing new; a grant whose path has disappeared is skipped.
+
+The rest of ADR-0012 applies to all of it: Markdown only, the secret block
+list, the context budget with visible truncation. Because the context is
+rebuilt for every message, a grant made during a session counts from the next
+message; revoking it, or ending the session (which revokes temporary grants,
+as since v0.3), removes it again.
+
+One function, `context::readable_sources`, defines this scope, and both the
+Context Builder and search use it, so they cannot drift apart. Grants are read
+without side effects (`workspace::active_temporary_paths`): looking does not
+create a permission session.
+
+Reason
+
+Before this, context read only the project's `Knowledge/` and `Session/`, and
+temporary grants were recorded and logged but never read, while the
+Permissions tab said the model reads granted folders. The maintainer granted a
+router-hardening note and the agent, correctly, saw nothing. The maintainer
+chose the default grants plus temporary grants as the scope, which makes the
+permission model and what the model actually reads the same thing.
+
+Status
+
+Accepted. Amends ADR-0012 point 2 (which folders are read).

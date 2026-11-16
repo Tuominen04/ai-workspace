@@ -49,9 +49,21 @@ fn context_snapshot_includes_base_project_and_session_sources() {
         .expect("context snapshot should build");
 
     assert_eq!(snapshot.base_files.len(), 1);
-    assert_eq!(snapshot.project_files.len(), 1);
+    // The whole project folder is read (ADR-0014): Knowledge/project.md and the README.md
+    // every new project gets at its top level.
+    assert_eq!(snapshot.project_files.len(), 2);
+    assert!(
+        snapshot
+            .project_files
+            .contains(&project_knowledge_dir.join("project.md"))
+    );
+    assert!(
+        snapshot
+            .project_files
+            .contains(&project.path.join("README.md"))
+    );
     assert_eq!(snapshot.session_files.len(), 1);
-    assert_eq!(snapshot.source_count, 3);
+    assert_eq!(snapshot.source_count, 4);
     assert!(!snapshot.assembled_content.is_empty());
 
     let _ = fs::remove_dir_all(&paths.root);
@@ -236,6 +248,7 @@ fn agent_instructions_come_first_and_the_context_follows() {
         base_files: Vec::new(),
         project_files: Vec::new(),
         session_files: Vec::new(),
+        granted_files: Vec::new(),
         assembled_content: "--- router.md ---\nSSH only from the LAN.".to_string(),
         source_count: 1,
         total_bytes: 40,

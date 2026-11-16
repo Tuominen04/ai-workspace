@@ -30,3 +30,16 @@ not fit is cut at a line break, if at least 512 bytes of it fit, and the text
 says so: `[truncated: N of M bytes shown]`. Smaller files later in the order can
 still fit whole. Sessions show the budget and any cut file (the CLI summary,
 the desktop chat's context list).
+
+## What is read (ADR-0014)
+
+`context::readable_sources` defines it once, for both chat context and search:
+
+- Markdown in all of `Base/` and in the whole selected project folder
+  (`Knowledge/`, `Specs/`, `Resources/`, `Session/`, and the project's top
+  level), three levels deep;
+- the session's active temporary grants: a granted `.md` file, or the `.md`
+  files in a granted folder, two levels deep, shown as "Granted".
+
+The block list and the budget apply to all of it. A grant counts from the
+next message and stops counting when it is revoked or the session ends.

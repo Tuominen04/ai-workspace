@@ -56,3 +56,12 @@ Event types:
 - `deny`
 - `revoke`
 - `status-change`
+
+## What a grant lets the model read (ADR-0014)
+
+The default grants (Base and the selected project) and the session's active
+temporary grants are exactly what a chat's context and search read: Markdown in
+all of Base and the whole project folder, plus a granted Markdown file or the
+Markdown files in a granted folder (two levels deep). Names that look like
+secrets are never read. A grant made during a chat counts from the next
+message; revoking it, or ending the session, removes it from the context.

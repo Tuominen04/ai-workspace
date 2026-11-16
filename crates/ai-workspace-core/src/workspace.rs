@@ -925,6 +925,22 @@ pub fn terminate_permission_session(paths: &WorkspacePaths, project: &Project) -
     Ok(set.temporary_grants.len())
 }
 
+/// The paths of the project's active temporary grants, read without side effects: no
+/// permission session is created when there is none (then the list is empty). Grants whose
+/// path has disappeared are left out (ADR-0014).
+pub fn active_temporary_paths(paths: &WorkspacePaths, project: &Project) -> Result<Vec<PathBuf>> {
+    let Some(set) = load_permission_set(paths, project)? else {
+        return Ok(Vec::new());
+    };
+    Ok(set
+        .temporary_grants
+        .iter()
+        .filter(|grant| grant.status == PermissionStatus::Active)
+        .map(|grant| PathBuf::from(&grant.canonical_path))
+        .filter(|path| path.exists())
+        .collect())
+}
+
 fn load_permission_set(
     paths: &WorkspacePaths,
     project: &Project,

@@ -1,7 +1,9 @@
 use crate::error::Result;
 use crate::paths::WorkspacePaths;
 use crate::search::{self, SourceKind};
-use crate::workspace::{MarkdownScan, Project, collect_markdown_files, scan_markdown_files};
+use crate::workspace::{
+    Project, active_temporary_paths, collect_markdown_files, looks_like_secret, scan_markdown_files,
+};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -95,6 +97,8 @@ pub struct ContextSnapshot {
     pub base_files: Vec<PathBuf>,
     pub project_files: Vec<PathBuf>,
     pub session_files: Vec<PathBuf>,
+    /// Files from the session's temporary grants (ADR-0014).
+    pub granted_files: Vec<PathBuf>,
     pub assembled_content: String,
     pub source_count: usize,
     pub total_bytes: usize,
@@ -143,53 +147,13 @@ pub fn build_context_snapshot_within(
     query: Option<&str>,
     budget: ContextBudget,
 ) -> Result<ContextSnapshot> {
-    let mut skipped_files = Vec::new();
-    let mut take = |root: &Path, scan: MarkdownScan| {
-        skipped_files.extend(scan.skipped.iter().map(|path| root.join(path)));
-        scan.files
-    };
-    let base_files = take(
-        paths.base_knowledge_path(),
-        scan_markdown_files(paths.base_knowledge_path(), 2)?,
-    );
-    let mut project_files = Vec::new();
-    let mut session_files = Vec::new();
-    let project_root = project.map(|project| project.path.clone());
-
-    if let Some(project) = project {
-        let knowledge = project.path.join("Knowledge");
-        project_files = take(
-            &knowledge,
-            scan_markdown_files(&knowledge, 2).unwrap_or_default(),
-        );
-        let session = project.path.join("Session");
-        session_files = take(
-            &session,
-            scan_markdown_files(&session, 2).unwrap_or_default(),
-        );
-    }
-
-    let mut all_sources = Vec::new();
-    for file in base_files.iter() {
-        all_sources.push((
-            "base".to_string(),
-            resolve_source_path(paths.base_knowledge_path(), file),
-        ));
-    }
-    for file in project_files.iter() {
-        let project_root = project_root.as_deref().unwrap_or_else(|| Path::new(""));
-        all_sources.push((
-            "project".to_string(),
-            resolve_source_path(project_root.join("Knowledge").as_path(), file),
-        ));
-    }
-    for file in session_files.iter() {
-        let project_root = project_root.as_deref().unwrap_or_else(|| Path::new(""));
-        all_sources.push((
-            "session".to_string(),
-            resolve_source_path(project_root.join("Session").as_path(), file),
-        ));
-    }
+    let readable = readable_sources(paths, project)?;
+    let skipped_files = readable.skipped;
+    let all_sources: Vec<(String, PathBuf)> = readable
+        .sources
+        .into_iter()
+        .map(|(kind, path)| (kind.as_str().to_string(), path))
+        .collect();
 
     let ordered_sources: Vec<(String, PathBuf)> = match query {
         Some(text) => {
@@ -213,7 +177,8 @@ pub fn build_context_snapshot_within(
                     "project" => 0,
                     "base" => 1,
                     "session" => 2,
-                    _ => 3,
+                    "granted" => 3,
+                    _ => 4,
                 };
                 rank(left.0.as_str())
                     .cmp(&rank(right.0.as_str()))
@@ -283,11 +248,17 @@ pub fn build_context_snapshot_within(
         .filter(|(kind, _)| kind == "session")
         .map(|(_, path)| path.clone())
         .collect::<Vec<_>>();
+    let selected_granted = selected_sources
+        .iter()
+        .filter(|(kind, _)| kind == "granted")
+        .map(|(_, path)| path.clone())
+        .collect::<Vec<_>>();
 
     Ok(ContextSnapshot {
         base_files: selected_base,
         project_files: selected_project,
         session_files: selected_session,
+        granted_files: selected_granted,
         assembled_content,
         source_count: selected_sources.len(),
         total_bytes,
@@ -301,16 +272,98 @@ fn source_kind_from_tag(kind: &str) -> SourceKind {
     match kind {
         "project" => SourceKind::Project,
         "session" => SourceKind::Session,
+        "granted" => SourceKind::Granted,
         _ => SourceKind::Base,
     }
 }
 
-fn resolve_source_path(root: &Path, relative_path: &Path) -> PathBuf {
-    if relative_path.is_absolute() {
-        return relative_path.to_path_buf();
+/// How deep below Base and the project folder Markdown is looked for: the folder itself, its
+/// subfolders, and one level below those (e.g. `Projects/sec/Knowledge/router/notes.md`).
+const DEFAULT_SCOPE_DEPTH: usize = 3;
+/// How deep below a granted folder Markdown is looked for.
+const GRANTED_FOLDER_DEPTH: usize = 2;
+
+/// What a context or a search may read (ADR-0014), with the files the block list left out.
+#[derive(Debug, Clone, Default)]
+pub struct ReadableSources {
+    /// Every readable Markdown file, with what kind of source it is. No path appears twice.
+    pub sources: Vec<(SourceKind, PathBuf)>,
+    /// Files and folders skipped because their names look like secrets (ADR-0012).
+    pub skipped: Vec<PathBuf>,
+}
+
+/// The one definition of what the model may read: Markdown in all of Base and, with a project,
+/// the whole project folder (its `Session/` folder as session sources), plus the project's
+/// active temporary grants, each a file or a folder. The secret block list applies to all of it;
+/// a grant inside Base or the project adds nothing new.
+pub fn readable_sources(
+    paths: &WorkspacePaths,
+    project: Option<&Project>,
+) -> Result<ReadableSources> {
+    let mut readable = ReadableSources::default();
+    let mut seen = std::collections::HashSet::new();
+    let mut add = |readable: &mut ReadableSources, kind: SourceKind, path: PathBuf| {
+        if seen.insert(path.clone()) {
+            readable.sources.push((kind, path));
+        }
+    };
+
+    let base = paths.base_knowledge_path();
+    let scan = scan_markdown_files(base, DEFAULT_SCOPE_DEPTH)?;
+    readable
+        .skipped
+        .extend(scan.skipped.iter().map(|p| base.join(p)));
+    for file in scan.files {
+        add(&mut readable, SourceKind::Base, base.join(file));
     }
 
-    root.join(relative_path)
+    let Some(project) = project else {
+        return Ok(readable);
+    };
+
+    let scan = scan_markdown_files(&project.path, DEFAULT_SCOPE_DEPTH).unwrap_or_default();
+    readable
+        .skipped
+        .extend(scan.skipped.iter().map(|p| project.path.join(p)));
+    let session_root = project.path.join("Session");
+    for file in scan.files {
+        let path = project.path.join(file);
+        let kind = if path.starts_with(&session_root) {
+            SourceKind::Session
+        } else {
+            SourceKind::Project
+        };
+        add(&mut readable, kind, path);
+    }
+
+    for granted in active_temporary_paths(paths, project)? {
+        if granted.starts_with(base) || granted.starts_with(&project.path) {
+            continue;
+        }
+        if granted.is_dir() {
+            let scan = scan_markdown_files(&granted, GRANTED_FOLDER_DEPTH).unwrap_or_default();
+            readable
+                .skipped
+                .extend(scan.skipped.iter().map(|p| granted.join(p)));
+            for file in scan.files {
+                add(&mut readable, SourceKind::Granted, granted.join(file));
+            }
+        } else if granted.extension().is_some_and(|ext| ext == "md") {
+            let name = granted
+                .file_name()
+                .map(|name| name.to_string_lossy().to_string())
+                .unwrap_or_default();
+            if looks_like_secret(&name) {
+                readable.skipped.push(granted);
+            } else {
+                add(&mut readable, SourceKind::Granted, granted);
+            }
+        }
+    }
+
+    readable.skipped.sort();
+    readable.skipped.dedup();
+    Ok(readable)
 }
 
 pub fn collect_context_sources(root: &Path, max_depth: usize) -> Result<Vec<PathBuf>> {

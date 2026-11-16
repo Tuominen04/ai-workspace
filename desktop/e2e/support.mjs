@@ -100,6 +100,7 @@ export const FIXTURE = {
       "/home/me/AI/Projects/security/Knowledge/ssh.md",
     ],
     session_files: [],
+    granted_files: ["/home/me/Documents/Security/router-hardening-notes.md"],
     skipped_files: ["/home/me/AI/Projects/security/Knowledge/wifi-password.md"],
     budget: "12288 bytes of workspace text, from the model's 8192-token window",
     truncated_files: ["/home/me/AI/Projects/security/Knowledge/history.md (11800 of 26000 bytes shown)"],

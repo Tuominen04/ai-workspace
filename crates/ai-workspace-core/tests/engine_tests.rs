@@ -34,8 +34,11 @@ fn create_and_search_return_their_results() {
     let outcome = engine
         .search("firewall", Some("router"), 10)
         .expect("search should succeed");
-    assert_eq!(outcome.results.len(), 1);
+    // The whole project is searched (ADR-0014), so the README holding the description
+    // "Firewall notes" matches too; the knowledge note ranks first.
+    assert_eq!(outcome.results.len(), 2);
     assert!(outcome.results[0].path.ends_with("fw.md"));
+    assert!(outcome.results[1].path.ends_with("README.md"));
 
     let _ = std::fs::remove_dir_all(&engine.paths().root);
 }
