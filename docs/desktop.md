@@ -18,6 +18,10 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
 - **Chat** — a session in the chosen project: opening it grants the project's default
   permissions and builds the first context; each message rebuilds the context from what was
   asked; ending it revokes temporary permissions. Quitting the app ends an open session too.
+  The chat names the model it talks to (the project's `model` in `project.toml`, else the
+  workspace default) and whether the model's own instructions are kept: a model built from a
+  Modelfile with a `SYSTEM` prompt, such as a security advisor, keeps those rules, and the
+  workspace context follows them (ADR-0012).
 - **Permissions** — the chosen project's grants: the defaults (Base and the project) and any
   temporary ones, with their status, a filter and pages. **Grant** gives temporary access to
   a path you type or paste; **Revoke** takes a temporary grant away. Paths that do not exist

@@ -127,6 +127,10 @@ export function ChatPanel({ project, session, onSession }: Props) {
         </button>
       </header>
 
+      <p className={session.agent_included ? "agent ok" : "agent"} title={session.agent}>
+        Model <strong>{session.model}</strong> · {session.agent}
+      </p>
+
       <details className="context">
         <summary>
           {session.runtime} · {counted(files, "context file")}

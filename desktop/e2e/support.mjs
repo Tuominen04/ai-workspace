@@ -91,6 +91,9 @@ export const FIXTURE = {
     project: "security",
     can_chat: true,
     runtime: "Ollama is already running on 127.0.0.1:11434",
+    model: "sec",
+    agent_included: true,
+    agent: "the model's own instructions are kept",
     base_files: ["/home/me/AI/Base/Fedora/firewalld.md"],
     project_files: [
       "/home/me/AI/Projects/security/Knowledge/router.md",

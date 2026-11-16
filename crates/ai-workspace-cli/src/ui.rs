@@ -1,16 +1,14 @@
 use crate::COMMAND_NAME;
-use ai_workspace_core::SetRootReport;
 use ai_workspace_core::config::WorkspaceConfig;
-use ai_workspace_core::context::ContextSnapshot;
 use ai_workspace_core::error::{AppError, Result};
 use ai_workspace_core::paths::{RootSource, WorkspacePaths};
-use ai_workspace_core::runtime::RuntimeStatus;
 use ai_workspace_core::search::SearchOutcome;
 use ai_workspace_core::workspace::{
     Action, CreatedProject, PermissionCategory, PermissionGrantResult, PermissionRevokeResult,
     PermissionStatus, PermissionViewSnapshot, Project, ProjectMetadata, SuggestedFix,
     ValidationIssue, ValidationResult, ValidationSeverity,
 };
+use ai_workspace_core::{SessionSummary, SetRootReport};
 use std::fmt;
 use std::io::{self, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -73,15 +71,19 @@ pub fn prompt_for_selection(projects: &[Project]) -> Result<usize> {
     }
 }
 
-pub fn render_session_summary(
-    project: &Project,
-    context: &ContextSnapshot,
-    runtime: &RuntimeStatus,
-) {
+pub fn render_session_summary(summary: &SessionSummary<'_>) {
+    let SessionSummary {
+        project,
+        context,
+        runtime,
+        model,
+        agent,
+    } = *summary;
     outln!();
     outln!("Workspace: {}", project.name);
     outln!("Project path: {}", project.path.display());
     outln!("Runtime: {}", runtime.detail);
+    outln!("Model: {model} ({agent})");
     outln!("Base context files: {}", context.base_files.len());
     outln!("Project context files: {}", context.project_files.len());
     outln!("Session context files: {}", context.session_files.len());
