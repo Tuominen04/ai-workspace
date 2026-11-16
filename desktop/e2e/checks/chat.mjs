@@ -27,11 +27,25 @@ const lines = await page.locator(".line").allTextContents();
 check("the question and the reply appear in order", lines[0] === "Is SSH open to the internet?" && lines[1]?.startsWith("You asked"), JSON.stringify(lines));
 if (SHOTS) await page.screenshot({ path: `${SHOTS}/chat.png` });
 
+await page.getByLabel("Message").fill("half-typed question");
 await page.getByRole("tab", { name: "Search" }).click();
 await page.getByRole("tab", { name: /^Chat/ }).click();
 check("switching tabs keeps the session", await page.getByRole("heading", { name: "Chat · security" }).isVisible());
+const kept = await page.locator(".line").allTextContents();
+check("switching tabs keeps the conversation", kept[0] === "Is SSH open to the internet?" && kept[1]?.startsWith("You asked"), JSON.stringify(kept));
+check("switching tabs keeps a half-typed message", (await page.getByLabel("Message").inputValue()) === "half-typed question");
+
+// A reply that arrives while another tab is open is still there on return.
+await page.getByLabel("Message").fill("Second question");
+await page.keyboard.press("Enter");
+await page.getByRole("tab", { name: "Overview" }).click();
+await page.waitForTimeout(400);
+await page.getByRole("tab", { name: /^Chat/ }).click();
+check("a reply that arrived on another tab is shown", (await page.locator(".line.ai").allTextContents()).some((t) => t.includes("Second question")));
 
 await page.getByRole("button", { name: "End session" }).click();
+// The conversation had answers, so ending offers a note first (ADR-0012).
+await page.getByRole("button", { name: "End without a note" }).click();
 await page.getByText("1 temporary permission revoked").waitFor();
 check("ending the session reports the revoked permissions", true);
 
