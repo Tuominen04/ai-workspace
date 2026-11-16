@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { engine, messageOf, type SessionInfo } from "../lib/engine";
 import { counted, fileName } from "../lib/words";
+import { Markdown } from "./Markdown";
 
 type Line = { who: "you" | "ai" | "note"; text: string };
 
@@ -211,7 +212,7 @@ export function ChatPanel({ project, session, onSession }: Props) {
         )}
         {lines.map((line, index) => (
           <div key={index} className={`line ${line.who}`}>
-            {line.text}
+            {line.who === "ai" ? <Markdown text={line.text} /> : line.text}
           </div>
         ))}
         {busy === "waiting" && <div className="line ai thinking">Thinking…</div>}

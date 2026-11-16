@@ -442,6 +442,111 @@ button:focus-visible {
 .chat {
   height: 100%;
   max-width: 900px;
+  /* Centred in the window, so a wide window reads like a page rather than a left column. */
+  margin: 0 auto;
+}
+
+/* Model replies rendered as Markdown. */
+.line.ai {
+  white-space: normal;
+  max-width: 88%;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  margin: 14px 0 6px;
+  line-height: 1.3;
+}
+
+.markdown h1 {
+  font-size: 18px;
+}
+
+.markdown h2 {
+  font-size: 16px;
+}
+
+.markdown h3,
+.markdown h4 {
+  font-size: 14px;
+}
+
+.markdown p {
+  margin: 6px 0;
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 6px 0;
+  padding-left: 22px;
+}
+
+.markdown li {
+  margin: 3px 0;
+}
+
+.markdown code {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+.markdown pre {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  overflow-x: auto;
+}
+
+.markdown pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.markdown hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 12px 0;
+}
+
+.markdown table {
+  border-collapse: collapse;
+  margin: 8px 0;
+}
+
+.markdown th,
+.markdown td {
+  border: 1px solid var(--line);
+  padding: 4px 8px;
+  text-align: left;
+}
+
+.markdown blockquote {
+  margin: 6px 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--line);
+  color: var(--muted);
+}
+
+.md-link {
+  text-decoration: underline dotted;
+}
+
+.md-image {
+  color: var(--muted);
 }
 
 .agent {
