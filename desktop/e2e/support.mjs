@@ -176,6 +176,14 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
         workspace_search: () => fixture.search,
         chat_open: ({ project }) => ({ ...fixture.session, project }),
         chat_send: ({ message, onPiece }) => {
+          // "flaky" fails once, like a timeout, then works.
+          if (message.includes("flaky") && !window.__flakyFailed) {
+            window.__flakyFailed = true;
+            return Promise.reject({
+              kind: "RuntimeRequestFailed",
+              message: "request to the AI runtime failed: timed out reading response",
+            });
+          }
           const text = message.includes("rules")
             ? "## My Rules (short version)\n\n1. **Exact Fedora commands** – `dnf`, `systemctl`, `firewall-cmd`. Each one gets a one-line explanation.\n2. **Warn before destructive actions** – back up first, here's how to undo.\n3. **Smallest fix wins** – I won't suggest `setenforce 0`.\n\n---\n\n### What I *can't* do\n\n- See your filesystem, processes, or network.\n- Run commands for you.\n\nReady when you are. Paste a config, a `journalctl` snippet or an `ss -tlnp` dump."
             : `You asked: ${message}`;

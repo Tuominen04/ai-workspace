@@ -612,6 +612,10 @@ button:focus-visible {
   font-size: 12px;
 }
 
+.line.note .retry {
+  margin-left: 8px;
+}
+
 .thinking {
   color: var(--muted);
   font-style: italic;
