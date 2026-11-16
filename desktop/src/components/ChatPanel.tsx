@@ -181,7 +181,11 @@ export function ChatPanel({ project, session, onSession }: Props) {
     );
   }
 
-  const files = session.base_files.length + session.project_files.length + session.session_files.length;
+  const files =
+    session.base_files.length +
+    session.project_files.length +
+    session.session_files.length +
+    session.granted_files.length;
   return (
     <section className="panel chat">
       <header className="panel-head">
@@ -207,6 +211,7 @@ export function ChatPanel({ project, session, onSession }: Props) {
         <ContextList title="Base" files={session.base_files} />
         <ContextList title="Project" files={session.project_files} />
         <ContextList title="Session" files={session.session_files} />
+        <ContextList title="Granted" files={session.granted_files} />
         <ContextList title="Skipped (names look like secrets)" files={session.skipped_files} />
         <p className="muted small">Budget: {session.budget}</p>
         {session.truncated_files.length > 0 && (

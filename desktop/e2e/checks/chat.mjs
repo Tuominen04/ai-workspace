@@ -14,9 +14,10 @@ check("chat asks for a project first", (await page.locator(".content").textConte
 await page.getByRole("button", { name: "security" }).click();
 await page.getByRole("button", { name: "Start session in security" }).click();
 await page.getByRole("heading", { name: "Chat · security" }).waitFor();
-check("the session shows the runtime and its context", (await page.locator(".context summary").textContent()).includes("3 context files"));
+check("the session shows the runtime and its context", (await page.locator(".context summary").textContent()).includes("4 context files"));
 await page.locator(".context summary").click();
 check("the budget and a cut file are shown", (await page.locator(".context").textContent()).includes("8192-token window") && (await page.locator(".context").textContent()).includes("history.md (11800 of 26000 bytes shown)"));
+check("granted files are listed", (await page.locator(".context").textContent()).includes("router-hardening-notes.md"));
 check("skipped secret-looking files are listed", (await page.locator(".context").textContent()).includes("wifi-password.md"));
 check("the session names its model and keeps the model's instructions", (await page.locator(".agent").textContent()).includes("sec") && (await page.locator(".agent").textContent()).includes("own instructions are kept"));
 

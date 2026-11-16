@@ -8,13 +8,13 @@ use crate::paths::{
     RootSource, WorkspacePaths, canonical_workspace_root, env_root_override, user_config_file,
     write_user_root,
 };
-use crate::search::{self, SearchCandidate, SearchOutcome, SourceKind};
+use crate::search::{self, SearchCandidate, SearchOutcome};
 use crate::workspace::{
-    CreatedProject, PermissionGrantResult, PermissionRevokeResult, PermissionStatus,
-    PermissionViewOptions, PermissionViewSnapshot, Project, ProjectMetadata, ValidationResult,
-    collect_markdown_files, create_project, discover_projects, grant_temporary_permission,
-    initialize_permission_session, inspect_project, now_unix, revoke_temporary_permission,
-    save_session_note, set_project_model, validate_workspace, view_permissions,
+    CreatedProject, PermissionGrantResult, PermissionRevokeResult, PermissionViewOptions,
+    PermissionViewSnapshot, Project, ProjectMetadata, ValidationResult, create_project,
+    discover_projects, grant_temporary_permission, inspect_project, now_unix,
+    revoke_temporary_permission, save_session_note, set_project_model, validate_workspace,
+    view_permissions,
 };
 use std::path::PathBuf;
 
@@ -255,61 +255,15 @@ pub fn set_workspace_root(path: &str) -> Result<SetRootReport> {
     })
 }
 
-/// Collects the permission-scoped candidate set search ranks against: Base
-/// knowledge, and — when a project is selected — that project's Knowledge
-/// and Session content, each only if the active permission session currently
-/// grants it. See `specs/006-filesystem-search/research.md` Decision 3.
+/// The candidates search ranks: everything the model may read (`context::readable_sources`).
 fn collect_search_candidates(
     paths: &WorkspacePaths,
     project: Option<&Project>,
 ) -> Result<Vec<SearchCandidate>> {
-    let mut candidates = Vec::new();
-
-    for relative_path in collect_markdown_files(paths.base_knowledge_path(), 2)? {
-        candidates.push(SearchCandidate {
-            source_kind: SourceKind::Base,
-            path: paths.base_knowledge_path().join(relative_path),
-        });
-    }
-
-    let Some(project) = project else {
-        return Ok(candidates);
-    };
-
-    let permission_set = initialize_permission_session(paths, project)?;
-    let granted_roots: Vec<PathBuf> = permission_set
-        .default_grants
-        .iter()
-        .chain(permission_set.temporary_grants.iter())
-        .filter(|grant| grant.status == PermissionStatus::Active)
-        .map(|grant| PathBuf::from(&grant.canonical_path))
-        .collect();
-
-    let knowledge_root = project.path.join("Knowledge");
-    if granted_roots
-        .iter()
-        .any(|root| knowledge_root.starts_with(root))
-    {
-        for relative_path in collect_markdown_files(&knowledge_root, 2).unwrap_or_default() {
-            candidates.push(SearchCandidate {
-                source_kind: SourceKind::Project,
-                path: knowledge_root.join(relative_path),
-            });
-        }
-    }
-
-    let session_root = project.path.join("Session");
-    if granted_roots
-        .iter()
-        .any(|root| session_root.starts_with(root))
-    {
-        for relative_path in collect_markdown_files(&session_root, 2).unwrap_or_default() {
-            candidates.push(SearchCandidate {
-                source_kind: SourceKind::Session,
-                path: session_root.join(relative_path),
-            });
-        }
-    }
-
-    Ok(candidates)
+    // The same scope as the chat's context (ADR-0014): Base, the whole project, active grants.
+    Ok(crate::context::readable_sources(paths, project)?
+        .sources
+        .into_iter()
+        .map(|(source_kind, path)| SearchCandidate { source_kind, path })
+        .collect())
 }

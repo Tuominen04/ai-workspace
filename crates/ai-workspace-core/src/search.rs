@@ -17,6 +17,8 @@ pub enum SourceKind {
     Base,
     Project,
     Session,
+    /// A file or folder granted for the session in the Permissions tab (ADR-0014).
+    Granted,
 }
 
 impl SourceKind {
@@ -25,6 +27,7 @@ impl SourceKind {
             SourceKind::Project => 0,
             SourceKind::Base => 1,
             SourceKind::Session => 2,
+            SourceKind::Granted => 3,
         }
     }
 
@@ -33,6 +36,7 @@ impl SourceKind {
             SourceKind::Base => "base",
             SourceKind::Project => "project",
             SourceKind::Session => "session",
+            SourceKind::Granted => "granted",
         }
     }
 }

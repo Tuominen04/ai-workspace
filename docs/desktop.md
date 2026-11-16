@@ -37,9 +37,12 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
   it as `session-note-YYYY-MM-DD-HHMMSS.md` (UTC) in the project's Session folder, where later
   sessions read it as context. **End without a note** writes nothing. Quitting the app ends a
   session without a note.
-- **Permissions** — the chosen project's grants: the defaults (Base and the project) and any
+- **Permissions** — what the model may read, beyond Base and the project folder, and the
+  chosen project's grants: the defaults (Base and the project) and any
   temporary ones, with their status, a filter and pages. **Grant** gives temporary access to
-  a path you type or paste; **Revoke** takes a temporary grant away. Paths that do not exist
+  a path you type or paste; **Revoke** takes a temporary grant away. A granted Markdown file, or
+  the Markdown files in a granted folder (two levels deep), join the chat's context from the next
+  message, listed as "Granted" (ADR-0014). Ending the chat session revokes temporary grants. Paths that do not exist
   are refused, and every change is written to `Logs/permissions-events.log`.
 - **Configuration** — the workspace configuration (`Config/workspace.toml`): the folder in
   use and why, the configuration file, the default model, the project file name and the

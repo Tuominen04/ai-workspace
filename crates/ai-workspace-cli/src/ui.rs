@@ -87,6 +87,7 @@ pub fn render_session_summary(summary: &SessionSummary<'_>) {
     outln!("Base context files: {}", context.base_files.len());
     outln!("Project context files: {}", context.project_files.len());
     outln!("Session context files: {}", context.session_files.len());
+    outln!("Granted context files: {}", context.granted_files.len());
     outln!("Total context sources: {}", context.source_count);
     outln!("Context budget: {}", context.budget);
     for file in &context.truncated_files {
@@ -120,6 +121,13 @@ pub fn render_session_summary(summary: &SessionSummary<'_>) {
     if !context.session_files.is_empty() {
         outln!("Session context:");
         for file in &context.session_files {
+            outln!("  - {}", file.display());
+        }
+    }
+
+    if !context.granted_files.is_empty() {
+        outln!("Granted context:");
+        for file in &context.granted_files {
             outln!("  - {}", file.display());
         }
     }

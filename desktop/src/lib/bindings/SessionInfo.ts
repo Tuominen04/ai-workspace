@@ -22,6 +22,10 @@ agent_included: boolean,
  */
 agent: string, base_files: Array<string>, project_files: Array<string>, session_files: Array<string>, 
 /**
+ * Files from the session's temporary grants (ADR-0014).
+ */
+granted_files: Array<string>, 
+/**
  * Files and folders left out because their names look like secrets.
  */
 skipped_files: Array<string>, 

@@ -78,8 +78,9 @@ function ProjectPermissions({ project }: { project: string }) {
     <section className="panel">
       <h2>Permissions · {project}</h2>
       <p className="muted small">
-        The model only ever reads Base and this project, plus folders granted here. Temporary
-        grants end when a chat session in this project ends.
+        The model reads Markdown from Base and this project, plus the files and folders granted
+        here (folders two levels deep), from its next message on. Names that look like secrets
+        are never read. Temporary grants end when a chat session in this project ends.
       </p>
 
       <form className="search" onSubmit={grant} aria-label="Grant access">
