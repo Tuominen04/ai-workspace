@@ -531,6 +531,17 @@ button:focus-visible {
   align-items: center;
 }
 
+.small-button {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.model-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .notice {
   color: var(--ok);
   background: var(--ok-soft);

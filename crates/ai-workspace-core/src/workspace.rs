@@ -331,6 +331,29 @@ pub fn save_project_metadata(
     fs::write(&metadata_path, serialized).map_err(|error| map_path_error(&metadata_path, error))
 }
 
+/// Sets or clears the Ollama model a project uses (`model` in its `project.toml`; ADR-0012).
+/// `None` or blank clears it, so the workspace's default model applies. A name must be a
+/// plausible Ollama model name: non-empty, at most 200 characters, no whitespace or control
+/// characters. Whether Ollama has the model is not checked here.
+pub fn set_project_model(
+    paths: &WorkspacePaths,
+    config: &WorkspaceConfig,
+    project_name: &str,
+    model: Option<&str>,
+) -> Result<(Project, ProjectMetadata)> {
+    let model = model.map(str::trim).filter(|name| !name.is_empty());
+    if let Some(name) = model
+        && (name.chars().count() > 200 || name.chars().any(|c| c.is_whitespace() || c.is_control()))
+    {
+        return Err(AppError::InvalidModelName(name.to_string()));
+    }
+
+    let (project, mut metadata) = inspect_project(paths, config, project_name)?;
+    metadata.model = model.map(str::to_string);
+    save_project_metadata(paths, &project.path, config.metadata_filename(), &metadata)?;
+    Ok((project, metadata))
+}
+
 pub fn inspect_project(
     paths: &WorkspacePaths,
     config: &WorkspaceConfig,

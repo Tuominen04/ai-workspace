@@ -6,6 +6,7 @@ use ai_workspace_core::{Engine, Session};
 
 const USAGE_CONFIG_SET_ROOT: &str = "config set-root PATH";
 const USAGE_PROJECT_SHOW: &str = "project show PROJECT";
+const USAGE_PROJECT_SET_MODEL: &str = "project set-model PROJECT [MODEL]";
 const USAGE_PROJECT_CREATE: &str = "project create --name NAME [--description TEXT]";
 const USAGE_PERMISSION_GRANT: &str = "permission grant [--project PROJECT] --path PATH";
 const USAGE_PERMISSION_VIEW: &str =
@@ -43,6 +44,7 @@ fn gated_command(operation: GatedOperation) -> String {
         GatedOperation::Search => "search",
         GatedOperation::ProjectCreate => "project create",
         GatedOperation::ProjectShow => "project show",
+        GatedOperation::ProjectSetModel => "project set-model",
         GatedOperation::PermissionGrant => "permission grant",
         GatedOperation::PermissionRevoke => "permission revoke",
         GatedOperation::PermissionView => "permission view",
@@ -103,6 +105,11 @@ fn run_workspace_command(command: Command) -> Result<()> {
         Command::ProjectShow { project } => {
             let (project, metadata) = engine.project_details(&project)?;
             ui::render_project_details(&project, &metadata);
+            Ok(())
+        }
+        Command::ProjectSetModel { project, model } => {
+            let (project, metadata) = engine.set_project_model(&project, model.as_deref())?;
+            ui::render_project_model_set(&project, &metadata);
             Ok(())
         }
         Command::PermissionGrant { project, path } => {
@@ -218,6 +225,10 @@ enum Command {
     ProjectShow {
         project: String,
     },
+    ProjectSetModel {
+        project: String,
+        model: Option<String>,
+    },
     PermissionGrant {
         project: Option<String>,
         path: String,
@@ -291,6 +302,17 @@ fn parse_project_command(args: &[String]) -> Result<Command> {
             })
         }
         "create" => parse_project_create_command(&args[1..]),
+        "set-model" => match &args[1..] {
+            [project] => Ok(Command::ProjectSetModel {
+                project: project.clone(),
+                model: None,
+            }),
+            [project, model] => Ok(Command::ProjectSetModel {
+                project: project.clone(),
+                model: Some(model.clone()),
+            }),
+            _ => Err(usage_error(USAGE_PROJECT_SET_MODEL)),
+        },
         _ => Err(AppError::Message(format!(
             "invalid project command. Use '{COMMAND_NAME} project create' or '{COMMAND_NAME} project show'."
         ))),
@@ -539,6 +561,8 @@ fn print_help() {
     outln!("{pad}Create a managed project workspace");
     outln!("  {cmd} {USAGE_PROJECT_SHOW}");
     outln!("{pad}Show project metadata and managed paths");
+    outln!("  {cmd} {USAGE_PROJECT_SET_MODEL}");
+    outln!("{pad}Use an Ollama model in a project (no MODEL: the workspace default)");
     outln!("  {cmd} {USAGE_PERMISSION_GRANT}");
     outln!("{pad}Grant temporary permission for a local path");
     outln!("  {cmd} {USAGE_PERMISSION_VIEW}");

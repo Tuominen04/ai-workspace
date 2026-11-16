@@ -11,6 +11,7 @@ pub enum GatedOperation {
     Search,
     ProjectCreate,
     ProjectShow,
+    ProjectSetModel,
     PermissionGrant,
     PermissionRevoke,
     PermissionView,
@@ -23,6 +24,7 @@ impl GatedOperation {
             Self::Search => "search",
             Self::ProjectCreate => "project create",
             Self::ProjectShow => "project show",
+            Self::ProjectSetModel => "project set-model",
             Self::PermissionGrant => "permission grant",
             Self::PermissionRevoke => "permission revoke",
             Self::PermissionView => "permission view",
@@ -42,6 +44,7 @@ pub enum AppError {
         reason: String,
     },
     InvalidProjectName(String),
+    InvalidModelName(String),
     ProjectNotFound(String),
     /// A gated operation was refused because validation found blocking
     /// issues. Carries the full result so a front end can show them.
@@ -84,6 +87,10 @@ impl fmt::Display for AppError {
             Self::InvalidProjectName(name) => {
                 write!(f, "invalid project name '{name}'")
             }
+            Self::InvalidModelName(name) => write!(
+                f,
+                "invalid model name '{name}': use an Ollama model name such as sec or qwen3:8b, without spaces"
+            ),
             Self::ProjectNotFound(project) => write!(f, "project '{project}' was not found"),
             Self::ValidationGateBlocked { operation, .. } => write!(
                 f,

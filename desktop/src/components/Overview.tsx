@@ -1,4 +1,7 @@
+import { useState, type FormEvent } from "react";
+
 import { engine, type WorkspaceStatus } from "../lib/engine";
+import { failureOf, type FailureInfo } from "../lib/failure";
 import { useLoad } from "../lib/useLoad";
 import { counted, dateText } from "../lib/words";
 import { Failure } from "./Failure";
@@ -28,7 +31,7 @@ export function Overview({ status, project }: { status: WorkspaceStatus; project
 }
 
 function ProjectOverview({ name }: { name: string }) {
-  const [details] = useLoad(() => engine.project.show(name), name);
+  const [details, reload] = useLoad(() => engine.project.show(name), name);
 
   if (details.state === "loading") return <p className="muted panel">Loading {name}…</p>;
   if (details.state === "failed")
@@ -48,7 +51,9 @@ function ProjectOverview({ name }: { name: string }) {
         <dt>Folder</dt>
         <dd className="path">{p.path}</dd>
         <dt>Model</dt>
-        <dd>{p.model ?? <span className="muted">workspace default</span>}</dd>
+        <dd>
+          <ModelSetting project={p.name} model={p.model} onChanged={reload} />
+        </dd>
         <dt>Created</dt>
         <dd>{dateText(p.created_at)}</dd>
         <dt>Knowledge</dt>
@@ -61,5 +66,104 @@ function ProjectOverview({ name }: { name: string }) {
         <dd>{p.session_dir}</dd>
       </dl>
     </section>
+  );
+}
+
+/**
+ * The project's model: shown, and changeable. Installed Ollama models are offered as
+ * suggestions; any name can be typed. Clearing returns to the workspace default.
+ */
+function ModelSetting({
+  project,
+  model,
+  onChanged,
+}: {
+  project: string;
+  model: string | null;
+  onChanged: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(model ?? "");
+  const [installed, setInstalled] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<FailureInfo | null>(null);
+
+  async function startEditing() {
+    setDraft(model ?? "");
+    setFailure(null);
+    setEditing(true);
+    try {
+      setInstalled(await engine.models.installed());
+    } catch {
+      setInstalled([]);
+    }
+  }
+
+  async function save(next: string | null) {
+    setBusy(true);
+    setFailure(null);
+    try {
+      await engine.project.setModel(project, next);
+      setEditing(false);
+      onChanged();
+    } catch (thrown) {
+      setFailure(failureOf(thrown));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!editing) {
+    return (
+      <span className="row">
+        {model ?? <span className="muted">workspace default</span>}
+        <button type="button" className="quiet small-button" onClick={startEditing}>
+          Change
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <form
+      className="model-form"
+      aria-label="Project model"
+      onSubmit={(event: FormEvent) => {
+        event.preventDefault();
+        save(draft.trim() === "" ? null : draft);
+      }}
+    >
+      <div className="row">
+        <input
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          list="installed-models"
+          placeholder="Ollama model, e.g. sec"
+          aria-label="Model name"
+          autoFocus
+        />
+        <datalist id="installed-models">
+          {installed.map((name) => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
+        <button type="submit" disabled={busy}>
+          Save
+        </button>
+        <button type="button" className="quiet" disabled={busy} onClick={() => save(null)}>
+          Use default
+        </button>
+        <button type="button" className="quiet" disabled={busy} onClick={() => setEditing(false)}>
+          Cancel
+        </button>
+      </div>
+      <p className="muted small">
+        {installed.length > 0
+          ? `Installed in Ollama: ${installed.join(", ")}.`
+          : "Ollama did not list any models (is it running?). You can still type a name."}{" "}
+        A model with its own instructions keeps them in every chat.
+      </p>
+      {failure && <Failure message={failure.message} kind={failure.kind} />}
+    </form>
   );
 }

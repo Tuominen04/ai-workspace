@@ -24,6 +24,8 @@ pub fn run() {
             commands::workspace_set_root,
             commands::workspace_switch_to_saved,
             commands::project_create,
+            commands::project_set_model,
+            commands::models_installed,
             commands::permission_list,
             commands::permission_grant,
             commands::permission_revoke,

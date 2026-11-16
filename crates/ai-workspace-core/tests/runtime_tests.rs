@@ -126,3 +126,13 @@ fn show_model_maps_an_unknown_model_to_runtime_request_failed() {
     let result = RuntimeManager::new().show_model(&base_url, "missing");
     assert!(matches!(result, Err(AppError::RuntimeRequestFailed(_))));
 }
+
+#[test]
+fn installed_models_lists_names_sorted() {
+    let body = r#"{"models":[{"name":"sec:latest","size":1},{"name":"qwen3.6:latest","size":2}]}"#;
+    let base_url = spawn_mock_server(ok_json(body));
+    let names = RuntimeManager::new()
+        .installed_models(&base_url)
+        .expect("tags should succeed");
+    assert_eq!(names, ["qwen3.6:latest", "sec:latest"]);
+}

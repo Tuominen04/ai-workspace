@@ -142,6 +142,13 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
           fixture.details[slug] = { ...fixture.details.security, name: slug, display_name: name, description, model: null, path: `/home/me/AI/Projects/${slug}` };
           return fixture.details[slug];
         },
+        models_installed: () => ["qwen3.6:latest", "sec:latest"],
+        project_set_model: ({ name, model }) => {
+          if (model && /\s/.test(model))
+            return Promise.reject({ kind: "InvalidModelName", message: `invalid model name '${model}'` });
+          fixture.details[name] = { ...fixture.details[name], model: model ?? null };
+          return fixture.details[name];
+        },
         permission_list: ({ filter }) => {
           const shown = grants.filter((g) => !filter || g.path.toLowerCase().includes(filter.toLowerCase()));
           return { project: "security", session_id: "security-1", total: shown.length, page: 1, page_size: 25, grants: shown };

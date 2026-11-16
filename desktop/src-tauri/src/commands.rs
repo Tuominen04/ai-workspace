@@ -120,6 +120,23 @@ pub fn create_project(
     Ok(ProjectDetails::new(&created.project, &created.metadata))
 }
 
+pub fn set_project_model(
+    engine: &Engine,
+    name: &str,
+    model: Option<&str>,
+) -> Outcome<ProjectDetails> {
+    let (project, metadata) = engine.set_project_model(name, model)?;
+    Ok(ProjectDetails::new(&project, &metadata))
+}
+
+/// The models Ollama has installed, to suggest when choosing one. Empty when Ollama is not
+/// running or cannot be asked: the person can still type a name.
+pub fn installed_models() -> Vec<String> {
+    ai_workspace_core::runtime::RuntimeManager::new()
+        .installed_models(ai_workspace_core::runtime::OLLAMA_BASE_URL)
+        .unwrap_or_default()
+}
+
 pub fn permissions(
     engine: &Engine,
     project: &str,
@@ -315,6 +332,20 @@ pub async fn project_create(
     description: Option<String>,
 ) -> Outcome<ProjectDetails> {
     create_project(&resolve(&choice)?, &name, description.as_deref())
+}
+
+#[tauri::command]
+pub async fn project_set_model(
+    choice: Choice<'_>,
+    name: String,
+    model: Option<String>,
+) -> Outcome<ProjectDetails> {
+    set_project_model(&resolve(&choice)?, &name, model.as_deref())
+}
+
+#[tauri::command]
+pub async fn models_installed() -> Outcome<Vec<String>> {
+    Ok(installed_models())
 }
 
 #[tauri::command]
