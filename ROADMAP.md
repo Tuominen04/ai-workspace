@@ -100,13 +100,27 @@ ADR-0011).
 
 ## v0.8
 
+Project agents
+
+A project's agent is an Ollama model, chosen per project; the model's own
+instructions are kept (ADR-0012). The context is sized from the model's
+window and long files are cut with a visible marker; names that look like
+secrets are never read. A session note is offered when a chat ends and saved
+only on request. Replies stream, a failed reply can be retried (ADR-0013),
+and the model reads Markdown from Base, the whole project and active
+temporary grants (ADR-0014).
+
+---
+
+## v0.9
+
 Runtime abstraction
 
 Support multiple runtimes.
 
 ---
 
-## v0.9
+## v0.10
 
 Project management
 
@@ -120,7 +134,7 @@ Clone
 
 ---
 
-## v0.10
+## v0.11
 
 Documentation
 
