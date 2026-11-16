@@ -20,4 +20,8 @@ agent_included: boolean,
 /**
  * The state of the model's own instructions, in words.
  */
-agent: string, base_files: Array<string>, project_files: Array<string>, session_files: Array<string>, };
+agent: string, base_files: Array<string>, project_files: Array<string>, session_files: Array<string>, 
+/**
+ * Files and folders left out because their names look like secrets.
+ */
+skipped_files: Array<string>, };

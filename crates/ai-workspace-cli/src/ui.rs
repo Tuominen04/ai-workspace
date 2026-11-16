@@ -88,6 +88,15 @@ pub fn render_session_summary(summary: &SessionSummary<'_>) {
     outln!("Project context files: {}", context.project_files.len());
     outln!("Session context files: {}", context.session_files.len());
     outln!("Total context sources: {}", context.source_count);
+    if !context.skipped_files.is_empty() {
+        outln!(
+            "Skipped because the names look like secrets: {}",
+            context.skipped_files.len()
+        );
+        for file in &context.skipped_files {
+            outln!("  - {}", file.display());
+        }
+    }
     outln!("AI access policy: read-only base scope (~/AI/Base)");
 
     if !context.base_files.is_empty() {
