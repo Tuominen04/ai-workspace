@@ -4,7 +4,8 @@ import { engine, messageOf, type SessionInfo } from "../lib/engine";
 import { counted, fileName } from "../lib/words";
 import { Markdown } from "./Markdown";
 
-type Line = { who: "you" | "ai" | "note"; text: string };
+/** One line of the transcript. A note about a failed reply carries the question, for Retry. */
+type Line = { who: "you" | "ai" | "note"; text: string; retry?: string };
 
 type Props = {
   project: string | null;
@@ -115,8 +116,22 @@ export function ChatPanel({ project, session, onSession }: Props) {
     const message = draft.trim();
     if (message === "" || busy !== null) return;
     setDraft("");
-    setError(null);
     setLines((all) => [...all, { who: "you", text: message }]);
+    await ask(message);
+  }
+
+  /**
+   * Sends the failed question again. Its question line stays where it is; the note about the
+   * failure is replaced by the new attempt's reply (or a new note if it fails again).
+   */
+  async function retry(message: string) {
+    if (busy !== null) return;
+    setLines((all) => all.filter((line) => line.retry === undefined));
+    await ask(message);
+  }
+
+  async function ask(message: string) {
+    setError(null);
     setBusy("waiting");
     setStreaming(null);
     try {
@@ -127,7 +142,7 @@ export function ChatPanel({ project, session, onSession }: Props) {
     } catch (thrown) {
       setLines((all) => [
         ...all,
-        { who: "note", text: `No answer: ${messageOf(thrown)}. You can try again.` },
+        { who: "note", text: `No answer: ${messageOf(thrown)}.`, retry: message },
       ]);
     } finally {
       setStreaming(null);
@@ -219,6 +234,16 @@ export function ChatPanel({ project, session, onSession }: Props) {
         {lines.map((line, index) => (
           <div key={index} className={`line ${line.who}`}>
             {line.who === "ai" ? <Markdown text={line.text} /> : line.text}
+            {line.retry !== undefined && index === lines.length - 1 && (
+              <button
+                type="button"
+                className="quiet small-button retry"
+                onClick={() => retry(line.retry ?? "")}
+                disabled={busy !== null}
+              >
+                Retry
+              </button>
+            )}
           </div>
         ))}
         {busy === "waiting" &&

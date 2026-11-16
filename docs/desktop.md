@@ -22,7 +22,8 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
   permissions and builds the first context; each message rebuilds the context from what was
   asked; ending it revokes temporary permissions. Quitting the app ends an open session too.
   Replies appear as they are written (streamed from Ollama, so a long answer from a large model
-  never times out, ADR-0013). Replies are shown as formatted Markdown (headings, lists, emphasis, code, tables); raw HTML in
+  never times out, ADR-0013). If a reply fails, the question stays and a **Retry** button sends
+  it again, so the model gets the real question rather than a follow-up like "continue". Replies are shown as formatted Markdown (headings, lists, emphasis, code, tables); raw HTML in
   a reply is never rendered, and links and images are shown as text, never followed or loaded,
   so the window stays on this computer. The chat names the model it talks to (the project's `model` in `project.toml`, else the
   workspace default) and whether the model's own instructions are kept: a model built from a
