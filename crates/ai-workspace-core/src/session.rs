@@ -192,6 +192,17 @@ impl Session {
     /// kept). On an error the message is dropped from the history, so the
     /// user can simply try again.
     pub fn send(&mut self, message: &str) -> Result<String> {
+        self.send_streaming(message, &mut |_| {})
+    }
+
+    /// Like [`Session::send`], calling `on_piece` with each piece of the reply as the model
+    /// writes it (ADR-0013). On an error the pieces already passed on are not part of any reply:
+    /// the message is dropped from the history, as with `send`.
+    pub fn send_streaming(
+        &mut self,
+        message: &str,
+        on_piece: &mut dyn FnMut(&str),
+    ) -> Result<String> {
         if !self.can_chat() {
             return Err(AppError::RuntimeRequestFailed(
                 "no local runtime is running".to_string(),
@@ -209,10 +220,12 @@ impl Session {
 
         self.history.push(ChatMessage::user(message.to_string()));
 
-        match self
-            .runtime
-            .send_chat_message(OLLAMA_BASE_URL, &self.model, &self.history)
-        {
+        match self.runtime.stream_chat_message(
+            OLLAMA_BASE_URL,
+            &self.model,
+            &self.history,
+            on_piece,
+        ) {
             Ok(reply) => {
                 let content = reply.content.clone();
                 self.history.push(reply);

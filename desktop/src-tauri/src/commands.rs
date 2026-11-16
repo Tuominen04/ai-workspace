@@ -234,12 +234,18 @@ pub fn session_open(engine: &Engine, open: &OpenSession, name: &str) -> Outcome<
 }
 
 /// Sends one message in the open session and returns the reply.
-pub fn session_send(open: &OpenSession, message: &str) -> Outcome<String> {
+/// Sends one message in the open session, passing each piece of the reply to `on_piece` as
+/// the model writes it (ADR-0013), and returns the whole reply.
+pub fn session_send(
+    open: &OpenSession,
+    message: &str,
+    on_piece: &mut dyn FnMut(&str),
+) -> Outcome<String> {
     let mut slot = lock(open)?;
     let session = slot
         .as_mut()
         .ok_or_else(|| CommandError::shell("no session is open"))?;
-    Ok(session.send(message)?)
+    Ok(session.send_streaming(message, on_piece)?)
 }
 
 /// Asks the open session's model to draft a note about the session. Nothing is saved.
@@ -412,8 +418,16 @@ pub async fn chat_open(
 }
 
 #[tauri::command]
-pub async fn chat_send(open: tauri::State<'_, OpenSession>, message: String) -> Outcome<String> {
-    session_send(&open, &message)
+pub async fn chat_send(
+    open: tauri::State<'_, OpenSession>,
+    message: String,
+    on_piece: tauri::ipc::Channel<String>,
+) -> Outcome<String> {
+    // A piece the window can no longer receive (it was closed) is simply dropped; the whole
+    // reply is still returned and kept in the history.
+    session_send(&open, &message, &mut |piece| {
+        let _ = on_piece.send(piece.to_string());
+    })
 }
 
 #[tauri::command]

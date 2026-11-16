@@ -136,3 +136,65 @@ fn installed_models_lists_names_sorted() {
         .expect("tags should succeed");
     assert_eq!(names, ["qwen3.6:latest", "sec:latest"]);
 }
+
+fn ndjson(lines: &[&str]) -> String {
+    let body = lines.join("\n") + "\n";
+    format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: application/x-ndjson\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        body.len(),
+        body
+    )
+}
+
+#[test]
+fn a_streamed_reply_arrives_in_pieces_and_is_assembled() {
+    let base_url = spawn_mock_server(ndjson(&[
+        r###"{"message":{"role":"assistant","content":"## My "},"done":false}"###,
+        r#"{"message":{"role":"assistant","content":"Rules"},"done":false}"#,
+        r#"{"message":{"role":"assistant","content":"\n1. Exact commands"},"done":false}"#,
+        r#"{"message":{"role":"assistant","content":""},"done":true,"total_duration":1}"#,
+    ]));
+    let mut pieces = Vec::new();
+    let reply = RuntimeManager::new()
+        .stream_chat_message(
+            &base_url,
+            "sec",
+            &[ChatMessage::user("rules?".to_string())],
+            &mut |piece| pieces.push(piece.to_string()),
+        )
+        .expect("the stream should complete");
+    assert_eq!(pieces, ["## My ", "Rules", "\n1. Exact commands"]);
+    assert_eq!(reply.content, "## My Rules\n1. Exact commands");
+    assert_eq!(reply.role, "assistant");
+}
+
+#[test]
+fn an_error_in_the_stream_fails_the_request() {
+    let base_url = spawn_mock_server(ndjson(&[
+        r#"{"message":{"role":"assistant","content":"Half"},"done":false}"#,
+        r#"{"error":"model ran out of memory"}"#,
+    ]));
+    let result = RuntimeManager::new().stream_chat_message(
+        &base_url,
+        "sec",
+        &[ChatMessage::user("hi".to_string())],
+        &mut |_| {},
+    );
+    match result {
+        Err(AppError::RuntimeRequestFailed(reason)) => assert!(reason.contains("out of memory")),
+        other => panic!("expected a failure, got {other:?}"),
+    }
+}
+
+#[test]
+fn a_stream_that_stops_before_done_fails_the_request() {
+    let base_url = spawn_mock_server(ndjson(&[
+        r#"{"message":{"role":"assistant","content":"Half an answ"},"done":false}"#,
+    ]));
+    let result = RuntimeManager::new().send_chat_message(
+        &base_url,
+        "sec",
+        &[ChatMessage::user("hi".to_string())],
+    );
+    assert!(matches!(result, Err(AppError::RuntimeRequestFailed(_))));
+}

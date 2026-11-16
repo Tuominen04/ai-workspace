@@ -175,18 +175,15 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
           fixture.details[name] ?? Promise.reject({ kind: "ProjectNotFound", message: `project '${name}' was not found` }),
         workspace_search: () => fixture.search,
         chat_open: ({ project }) => ({ ...fixture.session, project }),
-        chat_send: ({ message }) =>
-          new Promise((resolve) =>
-            setTimeout(
-              () =>
-                resolve(
-                  message.includes("rules")
-                    ? "## My Rules (short version)\n\n1. **Exact Fedora commands** – `dnf`, `systemctl`, `firewall-cmd`. Each one gets a one-line explanation.\n2. **Warn before destructive actions** – back up first, here's how to undo.\n3. **Smallest fix wins** – I won't suggest `setenforce 0`.\n\n---\n\n### What I *can't* do\n\n- See your filesystem, processes, or network.\n- Run commands for you.\n\nReady when you are. Paste a config, a `journalctl` snippet or an `ss -tlnp` dump."
-                    : `You asked: ${message}`,
-                ),
-              150,
-            ),
-          ),
+        chat_send: ({ message, onPiece }) => {
+          const text = message.includes("rules")
+            ? "## My Rules (short version)\n\n1. **Exact Fedora commands** – `dnf`, `systemctl`, `firewall-cmd`. Each one gets a one-line explanation.\n2. **Warn before destructive actions** – back up first, here's how to undo.\n3. **Smallest fix wins** – I won't suggest `setenforce 0`.\n\n---\n\n### What I *can't* do\n\n- See your filesystem, processes, or network.\n- Run commands for you.\n\nReady when you are. Paste a config, a `journalctl` snippet or an `ss -tlnp` dump."
+            : `You asked: ${message}`;
+          // Streamed in a few pieces, as Ollama does; slower for "slowly" so a check can watch.
+          const size = Math.ceil(text.length / 4);
+          const pieces = [0, 1, 2, 3].map((n) => text.slice(n * size, (n + 1) * size)).filter(Boolean);
+          return stream(onPiece, pieces, message.includes("slowly") ? 300 : 30);
+        },
         chat_close: () => ({ project: fixture.session.project, revoked: 1 }),
         chat_draft_note: () => "# Router hardening\n- Discussed SSH exposure\n- Next: review the guest VLAN",
         note_save: ({ project, text }) =>
@@ -194,6 +191,20 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
             ? Promise.reject({ kind: "Message", message: "a session note cannot be empty" })
             : { project, path: `/home/me/AI/Projects/${project}/Session/session-note-2026-11-15-160000.md` },
       };
+      // Tauri's Channel registers a callback through transformCallback and the shell sends
+      // { index, message } to it; the stub does the same for streamed replies.
+      const callbacks = new Map();
+      let nextCallback = 1;
+      const stream = (channel, pieces, gap) =>
+        new Promise((resolve) => {
+          pieces.forEach((piece, index) =>
+            setTimeout(() => callbacks.get(channel.id)?.({ index, message: piece }), gap * (index + 1)),
+          );
+          setTimeout(() => {
+            callbacks.get(channel.id)?.({ index: pieces.length, end: true });
+            resolve(pieces.join(""));
+          }, gap * (pieces.length + 1));
+        });
       window.__TAURI_INTERNALS__ = {
         invoke: async (command, args) => {
           window.__calls.push({ command, args });
@@ -202,7 +213,12 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
           if (!answer) throw { kind: "Bridge", message: `the stub has no ${command}` };
           return answer(args ?? {});
         },
-        transformCallback: () => 0,
+        transformCallback: (callback) => {
+          const id = nextCallback++;
+          callbacks.set(id, callback);
+          return id;
+        },
+        unregisterCallback: (id) => callbacks.delete(id),
       };
     },
     { fixture, failures },
