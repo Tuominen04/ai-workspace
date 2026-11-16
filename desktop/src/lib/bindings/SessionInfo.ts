@@ -24,4 +24,12 @@ agent: string, base_files: Array<string>, project_files: Array<string>, session_
 /**
  * Files and folders left out because their names look like secrets.
  */
-skipped_files: Array<string>, };
+skipped_files: Array<string>, 
+/**
+ * How much workspace text fits, and why, in words.
+ */
+budget: string, 
+/**
+ * Files included only in part, each as "path (N of M bytes shown)".
+ */
+truncated_files: Array<string>, };

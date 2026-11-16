@@ -313,6 +313,10 @@ pub struct SessionInfo {
     pub session_files: Vec<String>,
     /// Files and folders left out because their names look like secrets.
     pub skipped_files: Vec<String>,
+    /// How much workspace text fits, and why, in words.
+    pub budget: String,
+    /// Files included only in part, each as "path (N of M bytes shown)".
+    pub truncated_files: Vec<String>,
 }
 
 impl SessionInfo {
@@ -336,6 +340,12 @@ impl SessionInfo {
             project_files: paths(&context.project_files),
             session_files: paths(&context.session_files),
             skipped_files: paths(&context.skipped_files),
+            budget: context.budget.to_string(),
+            truncated_files: context
+                .truncated_files
+                .iter()
+                .map(ToString::to_string)
+                .collect(),
         }
     }
 }

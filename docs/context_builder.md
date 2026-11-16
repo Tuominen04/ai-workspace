@@ -16,3 +16,17 @@ looks like a secret, even inside granted folders: `*.key`, `*.pem`, `*.p12`,
 entered at all. A session lists what it skipped (the CLI's summary, the
 desktop chat's context list), so nothing disappears silently. The rule lives
 in `looks_like_secret` in `workspace.rs`.
+
+## How much fits (ADR-0012)
+
+A chat session sizes its context from the model's context window (`num_ctx`,
+reported by Ollama): workspace text gets 1.5 bytes per window token, minus the
+model's own instructions, and up to one source per 1,500 bytes (between 8 and
+32). An 8,192-token model gets about 12 kB, a 32,768-token model about 48 kB.
+When the window is unknown, the fixed 12,000 bytes and 8 sources apply.
+
+Sources are taken in relevance order while they fit. The first one that does
+not fit is cut at a line break, if at least 512 bytes of it fit, and the text
+says so: `[truncated: N of M bytes shown]`. Smaller files later in the order can
+still fit whole. Sessions show the budget and any cut file (the CLI summary,
+the desktop chat's context list).

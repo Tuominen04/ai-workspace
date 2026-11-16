@@ -26,7 +26,8 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
   Modelfile with a `SYSTEM` prompt, such as a security advisor, keeps those rules, and the
   workspace context follows them (ADR-0012). Files whose names look like secrets (such as
   `wifi-password.md` or anything in a `secrets/` folder) are never read; the context list shows
-  them under "Skipped".
+  them under "Skipped". The context list also shows how much text fits (from the model's
+  context window) and any file that was cut to fit, which the model sees marked as truncated.
 - **Permissions** — the chosen project's grants: the defaults (Base and the project) and any
   temporary ones, with their status, a filter and pages. **Grant** gives temporary access to
   a path you type or paste; **Revoke** takes a temporary grant away. Paths that do not exist
