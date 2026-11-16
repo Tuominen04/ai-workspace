@@ -31,6 +31,8 @@ pub fn run() {
             commands::permission_revoke,
             commands::chat_open,
             commands::chat_send,
+            commands::chat_draft_note,
+            commands::note_save,
             commands::chat_close,
         ])
         .build(tauri::generate_context!());

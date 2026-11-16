@@ -504,6 +504,26 @@ button:focus-visible {
   font-style: italic;
 }
 
+.ending {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.ending p {
+  margin: 0;
+}
+
+.ending textarea {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", monospace;
+  font-size: 13px;
+  resize: vertical;
+}
+
 .composer {
   display: flex;
   gap: 8px;

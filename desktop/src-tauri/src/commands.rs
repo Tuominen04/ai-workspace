@@ -9,9 +9,9 @@
 //! Ollama, and a reply can take as long as the model needs, and neither may freeze the window.
 
 use crate::dto::{
-    CommandError, GrantDone, InitDone, PermissionPage, ProjectDetails, RevokeDone, RootSaved,
-    SearchResults, SessionClosed, SessionInfo, SwitchDone, Validation, WorkspaceSettings,
-    WorkspaceStatus,
+    CommandError, GrantDone, InitDone, NoteSaved, PermissionPage, ProjectDetails, RevokeDone,
+    RootSaved, SearchResults, SessionClosed, SessionInfo, SwitchDone, Validation,
+    WorkspaceSettings, WorkspaceStatus,
 };
 use ai_workspace_core::workspace::PermissionViewOptions;
 use ai_workspace_core::{Engine, Session};
@@ -242,6 +242,24 @@ pub fn session_send(open: &OpenSession, message: &str) -> Outcome<String> {
     Ok(session.send(message)?)
 }
 
+/// Asks the open session's model to draft a note about the session. Nothing is saved.
+pub fn session_draft_note(open: &OpenSession) -> Outcome<String> {
+    let slot = lock(open)?;
+    let session = slot
+        .as_ref()
+        .ok_or_else(|| CommandError::shell("no session is open"))?;
+    Ok(session.draft_note()?)
+}
+
+/// Saves `text` as a session note in the project's Session folder, on the person's say-so.
+pub fn save_note(engine: &Engine, project: &str, text: &str) -> Outcome<NoteSaved> {
+    let path = engine.save_session_note(project, text)?;
+    Ok(NoteSaved {
+        project: project.to_string(),
+        path: path.display().to_string(),
+    })
+}
+
 /// Closes the open session, if there is one.
 pub fn session_close(open: &OpenSession) -> Outcome<Option<SessionClosed>> {
     let mut slot = lock(open)?;
@@ -396,6 +414,16 @@ pub async fn chat_open(
 #[tauri::command]
 pub async fn chat_send(open: tauri::State<'_, OpenSession>, message: String) -> Outcome<String> {
     session_send(&open, &message)
+}
+
+#[tauri::command]
+pub async fn chat_draft_note(open: tauri::State<'_, OpenSession>) -> Outcome<String> {
+    session_draft_note(&open)
+}
+
+#[tauri::command]
+pub async fn note_save(choice: Choice<'_>, project: String, text: String) -> Outcome<NoteSaved> {
+    save_note(&resolve(&choice)?, &project, &text)
 }
 
 #[tauri::command]

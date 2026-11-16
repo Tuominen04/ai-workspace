@@ -152,6 +152,36 @@ impl Session {
         }
     }
 
+    /// How many messages the person has sent and had answered.
+    pub fn exchanges(&self) -> usize {
+        self.history
+            .iter()
+            .filter(|m| m.role == "assistant")
+            .count()
+    }
+
+    /// Asks the model to draft a short note about this session for later sessions (ADR-0012).
+    /// The request is not added to the history. The note is only text: saving it is a
+    /// separate, explicit step ([`Engine::save_session_note`]).
+    pub fn draft_note(&self) -> Result<String> {
+        if !self.can_chat() {
+            return Err(AppError::RuntimeRequestFailed(
+                "no local runtime is running".to_string(),
+            ));
+        }
+        if self.exchanges() == 0 {
+            return Err(AppError::Message(
+                "there is nothing to note yet: no message has been answered".to_string(),
+            ));
+        }
+        let mut messages = self.history.clone();
+        messages.push(ChatMessage::user(NOTE_REQUEST.to_string()));
+        let reply = self
+            .runtime
+            .send_chat_message(OLLAMA_BASE_URL, &self.model, &messages)?;
+        Ok(reply.content.trim().to_string())
+    }
+
     /// `true` when a runtime is available, so [`Session::send`] can be used.
     pub fn can_chat(&self) -> bool {
         self.runtime_status.running
@@ -210,6 +240,9 @@ impl Drop for Session {
         }
     }
 }
+
+/// What the model is asked when drafting a session note.
+const NOTE_REQUEST: &str = "Write a short Markdown note about this session for future sessions in this project. Start with a level-one heading naming the topic. Then list, as bullet points: what was discussed, what was decided or changed, open questions, and what to keep in mind next time. Use only what was actually said here. Write only the note.";
 
 /// The implicit query used to build the very first context, before the user
 /// has asked anything. Falls back to the project's display name only in the

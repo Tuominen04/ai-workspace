@@ -28,6 +28,11 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
   `wifi-password.md` or anything in a `secrets/` folder) are never read; the context list shows
   them under "Skipped". The context list also shows how much text fits (from the model's
   context window) and any file that was cut to fit, which the model sees marked as truncated.
+  **End session** after at least one answer offers a note for next time: **Draft a note** asks
+  the model for a short Markdown summary, which you can edit, then **Save note and end** writes
+  it as `session-note-YYYY-MM-DD-HHMMSS.md` (UTC) in the project's Session folder, where later
+  sessions read it as context. **End without a note** writes nothing. Quitting the app ends a
+  session without a note.
 - **Permissions** — the chosen project's grants: the defaults (Base and the project) and any
   temporary ones, with their status, a filter and pages. **Grant** gives temporary access to
   a path you type or paste; **Revoke** takes a temporary grant away. Paths that do not exist

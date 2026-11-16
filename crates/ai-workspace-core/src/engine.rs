@@ -13,8 +13,8 @@ use crate::workspace::{
     CreatedProject, PermissionGrantResult, PermissionRevokeResult, PermissionStatus,
     PermissionViewOptions, PermissionViewSnapshot, Project, ProjectMetadata, ValidationResult,
     collect_markdown_files, create_project, discover_projects, grant_temporary_permission,
-    initialize_permission_session, inspect_project, revoke_temporary_permission, set_project_model,
-    validate_workspace, view_permissions,
+    initialize_permission_session, inspect_project, now_unix, revoke_temporary_permission,
+    save_session_note, set_project_model, validate_workspace, view_permissions,
 };
 use std::path::PathBuf;
 
@@ -135,6 +135,15 @@ impl Engine {
         self.enforce_validation_gate(GatedOperation::ProjectSetModel)?;
         let config = load_workspace_config(&self.paths)?;
         set_project_model(&self.paths, &config, name, model)
+    }
+
+    /// Saves a session note in the project's Session folder and returns its path. Not gated by
+    /// validation: it writes only into the project's own Session folder, at the person's
+    /// explicit request, and a blocked workspace should not cost the record of a session.
+    pub fn save_session_note(&self, name: &str, text: &str) -> Result<PathBuf> {
+        self.paths.ensure_layout()?;
+        let config = load_workspace_config(&self.paths)?;
+        save_session_note(&self.paths, &config, name, text, now_unix())
     }
 
     /// Grants temporary access to `path` in a project's permission session.
