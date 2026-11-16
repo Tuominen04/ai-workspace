@@ -123,7 +123,7 @@ fn a_blocked_gate_and_its_issues_reach_the_interface_as_data() {
 #[test]
 fn chat_commands_without_a_session_answer_plainly() {
     let open = OpenSession::default();
-    let sent = commands::session_send(&open, "hello").expect_err("nothing to send to");
+    let sent = commands::session_send(&open, "hello", &mut |_| {}).expect_err("nothing to send to");
     assert_eq!(sent.kind, "Shell");
     let closed = commands::session_close(&open).expect("closing nothing is fine");
     assert!(closed.is_none());

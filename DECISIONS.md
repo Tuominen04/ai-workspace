@@ -55,7 +55,7 @@ handling to one JSON object per turn instead of incremental NDJSON parsing.
 
 Status
 
-Accepted
+Superseded by ADR-0013 (replies are streamed)
 
 ---
 
@@ -473,3 +473,41 @@ explicit.
 Status
 
 Accepted
+
+---
+
+## ADR-0013
+
+Replies are streamed. A chat request asks Ollama for `stream: true` and reads
+its answer piece by piece (newline-delimited JSON), so the desktop app shows
+the reply as it is written. This supersedes ADR-0004's one-reply-per-turn,
+non-streaming choice.
+
+- **No total time limit while the model writes.** The request waits up to 10
+  seconds to connect and up to 5 minutes for each next piece, which covers a
+  large model being loaded into memory before its first word, but there is no
+  limit on the whole answer. Before, one 120-second limit covered loading and
+  the entire answer, and a 27B model on a desktop machine ran past it.
+- **One code path.** `RuntimeManager` streams always; a caller that does not
+  show progress passes a no-op callback. `Session::send` streams too, so the
+  command line and session-note drafts get the same timeouts.
+- **To the window, a Tauri channel.** `chat_send` takes a `Channel<String>`
+  and sends each piece as it arrives, then returns the full reply. The
+  interface shows the growing text (rendered as Markdown) in place of
+  "Thinking…".
+- **Errors mid-stream.** A line carrying Ollama's `error` field, or a stream
+  that ends without `done`, fails the request; the half-written text is
+  discarded and the message is dropped from the history, as before, so the
+  person can retry it.
+
+Reason
+
+The maintainer's 27B security model timed out on its first answer, and the
+app showed nothing for two minutes before failing. Streaming removes the
+whole-answer limit and shows progress at once, which is what local models need
+most; it is the norm in chat interfaces. It changes only how replies are read,
+not what is sent or where it goes: still only `127.0.0.1:11434`.
+
+Status
+
+Accepted. Supersedes ADR-0004.

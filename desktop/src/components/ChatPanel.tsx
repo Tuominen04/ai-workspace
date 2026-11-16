@@ -27,6 +27,8 @@ export function ChatPanel({ project, session, onSession }: Props) {
   const [ending, setEnding] = useState<null | "ask" | "edit">(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // The reply as it is being written (ADR-0013); null when no reply is streaming.
+  const [streaming, setStreaming] = useState<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -116,8 +118,11 @@ export function ChatPanel({ project, session, onSession }: Props) {
     setError(null);
     setLines((all) => [...all, { who: "you", text: message }]);
     setBusy("waiting");
+    setStreaming(null);
     try {
-      const reply = await engine.chat.send(message);
+      const reply = await engine.chat.send(message, (piece) =>
+        setStreaming((sofar) => (sofar ?? "") + piece),
+      );
       setLines((all) => [...all, { who: "ai", text: reply }]);
     } catch (thrown) {
       setLines((all) => [
@@ -125,6 +130,7 @@ export function ChatPanel({ project, session, onSession }: Props) {
         { who: "note", text: `No answer: ${messageOf(thrown)}. You can try again.` },
       ]);
     } finally {
+      setStreaming(null);
       setBusy(null);
     }
   }
@@ -215,7 +221,14 @@ export function ChatPanel({ project, session, onSession }: Props) {
             {line.who === "ai" ? <Markdown text={line.text} /> : line.text}
           </div>
         ))}
-        {busy === "waiting" && <div className="line ai thinking">Thinking…</div>}
+        {busy === "waiting" &&
+          (streaming === null ? (
+            <div className="line ai thinking">Thinking…</div>
+          ) : (
+            <div className="line ai streaming" aria-busy="true">
+              <Markdown text={streaming} />
+            </div>
+          ))}
         <div ref={end} />
       </div>
 

@@ -1,5 +1,6 @@
 use crate::error::{AppError, Result};
 use serde::{Deserialize, Serialize};
+use std::io::{BufRead, BufReader};
 use std::net::{SocketAddr, TcpStream};
 use std::process::{Child, Command, Stdio};
 use std::thread;
@@ -7,7 +8,11 @@ use std::time::{Duration, Instant};
 
 const OLLAMA_PORT: u16 = 11434;
 pub const OLLAMA_BASE_URL: &str = "http://127.0.0.1:11434";
-const CHAT_REQUEST_TIMEOUT: Duration = Duration::from_secs(120);
+/// How long to wait for Ollama to accept a chat request.
+pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+/// How long to wait for each next piece of a streamed reply. Generous, because a large model
+/// may first have to be loaded into memory; there is no limit on the whole answer (ADR-0013).
+pub const PIECE_TIMEOUT: Duration = Duration::from_secs(300);
 const SHOW_REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,9 +44,15 @@ struct ChatRequest<'a> {
     stream: bool,
 }
 
+/// One line of a streamed chat reply.
 #[derive(Deserialize)]
-struct ChatResponse {
-    message: ChatMessage,
+struct ChatChunk {
+    #[serde(default)]
+    message: Option<ChatMessage>,
+    #[serde(default)]
+    done: bool,
+    #[serde(default)]
+    error: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -190,35 +201,72 @@ impl RuntimeManager {
         }
     }
 
+    /// Sends a chat and returns the whole reply. Streams underneath (ADR-0013), so it has the
+    /// same timeouts as [`Self::stream_chat_message`]; the pieces are simply not shown.
     pub fn send_chat_message(
         &self,
         base_url: &str,
         model: &str,
         messages: &[ChatMessage],
     ) -> Result<ChatMessage> {
+        self.stream_chat_message(base_url, model, messages, &mut |_| {})
+    }
+
+    /// Sends a chat with `stream: true` and calls `on_piece` with each piece of the reply as
+    /// Ollama writes it, then returns the whole reply. Waits up to [`CONNECT_TIMEOUT`] to
+    /// connect and up to [`PIECE_TIMEOUT`] for each next piece, with no limit on the whole
+    /// answer. A stream that carries an `error`, or ends without `done`, fails the request.
+    pub fn stream_chat_message(
+        &self,
+        base_url: &str,
+        model: &str,
+        messages: &[ChatMessage],
+        on_piece: &mut dyn FnMut(&str),
+    ) -> Result<ChatMessage> {
+        let failed = |reason: String| AppError::RuntimeRequestFailed(reason);
         let request_body = ChatRequest {
             model,
             messages,
-            stream: false,
+            stream: true,
         };
-        let body_bytes = serde_json::to_vec(&request_body)
-            .map_err(|error| AppError::RuntimeRequestFailed(error.to_string()))?;
+        let body_bytes = serde_json::to_vec(&request_body).map_err(|e| failed(e.to_string()))?;
 
-        let url = format!("{base_url}/api/chat");
-        let response = ureq::post(&url)
+        let agent = ureq::AgentBuilder::new()
+            .timeout_connect(CONNECT_TIMEOUT)
+            .timeout_read(PIECE_TIMEOUT)
+            .build();
+        let response = agent
+            .post(&format!("{base_url}/api/chat"))
             .set("Content-Type", "application/json")
-            .timeout(CHAT_REQUEST_TIMEOUT)
             .send_bytes(&body_bytes)
-            .map_err(|error| AppError::RuntimeRequestFailed(error.to_string()))?;
+            .map_err(|e| failed(e.to_string()))?;
 
-        let text = response
-            .into_string()
-            .map_err(|error| AppError::RuntimeRequestFailed(error.to_string()))?;
-
-        let parsed: ChatResponse = serde_json::from_str(&text)
-            .map_err(|error| AppError::RuntimeRequestFailed(error.to_string()))?;
-
-        Ok(parsed.message)
+        let mut content = String::new();
+        let mut role = "assistant".to_string();
+        for line in BufReader::new(response.into_reader()).lines() {
+            let line = line.map_err(|e| failed(e.to_string()))?;
+            if line.trim().is_empty() {
+                continue;
+            }
+            let chunk: ChatChunk =
+                serde_json::from_str(&line).map_err(|e| failed(e.to_string()))?;
+            if let Some(error) = chunk.error {
+                return Err(failed(error));
+            }
+            if let Some(message) = chunk.message {
+                role = message.role;
+                if !message.content.is_empty() {
+                    on_piece(&message.content);
+                    content.push_str(&message.content);
+                }
+            }
+            if chunk.done {
+                return Ok(ChatMessage { role, content });
+            }
+        }
+        Err(failed(
+            "the runtime stopped before the reply was complete".to_string(),
+        ))
     }
 }
 
