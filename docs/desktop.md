@@ -7,10 +7,13 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
 
 ## What it does
 
-- **Sidebar** — the workspace folder, where that choice came from, and the projects. Choosing
-  a project scopes the other tabs to it. **New project** creates one (name and an optional
-  description).
-- **Overview** — the workspace's folders, or the chosen project's description, model and folders.
+- **Sidebar** — **Whole workspace** at the top, then the projects; a dot marks the project with
+  an open chat session. **New project** creates one (name and an optional description).
+- **Tabs** — the whole workspace shows **Overview**, **Validation**, **Search** and
+  **Configuration**; a project shows **Chat** (opened first), **Overview**, **Search** and
+  **Permissions**. Each tab's page is a centred column. An open chat session survives switching
+  tabs and projects, including the whole workspace, until it is ended or the app closes.
+- **Overview** — the workspace's folder and where that choice came from, or the chosen project's description, model and folders.
   **Change** next to the model picks the Ollama model the project chats with (installed models
   are suggested); **Use default** returns it to the workspace default. It is saved as `model`
   in the project's `project.toml`.

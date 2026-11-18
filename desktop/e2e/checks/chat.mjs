@@ -8,8 +8,7 @@ const page = await browser.newPage({ viewport: { width: 1100, height: 750 }, dev
 await stubEngine(page);
 await page.goto(URL);
 
-await page.getByRole("tab", { name: "Chat" }).click();
-check("chat asks for a project first", (await page.locator(".content").textContent()).includes("Choose a project"));
+check("the whole workspace has no Chat tab", (await page.getByRole("tab", { name: "Chat" }).count()) === 0);
 
 await page.getByRole("button", { name: "security" }).click();
 await page.getByRole("button", { name: "Start session in security" }).click();
@@ -43,6 +42,14 @@ await page.getByRole("tab", { name: "Overview" }).click();
 await page.waitForTimeout(400);
 await page.getByRole("tab", { name: /^Chat/ }).click();
 check("a reply that arrived on another tab is shown", (await page.locator(".line.ai").allTextContents()).some((t) => t.includes("Second question")));
+
+// The session also survives looking at the whole workspace, and the sidebar marks its project.
+check("the sidebar marks the project with the open session", (await page.getByRole("button", { name: "security" }).locator(".dot").count()) === 1);
+await page.getByRole("button", { name: "Whole workspace" }).click();
+check("the chat is hidden on the whole workspace", !(await page.getByRole("heading", { name: "Chat · security" }).isVisible()));
+await page.getByRole("button", { name: "security" }).click();
+check("going back to the project shows the same session", await page.getByRole("heading", { name: "Chat · security" }).isVisible());
+check("and the same conversation", (await page.locator(".line.ai").allTextContents()).some((t) => t.includes("Second question")));
 
 await page.getByRole("button", { name: "End session" }).click();
 // The conversation had answers, so ending offers a note first (ADR-0012).

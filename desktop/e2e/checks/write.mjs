@@ -19,8 +19,11 @@ const browser = await launch();
   await page.getByLabel("Project name").fill("Home Lab");
   await page.getByLabel("Project description").fill("Switches and VLANs");
   await page.getByRole("button", { name: "Create", exact: true }).click();
+  await page.getByRole("button", { name: "Start session in home-lab" }).waitFor();
+  check("a new project appears and is selected", (await page.getByRole("button", { name: "home-lab", exact: true }).getAttribute("class")).includes("active"));
+  check("a new project opens on its chat", (await page.getByRole("tab", { name: "Chat" }).getAttribute("aria-selected")) === "true");
+  await page.getByRole("tab", { name: "Overview" }).click();
   await page.getByRole("heading", { name: "Home Lab" }).waitFor();
-  check("a new project appears and is selected", (await page.getByRole("button", { name: "home-lab" }).getAttribute("class")).includes("active"));
 
   // Grant and revoke.
   await page.getByRole("button", { name: "security" }).click();
@@ -41,7 +44,8 @@ const browser = await launch();
   check("revoking removes it", (await page.locator(".notice").textContent()).includes("Revoked /home/me/router-backups"));
   check("default grants cannot be revoked", (await page.getByRole("button", { name: /^Revoke/ }).count()) === 0);
 
-  // Choose the workspace folder.
+  // Choose the workspace folder: a whole-workspace tab.
+  await page.getByRole("button", { name: "Whole workspace" }).click();
   await page.getByRole("tab", { name: "Configuration" }).click();
   await page.getByLabel("New workspace folder").fill("/home/me/nope");
   await page.getByRole("button", { name: "Use this folder" }).click();
@@ -110,6 +114,7 @@ const browser = await launch();
   await stubEngine(page);
   await page.goto(URL);
   await page.getByRole("button", { name: "security" }).click();
+  await page.getByRole("tab", { name: "Overview" }).click();
   await page.getByRole("heading", { name: "Security" }).waitFor();
   await page.getByRole("button", { name: "Change" }).click();
   await page.getByText("Installed in Ollama: qwen3.6:latest, sec:latest.").waitFor();

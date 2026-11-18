@@ -11,8 +11,15 @@ import { ValidationPanel } from "./components/ValidationPanel";
 import { engine, isDesktopRuntime, type SessionInfo } from "./lib/engine";
 import { useLoad } from "./lib/useLoad";
 
-const TABS = ["Overview", "Validation", "Search", "Chat", "Permissions", "Configuration"] as const;
-type Tab = (typeof TABS)[number];
+// The whole workspace and a project each have their own tabs; a project opens on its chat.
+const WORKSPACE_TABS = ["Overview", "Validation", "Search", "Configuration"] as const;
+const PROJECT_TABS = ["Chat", "Overview", "Search", "Permissions"] as const;
+type Tab = (typeof WORKSPACE_TABS)[number] | (typeof PROJECT_TABS)[number];
+
+/** The tab a selection opens on: a project's chat, or the whole workspace's overview. */
+function firstTab(project: string | null): Tab {
+  return project === null ? "Overview" : "Chat";
+}
 
 export default function App() {
   if (!isDesktopRuntime()) {
@@ -33,25 +40,31 @@ function Workspace() {
   const [status, refresh] = useLoad(() => engine.workspace.status(), "status");
   const [project, setProject] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("Overview");
-  // Kept here, not in the chat panel, so switching tabs does not lose the open session.
+  // Kept here, not in the chat panel, so switching tabs or projects does not lose the open session.
   const [session, setSession] = useState<SessionInfo | null>(null);
+  const tabs: readonly Tab[] = project === null ? WORKSPACE_TABS : PROJECT_TABS;
+
+  function select(next: string | null) {
+    setProject(next);
+    setTab(firstTab(next));
+  }
 
   return (
     <div className="app">
       <Sidebar
         status={status}
         selected={project}
-        onSelect={setProject}
+        sessionProject={session?.project ?? null}
+        onSelect={select}
         onRefresh={refresh}
         onCreated={(created) => {
           refresh();
-          setProject(created);
-          setTab("Overview");
+          select(created);
         }}
       />
       <main className="main">
         <div className="tabs" role="tablist">
-          {TABS.map((name) => (
+          {tabs.map((name) => (
             <button
               type="button"
               role="tab"
@@ -81,15 +94,16 @@ function Workspace() {
           {/* Always mounted, only hidden on other tabs: the conversation, a half-typed message
               and a reply still on its way survive switching tabs, until the session ends or the
               app closes. */}
-          <div className="tab-page" hidden={tab !== "Chat"}>
+          <div className="tab-page" hidden={project === null || tab !== "Chat"}>
             <ChatPanel project={project} session={session} onSession={setSession} />
           </div>
-          {tab === "Permissions" && <PermissionsPanel project={project} />}
+          {tab === "Permissions" && project !== null && <PermissionsPanel project={project} />}
           {tab === "Configuration" && (
             <ConfigPanel
               onChanged={(change) => {
                 if (change.sessionClosed) setSession(null);
-                // Another workspace has other projects; the old selection may not exist there.
+                // Configuration is a whole-workspace tab, so no project is selected here; stay on
+                // it so its confirmation stays visible.
                 if (change.folder) setProject(null);
                 refresh();
               }}
