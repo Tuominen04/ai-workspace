@@ -9,8 +9,10 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
 
 - **Sidebar** — **Whole workspace** at the top, then the projects; a dot marks the project with
   an open chat session. **New project** creates one (name and an optional description).
-  **Archived** projects (`Projects/Archive/`) are listed at the bottom; one shows only a
-  read-only Overview with **Restore**, which moves it back among the projects (ADR-0015).
+  Right-clicking a project (or the context-menu key) offers **Archive**. **Archived (N)** at the
+  bottom switches the sidebar to the archived projects (`Projects/Archive/`), with **← Projects**
+  to go back; an archived project shows only a read-only Overview with **Restore**, also in its
+  right-click menu, which moves it back among the projects (ADR-0015).
 - **Tabs** — the whole workspace shows **Overview**, **Validation**, **Search** and
   **Configuration**; a project shows **Chat** (opened first), **Overview**, **Search** and
   **Permissions**. Each tab's page is a centred column. An open chat session survives switching

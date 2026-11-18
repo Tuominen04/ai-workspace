@@ -45,11 +45,14 @@ function Workspace() {
   // Kept here, not in the chat panel, so switching tabs or projects does not lose the open session.
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [archived, setArchived] = useState<string | null>(null);
+  // The sidebar lists either the projects or the archived projects.
+  const [showArchived, setShowArchived] = useState(false);
   const tabs: readonly Tab[] =
     archived !== null ? ARCHIVED_TABS : project === null ? WORKSPACE_TABS : PROJECT_TABS;
 
   function select(next: string | null) {
     setArchived(null);
+    setShowArchived(false);
     setProject(next);
     setTab(firstTab(next));
   }
@@ -80,8 +83,12 @@ function Workspace() {
         selected={project}
         sessionProject={session?.project ?? null}
         selectedArchived={archived}
+        showArchived={showArchived}
+        onShowArchived={setShowArchived}
         onSelect={select}
         onSelectArchived={selectArchived}
+        onArchived={archivedDone}
+        onRestored={restoredDone}
         onRefresh={refresh}
         onCreated={(created) => {
           refresh();
