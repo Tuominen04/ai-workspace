@@ -26,6 +26,8 @@ type Props = {
   onCloned: (clone: ProjectDetails) => void;
   /** Asks to delete a project (or an archived one); the confirmation is the app's. */
   onDelete: (name: string, archived: boolean) => void;
+  /** Asks to rename a project; the dialog is the app's. */
+  onRename: (name: string) => void;
 };
 
 /** A right-click menu open on one project, at the pointer. */
@@ -49,6 +51,7 @@ export function Sidebar({
   onRestored,
   onCloned,
   onDelete,
+  onRename,
 }: Props) {
   const [menu, setMenu] = useState<Menu | null>(null);
   const [failure, setFailure] = useState<FailureInfo | null>(null);
@@ -153,6 +156,10 @@ export function Sidebar({
             setMenu(null);
             onDelete(menu.name, menu.archived);
           }}
+          onRename={() => {
+            setMenu(null);
+            onRename(menu.name);
+          }}
           onRestore={() => void run(() => engine.project.restore(menu.name), onRestored)}
         />
       )}
@@ -169,8 +176,8 @@ export function Sidebar({
   );
 }
 
-/** The right-click menu: Clone, Archive and Delete for a project; Restore and Delete for an
- * archived one. Closes on a
+/** The right-click menu: Rename, Clone, Archive and Delete for a project; Restore and Delete
+ * for an archived one. Closes on a
  * choice, a click elsewhere, Escape or scrolling. */
 function ProjectMenu({
   menu,
@@ -179,6 +186,7 @@ function ProjectMenu({
   onClone,
   onRestore,
   onDelete,
+  onRename,
 }: {
   menu: Menu;
   onClose: () => void;
@@ -186,6 +194,7 @@ function ProjectMenu({
   onClone: () => void;
   onRestore: () => void;
   onDelete: () => void;
+  onRename: () => void;
 }) {
   const first = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -222,7 +231,10 @@ function ProjectMenu({
         </button>
       ) : (
         <>
-          <button type="button" role="menuitem" ref={first} onClick={onClone}>
+          <button type="button" role="menuitem" ref={first} onClick={onRename}>
+            Rename…
+          </button>
+          <button type="button" role="menuitem" onClick={onClone}>
             Clone
           </button>
           <button type="button" role="menuitem" onClick={onArchive}>

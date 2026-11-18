@@ -583,6 +583,14 @@ stable release, to v1.1.
    the project is ended first.
 6. **Desktop only.** The command line, a developer tool since ADR-0010, gets no new
    commands.
+7. **Rename moves the folder too** (added with the maintainer). Renaming a project to
+   "Home Security" sets its display name and moves its folder to the normalized name,
+   `Projects/home-security`, keeping the two in step; a taken folder is refused with
+   "Already exists". Only active projects are renamed; an archived one is restored
+   first. The project's permission state names its old folder, so renaming ends it,
+   as ending a chat session does: temporary grants are revoked and logged. An open
+   chat session in the project is ended first. Rename is gated, like clone, since it
+   reads and writes `project.toml`.
 
 Reason
 

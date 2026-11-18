@@ -15,10 +15,20 @@ type Props = {
   onRestored: (moved: ProjectMoved) => void;
   onCloned: (clone: ProjectDetails) => void;
   onDelete: (name: string, archived: boolean) => void;
+  onRename: (name: string) => void;
 };
 
 /** The selected project's details, an archived project, or the workspace's folders. */
-export function Overview({ status, project, archived, onArchived, onRestored, onCloned, onDelete }: Props) {
+export function Overview({
+  status,
+  project,
+  archived,
+  onArchived,
+  onRestored,
+  onCloned,
+  onDelete,
+  onRename,
+}: Props) {
   if (archived !== null) {
     const summary = status.archived.find((p) => p.name === archived);
     return (
@@ -57,6 +67,7 @@ export function Overview({ status, project, archived, onArchived, onRestored, on
       onArchived={onArchived}
       onCloned={onCloned}
       onDelete={() => onDelete(project, false)}
+      onRename={() => onRename(project)}
     />
   );
 }
@@ -125,11 +136,13 @@ function ProjectOverview({
   onArchived,
   onCloned,
   onDelete,
+  onRename,
 }: {
   name: string;
   onArchived: (moved: ProjectMoved) => void;
   onCloned: (clone: ProjectDetails) => void;
   onDelete: () => void;
+  onRename: () => void;
 }) {
   const archive = useProjectAction(() => engine.project.archive(name), onArchived);
   const clone = useProjectAction(() => engine.project.clone(name), onCloned);
@@ -174,6 +187,9 @@ function ProjectOverview({
       <div className="panel-head">
         <h2>{p.display_name}</h2>
         <div className="row">
+          <button type="button" className="quiet" onClick={onRename} title="Change its name and folder">
+            Rename…
+          </button>
           <button
             type="button"
             className="quiet"

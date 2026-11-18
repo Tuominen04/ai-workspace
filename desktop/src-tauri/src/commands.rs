@@ -10,8 +10,8 @@
 
 use crate::dto::{
     CommandError, GrantDone, InitDone, NoteSaved, PermissionPage, ProjectDeleted, ProjectDetails,
-    ProjectMoved, RevokeDone, RootSaved, SearchResults, SessionClosed, SessionInfo, SwitchDone,
-    Validation, WorkspaceSettings, WorkspaceStatus,
+    ProjectMoved, ProjectRenamed, RevokeDone, RootSaved, SearchResults, SessionClosed, SessionInfo,
+    SwitchDone, Validation, WorkspaceSettings, WorkspaceStatus,
 };
 use ai_workspace_core::workspace::{Deleted, PermissionViewOptions};
 use ai_workspace_core::{Engine, Session};
@@ -247,6 +247,22 @@ pub fn delete(
     })
 }
 
+/// **Rename**: ends an open chat session in the project, then renames it, folder and display
+/// name (ADR-0015 point 7).
+pub fn rename(
+    engine: &Engine,
+    open: &OpenSession,
+    name: &str,
+    new_name: &str,
+) -> Outcome<ProjectRenamed> {
+    let session_closed = close_session_in(open, name)?;
+    let (project, metadata) = engine.rename_project(name, new_name)?;
+    Ok(ProjectRenamed {
+        project: ProjectDetails::new(&project, &metadata),
+        session_closed,
+    })
+}
+
 /// **Clone**: copies a project into `<folder>-clone` (ADR-0015) and returns the clone.
 pub fn clone(engine: &Engine, name: &str) -> Outcome<ProjectDetails> {
     let (project, metadata) = engine.clone_project(name)?;
@@ -443,6 +459,16 @@ pub async fn project_delete(
     erase: bool,
 ) -> Outcome<ProjectDeleted> {
     delete(&resolve(&choice)?, &open, &name, archived, erase)
+}
+
+#[tauri::command]
+pub async fn project_rename(
+    choice: Choice<'_>,
+    open: tauri::State<'_, OpenSession>,
+    name: String,
+    new_name: String,
+) -> Outcome<ProjectRenamed> {
+    rename(&resolve(&choice)?, &open, &name, &new_name)
 }
 
 #[tauri::command]

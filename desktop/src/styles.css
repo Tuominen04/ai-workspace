@@ -811,9 +811,10 @@ button.quiet.danger {
   inset: 0;
   z-index: 20;
   display: flex;
-  align-items: center;
+  /* Pinned near the top, so a dialog that grows or shrinks never moves under the pointer. */
+  align-items: flex-start;
   justify-content: center;
-  padding: 16px;
+  padding: 15vh 16px 16px;
   background: rgb(0 0 0 / 45%);
 }
 

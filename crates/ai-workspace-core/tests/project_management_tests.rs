@@ -300,3 +300,140 @@ fn clone_refuses_links_and_leaves_no_partial_copy() {
         "a failed clone removes what it wrote"
     );
 }
+
+#[test]
+fn rename_moves_the_folder_and_sets_the_display_name() {
+    let engine = test_engine("rename");
+    let created = engine
+        .create_project("Security", Some("Router notes"))
+        .expect("created");
+    fs::write(
+        created
+            .project
+            .path
+            .join("Session")
+            .join("session-note-1.md"),
+        "# Earlier\n",
+    )
+    .expect("note");
+    let before: Vec<_> = snapshot(&created.project.path)
+        .into_iter()
+        .filter(|(rel, _)| rel != "project.toml")
+        .collect();
+
+    let (renamed, metadata) = engine
+        .rename_project("security", "  Home Security ")
+        .expect("rename should succeed");
+    assert_eq!(renamed.name, "home-security");
+    assert_eq!(renamed.path, engine.paths().projects.join("home-security"));
+    assert_eq!(metadata.display_name, "Home Security");
+    assert_eq!(metadata.project_id, "home-security");
+    assert_eq!(metadata.description, "Router notes");
+    assert!(!created.project.path.exists(), "the old folder is gone");
+    let after: Vec<_> = snapshot(&renamed.path)
+        .into_iter()
+        .filter(|(rel, _)| rel != "project.toml")
+        .collect();
+    assert_eq!(after, before, "every other file is unchanged");
+    let (_, shown) = engine.project_details("home-security").expect("loads");
+    assert_eq!(shown.display_name, "Home Security");
+    assert!(engine.validate().expect("validate").valid);
+}
+
+#[test]
+fn rename_to_the_same_folder_only_changes_the_display_name() {
+    let engine = test_engine("rename-same");
+    engine.create_project("Security", None).expect("created");
+    let (renamed, metadata) = engine
+        .rename_project("security", "SECURITY")
+        .expect("renamed");
+    assert_eq!(renamed.name, "security");
+    assert_eq!(metadata.display_name, "SECURITY");
+    assert!(renamed.path.is_dir());
+}
+
+#[test]
+fn rename_refuses_a_taken_folder_and_bad_names_and_changes_nothing() {
+    let engine = test_engine("rename-refused");
+    engine.create_project("Security", None).expect("created");
+    engine
+        .create_project("Home Security", None)
+        .expect("created");
+
+    match engine.rename_project("security", "Home Security") {
+        Err(AppError::AlreadyExists(path)) => {
+            assert_eq!(path, engine.paths().projects.join("home-security"))
+        }
+        other => panic!("expected AlreadyExists, got {other:?}"),
+    }
+    for bad in ["", "   ", "Archive", "config", "a/b", "../x", "naïve"] {
+        assert!(
+            matches!(
+                engine.rename_project("security", bad),
+                Err(AppError::InvalidProjectName(_))
+            ),
+            "{bad:?} must be refused"
+        );
+    }
+    let (_, metadata) = engine.project_details("security").expect("still there");
+    assert_eq!(metadata.display_name, "Security");
+}
+
+#[test]
+fn rename_ends_the_permission_session_and_logs_the_revoked_grants() {
+    let engine = test_engine("rename-grants");
+    let created = engine.create_project("Security", None).expect("created");
+    let outside = engine.paths().root.join("outside");
+    fs::create_dir_all(&outside).expect("outside folder");
+    engine
+        .grant(Some("security"), outside.to_str().expect("utf-8 path"))
+        .expect("grant");
+    assert!(
+        created
+            .project
+            .path
+            .join("Session/permissions.toml")
+            .is_file()
+    );
+
+    let (renamed, _) = engine.rename_project("security", "Lab").expect("renamed");
+    assert!(
+        !renamed.path.join("Session/permissions.toml").exists(),
+        "the old permission state does not move with the project"
+    );
+    let log =
+        fs::read_to_string(engine.paths().logs.join("permissions-events.log")).expect("event log");
+    assert!(
+        log.contains("session-end") && log.contains("outside"),
+        "the revoked grant is logged: {log}"
+    );
+    let (_, page) = engine
+        .permissions(
+            Some("lab"),
+            ai_workspace_core::workspace::PermissionViewOptions {
+                filter: None,
+                page: 1,
+                page_size: 50,
+            },
+        )
+        .expect("permissions of the renamed project");
+    assert!(
+        page.entries
+            .iter()
+            .all(|g| !g.display_path.contains("outside")),
+        "no temporary grant is left"
+    );
+}
+
+#[test]
+fn rename_is_gated_by_validation() {
+    let engine = test_engine("rename-gated");
+    engine.create_project("Router", None).expect("created");
+    let broken = engine.create_project("Broken", None).expect("created");
+    fs::write(broken.project.path.join("project.toml"), "not = [valid").expect("break it");
+    assert!(matches!(
+        engine.rename_project("router", "Edge"),
+        Err(AppError::ValidationGateBlocked { .. })
+    ));
+    assert!(engine.paths().projects.join("router").is_dir());
+}

@@ -67,6 +67,25 @@ The maintainer no longer needs a project at all and deletes it, with a way back 
 
 ---
 
+### User Story 4 - Rename a project (Priority: P4)
+
+The maintainer wants a project's name to match what it has become.
+
+**Why this priority**: Added after the first three; a convenience that changes no content.
+
+**Independent Test**: Rename a project, then check that its folder and display name both changed, its files are intact, and the old folder is gone.
+
+**Acceptance Scenarios**:
+
+1. **Given** a project `security`, **When** the maintainer renames it to "Home Security", **Then** its folder moves to `Projects/home-security`, its display name becomes "Home Security", its project id follows the folder, and every other file is unchanged.
+2. **Given** `Projects/home-security` exists, **When** the maintainer renames another project to "Home Security", **Then** nothing changes and the app says "Already exists".
+3. **Given** a new name that normalizes to the same folder (such as "SECURITY" for `security`), **When** it is saved, **Then** only the display name changes.
+4. **Given** a name that is not allowed (empty, reserved such as "Archive", or with characters other than letters, digits, spaces, `-` and `_`), **When** it is saved, **Then** nothing changes and the app says why.
+5. **Given** the project has temporary grants or an open chat session, **When** it is renamed, **Then** the session is ended and the temporary grants are revoked and logged first.
+6. **Given** an archived project, **When** the maintainer looks at it, **Then** Rename is not offered.
+
+---
+
 ### Edge Cases
 
 - A project folder named `Archive` would collide with the archive folder. `archive` becomes a reserved project name, like `base` or `config`.
@@ -88,6 +107,7 @@ The maintainer no longer needs a project at all and deletes it, with a way back 
 - **FR-008**: All filesystem work MUST stay in the core's `workspace.rs` (per CLAUDE.md). The desktop calls one `Engine` method per operation.
 - **FR-009**: The desktop app MUST offer these operations: **Archive**, **Clone** and **Delete** on a project's Overview; **Restore** and **Delete** on an archived project. The command line is unchanged.
 - **FR-010**: Nothing MUST be deleted, moved or written without an explicit action by the person. Delete also requires a confirmation.
+- **FR-011**: Renaming MUST move the folder to the normalized new name and set the display name, refusing a taken folder with "Already exists". It MUST end the project's permission session first (temporary grants revoked and logged) and run the validation gate. Archived projects MUST NOT be renamed.
 
 ### Key Entities
 

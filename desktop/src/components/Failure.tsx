@@ -16,18 +16,20 @@ export function Failure({ message, kind, onDismiss }: Props) {
 
   useEffect(() => {
     if (!onDismiss) return;
-    const onPointer = (event: PointerEvent) => {
+    const onPointer = (event: MouseEvent) => {
       if (!box.current?.contains(event.target as Node)) onDismiss();
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onDismiss();
     };
-    // Clicks count from the next tick, so the click that caused the failure does not clear it.
+    // A finished click (not a press) clears it, so the clicked button still gets its click even
+    // when the message's going shifts the layout. Clicks count from the next tick, so the click
+    // that caused the failure does not clear it.
     document.addEventListener("keydown", onKey);
-    const timer = window.setTimeout(() => document.addEventListener("pointerdown", onPointer), 0);
+    const timer = window.setTimeout(() => document.addEventListener("click", onPointer), 0);
     return () => {
       window.clearTimeout(timer);
-      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("click", onPointer);
       document.removeEventListener("keydown", onKey);
     };
   }, [onDismiss]);

@@ -148,6 +148,21 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
           if (closed) window.__session = null;
           return { name, path, erased: Boolean(erase && name === "demo-chat"), session_closed: closed };
         },
+        // Rename: the folder follows the new name; a taken folder or a bad name is refused.
+        project_rename: ({ name, newName }) => {
+          const trimmed = newName.trim();
+          if (!/^[A-Za-z0-9 _-]+$/.test(trimmed) || trimmed.toLowerCase() === "archive")
+            return Promise.reject({ kind: "InvalidProjectName", message: `invalid project name '${newName}'` });
+          const slug = trimmed.toLowerCase().split(/\s+/).join("-");
+          if (slug !== name && projects.some((p) => p.name === slug))
+            return Promise.reject({ kind: "AlreadyExists", message: `Already exists: /home/me/AI/Projects/${slug}` });
+          const path = `/home/me/AI/Projects/${slug}`;
+          projects.splice(projects.findIndex((p) => p.name === name), 1, { name: slug, path });
+          fixture.details[slug] = { ...(fixture.details[name] ?? fixture.details.security), name: slug, path, display_name: trimmed };
+          const closed = window.__session === name ? { project: name, revoked: 0 } : null;
+          if (closed) window.__session = null;
+          return { project: fixture.details[slug], session_closed: closed };
+        },
         project_clone: ({ name }) => {
           const slug = `${name}-clone`;
           if (projects.some((p) => p.name === slug))
