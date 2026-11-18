@@ -208,6 +208,10 @@ button:focus-visible {
   font-weight: 600;
 }
 
+.projects-label {
+  margin-top: 12px;
+}
+
 .label {
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -279,6 +283,8 @@ button:focus-visible {
 
 .panel {
   max-width: 900px;
+  /* Centred like the chat, so every tab reads as a page in a wide window. */
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 12px;

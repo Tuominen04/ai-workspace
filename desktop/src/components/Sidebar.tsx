@@ -9,14 +9,17 @@ import { Failure } from "./Failure";
 type Props = {
   status: Loaded<WorkspaceStatus>;
   selected: string | null;
+  /** The project with an open chat session, marked with a dot. */
+  sessionProject: string | null;
   onSelect: (project: string | null) => void;
   onRefresh: () => void;
   /** A project was created: read the workspace again and select it. */
   onCreated: (project: string) => void;
 };
 
-/** The workspace folder and its projects. Choosing one scopes the other panels to it. */
-export function Sidebar({ status, selected, onSelect, onRefresh, onCreated }: Props) {
+/** The whole workspace and its projects. Choosing one scopes the panels to it; the workspace
+ * folder itself is shown in the whole workspace's Overview. */
+export function Sidebar({ status, selected, sessionProject, onSelect, onRefresh, onCreated }: Props) {
   return (
     <aside className="sidebar">
       <header>
@@ -30,23 +33,16 @@ export function Sidebar({ status, selected, onSelect, onRefresh, onCreated }: Pr
       {status.state === "failed" && <Failure message={status.message} kind={status.kind} />}
       {status.state === "ready" && (
         <>
-          <section className="root" aria-label="Workspace folder">
-            <div className="label">Workspace</div>
-            <div className="path" title={status.value.root}>
-              {status.value.root}
-            </div>
-            <div className="muted small">Chosen by {status.value.root_source}</div>
-          </section>
-
           <nav aria-label="Projects">
-            <div className="label">Projects</div>
             <button
               type="button"
               className={selected === null ? "item active" : "item"}
               onClick={() => onSelect(null)}
+              title={status.value.root}
             >
               Whole workspace
             </button>
+            <div className="label projects-label">Projects</div>
             {status.value.projects.map((project) => (
               <button
                 type="button"
@@ -56,6 +52,7 @@ export function Sidebar({ status, selected, onSelect, onRefresh, onCreated }: Pr
                 title={project.path}
               >
                 {project.name}
+                {project.name === sessionProject && <span className="dot" aria-label="session open" />}
               </button>
             ))}
             {status.value.projects.length === 0 && <p className="muted small">No projects yet.</p>}
