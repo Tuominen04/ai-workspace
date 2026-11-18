@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 
 import { engine, type ProjectDetails, type ProjectMoved, type WorkspaceStatus } from "../lib/engine";
 import { failureOf, type FailureInfo } from "../lib/failure";
@@ -49,6 +49,7 @@ export function Sidebar({
 }: Props) {
   const [menu, setMenu] = useState<Menu | null>(null);
   const [failure, setFailure] = useState<FailureInfo | null>(null);
+  const dismissFailure = useCallback(() => setFailure(null), []);
 
   function openMenu(event: MouseEvent, name: string, archived: boolean) {
     event.preventDefault();
@@ -138,7 +139,7 @@ export function Sidebar({
         </nav>
       )}
 
-      {failure && <Failure message={failure.message} kind={failure.kind} />}
+      {failure && <Failure message={failure.message} kind={failure.kind} onDismiss={dismissFailure} />}
       {menu && (
         <ProjectMenu
           menu={menu}
@@ -255,6 +256,7 @@ function NewProject({ onCreated }: { onCreated: (project: string) => void }) {
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<FailureInfo | null>(null);
+  const dismissFailure = useCallback(() => setFailure(null), []);
 
   if (!open) {
     return (
@@ -306,7 +308,7 @@ function NewProject({ onCreated }: { onCreated: (project: string) => void }) {
           Cancel
         </button>
       </div>
-      {failure && <Failure message={failure.message} kind={failure.kind} />}
+      {failure && <Failure message={failure.message} kind={failure.kind} onDismiss={dismissFailure} />}
     </form>
   );
 }

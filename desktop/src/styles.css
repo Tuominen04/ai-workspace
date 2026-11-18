@@ -792,3 +792,22 @@ button:focus-visible {
   margin: 15vh auto;
   padding: 0 16px;
 }
+
+/* A refused action's message that can be dismissed. */
+.failure.dismissible {
+  position: relative;
+  padding-right: 32px;
+  cursor: pointer;
+}
+
+.failure .dismiss {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  padding: 2px 6px;
+  font-size: 16px;
+  line-height: 1;
+}
