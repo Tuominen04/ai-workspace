@@ -9,7 +9,7 @@ Archive/restore, clone and delete projects from the desktop app (ADR-0015). Each
 ## Technical Context
 
 - **Language**: Rust (core, desktop shell), TypeScript/React (interface). No change to the CLI crate.
-- **New dependency**: `trash` (crates.io) in the core, for delete only. On Linux it implements the freedesktop.org Trash specification in Rust: it moves the folder into `~/.local/share/Trash/files` (or a filesystem's `.Trash-<uid>`) and writes the matching `.trashinfo`. Its default `freedesktop` feature pulls in only `libc`, `scopeguard` and `urlencoding`: no network, no D-Bus (`zbus` comes only with the `portal` feature, which stays off) and no background process.
+- **New dependency**: `trash` (crates.io) in the core, for delete only. On Linux it implements the freedesktop.org Trash specification in Rust: it moves the folder into `~/.local/share/Trash/files` (or a filesystem's `.Trash-<uid>`) and writes the matching `.trashinfo`. Its default features pull in only small local crates (`libc`, `scopeguard`, `urlencoding`, `jiff` for the deletion date, `log`, `once_cell`): no network, no D-Bus (`zbus` comes only with the `portal` feature, which stays off) and no background process.
 - **Storage**: the filesystem only, as always. `Projects/Archive/` holds archived projects.
 - **Testing**: core integration tests on temporary workspaces (`project_management_tests.rs`), desktop shell tests, browser checks with the stub engine. Delete's tests point the Trash at a temporary home (`XDG_DATA_HOME`), so they never touch a real Trash.
 
@@ -21,7 +21,7 @@ Archive/restore, clone and delete projects from the desktop app (ADR-0015). Each
 - `normalize_project_name` reserves `archive`.
 - `archive_project(paths, name)` and `restore_project(paths, name)` use `fs::rename`, within the same filesystem, so the move is atomic. The destination is checked first.
 - `clone_project(paths, config, name)` copies recursively into `<folder>-clone`. It skips `Session/permissions.toml`, rewrites `project.toml` (`project_id`, `display_name`, `created_at`), and refuses symlinks rather than following them. A failed copy removes the partial clone.
-- `delete_project(paths, name, archived)` calls `trash::delete`.
+- `delete_project(paths, name, archived, erase_without_trash)` calls `trash::delete`. If the Trash refuses, it returns `AppError::TrashUnavailable` unless `erase_without_trash` (the second confirmation) is set, in which case it erases the folder.
 - `AppError::AlreadyExists(PathBuf)`, displayed as "Already exists: <path>".
 - `Engine::archive_project`, `restore_project`, `clone_project` (gated), `delete_project`, `archived_projects`.
 

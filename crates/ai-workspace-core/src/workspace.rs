@@ -250,6 +250,54 @@ pub fn restore_project(paths: &WorkspacePaths, name: &str) -> Result<PathBuf> {
     Ok(to)
 }
 
+/// How a project was deleted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Deleted {
+    /// Moved to the desktop Trash, where it can be restored.
+    Trashed,
+    /// Erased, because the Trash was unavailable and the person chose to erase it.
+    Erased,
+}
+
+/// Deletes a project, or with `archived` an archived project, by moving its folder to the
+/// desktop Trash (ADR-0015). If the Trash is unavailable, nothing is deleted and
+/// `TrashUnavailable` says why, unless `erase_without_trash` is set: the person has confirmed
+/// a second time, and the folder is then erased. Returns the folder and how it went.
+pub fn delete_project(
+    paths: &WorkspacePaths,
+    name: &str,
+    archived: bool,
+    erase_without_trash: bool,
+) -> Result<(PathBuf, Deleted)> {
+    delete_project_with(paths, name, archived, erase_without_trash, |path| {
+        trash::delete(path).map_err(|error| error.to_string())
+    })
+}
+
+fn delete_project_with(
+    paths: &WorkspacePaths,
+    name: &str,
+    archived: bool,
+    erase_without_trash: bool,
+    to_trash: impl FnOnce(&Path) -> std::result::Result<(), String>,
+) -> Result<(PathBuf, Deleted)> {
+    let dir = if archived {
+        archive_dir(paths)
+    } else {
+        paths.projects.clone()
+    };
+    let folder = existing_folder_name(&dir, name)?;
+    let path = dir.join(folder);
+    match to_trash(&path) {
+        Ok(()) => Ok((path, Deleted::Trashed)),
+        Err(_) if erase_without_trash => {
+            fs::remove_dir_all(&path).map_err(|error| map_path_error(&path, error))?;
+            Ok((path, Deleted::Erased))
+        }
+        Err(reason) => Err(AppError::TrashUnavailable { path, reason }),
+    }
+}
+
 /// Clones a project into `<folder>-clone`, display name `<display name> (Clone)`, with a new
 /// project id and creation time (ADR-0015). Every file is copied, past sessions and notes
 /// included, except the permission session state, so the clone starts with no temporary
@@ -1194,4 +1242,93 @@ fn collect_markdown_files_recursive(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod delete_tests {
+    //! The Trash-unavailable path of `delete_project`, with a stand-in for the Trash.
+    use super::*;
+
+    fn workspace_with(name: &str, project: &str) -> WorkspacePaths {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock after epoch")
+            .as_nanos();
+        let paths = WorkspacePaths::from_root(
+            std::env::temp_dir().join(format!("ai-workspace-delete-{name}-{unique}")),
+        );
+        fs::create_dir_all(paths.projects.join(project).join("Knowledge")).expect("project");
+        fs::write(paths.projects.join(project).join("Knowledge/a.md"), "# A").expect("file");
+        paths
+    }
+
+    #[test]
+    fn without_a_trash_nothing_is_deleted_unless_confirmed() {
+        let paths = workspace_with("refused", "router");
+        let refused =
+            delete_project_with(&paths, "router", false, false, |_| Err("no trash".into()));
+        match refused {
+            Err(AppError::TrashUnavailable { path, reason }) => {
+                assert_eq!(path, paths.projects.join("router"));
+                assert_eq!(reason, "no trash");
+            }
+            other => panic!("expected TrashUnavailable, got {other:?}"),
+        }
+        assert!(
+            paths.projects.join("router/Knowledge/a.md").is_file(),
+            "nothing deleted"
+        );
+
+        let (path, how) =
+            delete_project_with(&paths, "router", false, true, |_| Err("no trash".into()))
+                .expect("erasing after the second confirmation");
+        assert_eq!(how, Deleted::Erased);
+        assert!(!path.exists());
+        let _ = fs::remove_dir_all(&paths.root);
+    }
+
+    #[test]
+    fn the_trash_is_always_tried_first() {
+        let paths = workspace_with("trash-first", "router");
+        let mut tried = None;
+        let (_, how) = delete_project_with(&paths, "router", false, true, |path| {
+            tried = Some(path.to_path_buf());
+            Ok(())
+        })
+        .expect("trashed");
+        assert_eq!(how, Deleted::Trashed);
+        assert_eq!(tried, Some(paths.projects.join("router")));
+        assert!(
+            paths.projects.join("router").exists(),
+            "the stand-in moved nothing"
+        );
+        let _ = fs::remove_dir_all(&paths.root);
+    }
+
+    #[test]
+    fn only_existing_plain_names_are_deleted() {
+        let paths = workspace_with("names", "router");
+        for bad in [
+            "",
+            "..",
+            "Archive",
+            "../Base",
+            "router/Knowledge",
+            "missing",
+        ] {
+            assert!(
+                matches!(
+                    delete_project_with(&paths, bad, false, true, |_| Err("x".into())),
+                    Err(AppError::ProjectNotFound(_))
+                ),
+                "{bad:?} must be refused"
+            );
+        }
+        assert!(matches!(
+            delete_project_with(&paths, "router", true, true, |_| Err("x".into())),
+            Err(AppError::ProjectNotFound(_))
+        ));
+        assert!(paths.projects.join("router").is_dir());
+        let _ = fs::remove_dir_all(&paths.root);
+    }
 }

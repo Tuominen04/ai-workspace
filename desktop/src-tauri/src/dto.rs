@@ -48,6 +48,7 @@ impl From<AppError> for CommandError {
             AppError::InvalidModelName(_) => "InvalidModelName",
             AppError::ProjectNotFound(_) => "ProjectNotFound",
             AppError::AlreadyExists(_) => "AlreadyExists",
+            AppError::TrashUnavailable { .. } => "TrashUnavailable",
             AppError::ValidationGateBlocked { .. } => "ValidationGateBlocked",
             AppError::PermissionDenied(_) => "PermissionDenied",
             AppError::InvalidPermissionPath(_) => "InvalidPermissionPath",
@@ -119,6 +120,19 @@ impl WorkspaceStatus {
             archived: archived.iter().map(ProjectSummary::from).collect(),
         }
     }
+}
+
+/// A deleted project: moved to the Trash, or erased after a second confirmation (ADR-0015).
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct ProjectDeleted {
+    pub name: String,
+    /// The folder it was in.
+    pub path: String,
+    /// `true` when it was erased rather than moved to the Trash.
+    pub erased: bool,
+    /// Set when a chat session in that project was ended first.
+    pub session_closed: Option<SessionClosed>,
 }
 
 /// Where an archived or restored project went.

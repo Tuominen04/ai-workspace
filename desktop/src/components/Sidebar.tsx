@@ -24,6 +24,8 @@ type Props = {
   onArchived: (moved: ProjectMoved) => void;
   onRestored: (moved: ProjectMoved) => void;
   onCloned: (clone: ProjectDetails) => void;
+  /** Asks to delete a project (or an archived one); the confirmation is the app's. */
+  onDelete: (name: string, archived: boolean) => void;
 };
 
 /** A right-click menu open on one project, at the pointer. */
@@ -46,6 +48,7 @@ export function Sidebar({
   onArchived,
   onRestored,
   onCloned,
+  onDelete,
 }: Props) {
   const [menu, setMenu] = useState<Menu | null>(null);
   const [failure, setFailure] = useState<FailureInfo | null>(null);
@@ -145,6 +148,10 @@ export function Sidebar({
           onClose={() => setMenu(null)}
           onArchive={() => void run(() => engine.project.archive(menu.name), onArchived)}
           onClone={() => void run(() => engine.project.clone(menu.name), onCloned)}
+          onDelete={() => {
+            setMenu(null);
+            onDelete(menu.name, menu.archived);
+          }}
           onRestore={() => void run(() => engine.project.restore(menu.name), onRestored)}
         />
       )}
@@ -161,7 +168,8 @@ export function Sidebar({
   );
 }
 
-/** The right-click menu: Clone and Archive for a project, Restore for an archived one. Closes on a
+/** The right-click menu: Clone, Archive and Delete for a project; Restore and Delete for an
+ * archived one. Closes on a
  * choice, a click elsewhere, Escape or scrolling. */
 function ProjectMenu({
   menu,
@@ -169,12 +177,14 @@ function ProjectMenu({
   onArchive,
   onClone,
   onRestore,
+  onDelete,
 }: {
   menu: Menu;
   onClose: () => void;
   onArchive: () => void;
   onClone: () => void;
   onRestore: () => void;
+  onDelete: () => void;
 }) {
   const first = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -219,6 +229,9 @@ function ProjectMenu({
           </button>
         </>
       )}
+      <button type="button" role="menuitem" className="danger-item" onClick={onDelete}>
+        Delete…
+      </button>
     </div>
   );
 }

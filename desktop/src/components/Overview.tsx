@@ -14,13 +14,21 @@ type Props = {
   onArchived: (moved: ProjectMoved) => void;
   onRestored: (moved: ProjectMoved) => void;
   onCloned: (clone: ProjectDetails) => void;
+  onDelete: (name: string, archived: boolean) => void;
 };
 
 /** The selected project's details, an archived project, or the workspace's folders. */
-export function Overview({ status, project, archived, onArchived, onRestored, onCloned }: Props) {
+export function Overview({ status, project, archived, onArchived, onRestored, onCloned, onDelete }: Props) {
   if (archived !== null) {
     const summary = status.archived.find((p) => p.name === archived);
-    return <ArchivedOverview name={archived} path={summary?.path ?? ""} onRestored={onRestored} />;
+    return (
+      <ArchivedOverview
+        name={archived}
+        path={summary?.path ?? ""}
+        onRestored={onRestored}
+        onDelete={() => onDelete(archived, true)}
+      />
+    );
   }
   if (project === null) {
     return (
@@ -41,7 +49,14 @@ export function Overview({ status, project, archived, onArchived, onRestored, on
       </section>
     );
   }
-  return <ProjectOverview name={project} onArchived={onArchived} onCloned={onCloned} />;
+  return (
+    <ProjectOverview
+      name={project}
+      onArchived={onArchived}
+      onCloned={onCloned}
+      onDelete={() => onDelete(project, false)}
+    />
+  );
 }
 
 /** Runs one project action (archive, restore, clone) and shows why it was refused, if it was. */
@@ -67,19 +82,26 @@ function ArchivedOverview({
   name,
   path,
   onRestored,
+  onDelete,
 }: {
   name: string;
   path: string;
   onRestored: (moved: ProjectMoved) => void;
+  onDelete: () => void;
 }) {
   const restore = useProjectAction(() => engine.project.restore(name), onRestored);
   return (
     <section className="panel">
       <div className="panel-head">
         <h2>{name}</h2>
-        <button type="button" onClick={() => void restore.act()} disabled={restore.busy}>
-          {restore.busy ? "Restoring…" : "Restore"}
-        </button>
+        <div className="row">
+          <button type="button" onClick={() => void restore.act()} disabled={restore.busy}>
+            {restore.busy ? "Restoring…" : "Restore"}
+          </button>
+          <button type="button" className="quiet danger" onClick={onDelete}>
+            Delete…
+          </button>
+        </div>
       </div>
       <p className="muted">
         Archived. Restore it to chat in it, search it or change its permissions again.
@@ -97,34 +119,42 @@ function ProjectOverview({
   name,
   onArchived,
   onCloned,
+  onDelete,
 }: {
   name: string;
   onArchived: (moved: ProjectMoved) => void;
   onCloned: (clone: ProjectDetails) => void;
+  onDelete: () => void;
 }) {
   const archive = useProjectAction(() => engine.project.archive(name), onArchived);
   const clone = useProjectAction(() => engine.project.clone(name), onCloned);
   const [details, reload] = useLoad(() => engine.project.show(name), name);
 
   if (details.state === "loading") return <p className="muted panel">Loading {name}…</p>;
+  // Archive and Delete do not read the project, so they are offered even when its details
+  // cannot load.
   const archiveButton = (
-    <button
-      type="button"
-      className="quiet"
-      onClick={() => void archive.act()}
-      disabled={archive.busy}
-      title="Move it to Projects/Archive/; it can be restored"
-    >
-      {archive.busy ? "Archiving…" : "Archive"}
-    </button>
+    <>
+      <button
+        type="button"
+        className="quiet"
+        onClick={() => void archive.act()}
+        disabled={archive.busy}
+        title="Move it to Projects/Archive/; it can be restored"
+      >
+        {archive.busy ? "Archiving…" : "Archive"}
+      </button>
+      <button type="button" className="quiet danger" onClick={onDelete} title="Move it to the Trash">
+        Delete…
+      </button>
+    </>
   );
-  // Archiving does not read the project, so it is offered even when its details cannot load.
   if (details.state === "failed")
     return (
       <section className="panel">
         <div className="panel-head">
           <h2>{name}</h2>
-          {archiveButton}
+          <div className="row">{archiveButton}</div>
         </div>
         <Failure message={details.message} kind={details.kind} />
         {archive.failure && <Failure message={archive.failure.message} kind={archive.failure.kind} />}

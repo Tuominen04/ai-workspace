@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { ChatPanel } from "./components/ChatPanel";
 import { ConfigPanel } from "./components/ConfigPanel";
+import { DeleteDialog } from "./components/DeleteDialog";
 import { PermissionsPanel } from "./components/PermissionsPanel";
 import { Failure } from "./components/Failure";
 import { Overview } from "./components/Overview";
@@ -11,6 +12,7 @@ import { ValidationPanel } from "./components/ValidationPanel";
 import {
   engine,
   isDesktopRuntime,
+  type ProjectDeleted,
   type ProjectDetails,
   type ProjectMoved,
   type SessionInfo,
@@ -53,17 +55,36 @@ function Workspace() {
   const [archived, setArchived] = useState<string | null>(null);
   // The sidebar lists either the projects or the archived projects.
   const [showArchived, setShowArchived] = useState(false);
+  // The project being deleted, while its confirmation is open.
+  const [deleting, setDeleting] = useState<{ name: string; archived: boolean } | null>(null);
+  // What the last delete did, shown until the next selection.
+  const [notice, setNotice] = useState<string | null>(null);
   const tabs: readonly Tab[] =
     archived !== null ? ARCHIVED_TABS : project === null ? WORKSPACE_TABS : PROJECT_TABS;
 
   function select(next: string | null) {
+    setNotice(null);
     setArchived(null);
     setShowArchived(false);
     setProject(next);
     setTab(firstTab(next));
   }
 
+  /** A project was deleted: the whole workspace is shown, with what happened. */
+  function deletedDone(deleted: ProjectDeleted) {
+    setDeleting(null);
+    if (deleted.session_closed) setSession(null);
+    refresh();
+    select(null);
+    setNotice(
+      deleted.erased
+        ? `Erased ${deleted.name}.`
+        : `Moved ${deleted.name} to the Trash. Restore it from the Files app's Trash if you need it back.`,
+    );
+  }
+
   function selectArchived(name: string) {
+    setNotice(null);
     setProject(null);
     setArchived(name);
     setTab("Overview");
@@ -102,6 +123,7 @@ function Workspace() {
         onArchived={archivedDone}
         onRestored={restoredDone}
         onCloned={clonedDone}
+        onDelete={(name, isArchived) => setDeleting({ name, archived: isArchived })}
         onRefresh={refresh}
         onCreated={(created) => {
           refresh();
@@ -125,6 +147,11 @@ function Workspace() {
           ))}
         </div>
         <div className="content">
+          {notice && (
+            <p className="notice" role="status">
+              {notice}
+            </p>
+          )}
           {tab === "Overview" &&
             (status.state === "ready" ? (
               <Overview
@@ -134,6 +161,7 @@ function Workspace() {
                 onArchived={archivedDone}
                 onRestored={restoredDone}
                 onCloned={clonedDone}
+                onDelete={(name, isArchived) => setDeleting({ name, archived: isArchived })}
               />
             ) : status.state === "failed" ? (
               <section className="panel">
@@ -164,6 +192,14 @@ function Workspace() {
           )}
         </div>
       </main>
+      {deleting && (
+        <DeleteDialog
+          name={deleting.name}
+          archived={deleting.archived}
+          onDeleted={deletedDone}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
     </div>
   );
 }

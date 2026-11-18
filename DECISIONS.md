@@ -570,9 +570,11 @@ stable release, to v1.1.
    `Session/permissions.toml`, so it starts with no temporary grants.
 3. **Delete goes to the Trash.** The folder moves to the freedesktop.org Trash, the
    one GNOME Files uses, through the `trash` crate; it can be restored from there,
-   and GNOME can empty it after 30 days (a desktop setting, off by default). The
-   app never erases a project and does not fall back to erasing when the Trash is
-   unavailable: it refuses and says why. Delete asks for confirmation first.
+   and GNOME can empty it after 30 days (a desktop setting, off by default). Delete
+   asks for confirmation first. If the Trash cannot take the folder (some other
+   drives have none), nothing is deleted and a second warning says why and offers
+   to erase it permanently; only that second confirmation erases (amended with the
+   maintainer, who chose this hard-delete fallback).
 4. **Never overwrite.** When a destination exists, every operation refuses with
    "Already exists", writing nothing; the person can rename or clone by hand.
 5. **Gate only what reads metadata.** Clone runs the validation gate. Archive,

@@ -62,7 +62,7 @@ The maintainer no longer needs a project at all and deletes it, with a way back 
 1. **Given** a project or an archived project, **When** the maintainer chooses **Delete**, **Then** the app first asks for confirmation, naming the project. Nothing happens until they confirm.
 2. **Given** the maintainer confirms, **When** the project is deleted, **Then** its folder is moved to the user's Trash (the freedesktop.org Trash that GNOME Files uses), not erased. It can be restored from there.
 3. **Given** GNOME's "Automatically Delete Trash Content" setting is on, **When** the configured age passes (30 days by default), **Then** the desktop removes it from the Trash. The app itself never empties the Trash.
-4. **Given** the folder cannot be moved to the Trash, **When** deletion is attempted, **Then** nothing is erased. The app says why, and the folder stays where it was.
+4. **Given** the folder cannot be moved to the Trash, **When** deletion is attempted, **Then** nothing is deleted yet. A second warning says why and offers to erase it permanently; only confirming that erases the folder, and Cancel keeps it.
 5. **Given** a chat session is open in the project, **When** it is deleted, **Then** the session is ended first.
 
 ---
@@ -81,7 +81,7 @@ The maintainer no longer needs a project at all and deletes it, with a way back 
 - **FR-001**: Project discovery MUST skip `Projects/Archive/`. A separate listing MUST return the projects inside it.
 - **FR-002**: Archiving MUST move the project folder unchanged to `Projects/Archive/<folder>`. Restoring MUST move it back. Both MUST refuse, writing nothing, when the destination exists.
 - **FR-003**: Cloning MUST copy the project folder to `<folder>-clone` with display name `<display name> (Clone)`, a new project id and creation time, and without `Session/permissions.toml`. It MUST refuse, writing nothing, when the destination exists.
-- **FR-004**: Deleting MUST move the folder to the user's Trash, following the freedesktop.org Trash specification. It MUST NOT fall back to erasing.
+- **FR-004**: Deleting MUST move the folder to the user's Trash, following the freedesktop.org Trash specification. When the Trash cannot take it, it MUST erase the folder only after a second, separate confirmation that says it cannot be undone.
 - **FR-005**: Every refusal because a destination exists MUST be one typed error whose message reads "Already exists: <path>".
 - **FR-006**: Archive, restore and delete MUST end an open chat session in that project first.
 - **FR-007**: Clone MUST run the validation gate, since it reads and writes `project.toml`. Archive, restore and delete move whole folders without reading them and MUST NOT be gated, so a project with broken metadata can still be put away or removed.
@@ -97,7 +97,7 @@ The maintainer no longer needs a project at all and deletes it, with a way back 
 
 - **SC-001**: Archiving then restoring a project leaves every file byte-identical.
 - **SC-002**: A clone contains every file of the original except `Session/permissions.toml`, and the original is unchanged.
-- **SC-003**: A deleted project can be restored with the Files app's Trash.
+- **SC-003**: A project deleted to the Trash can be restored with the Files app's Trash.
 - **SC-004**: No operation overwrites an existing folder.
 
 ## Assumptions

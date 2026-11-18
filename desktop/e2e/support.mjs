@@ -137,6 +137,17 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
           if (closed) window.__session = null;
           return { name, path, session_closed: closed };
         },
+        // Delete moves to the Trash; "demo-chat" stands for a folder the Trash cannot take.
+        project_delete: ({ name, archived: fromArchive, erase }) => {
+          const list = fromArchive ? archived : projects;
+          const path = `/home/me/AI/Projects/${fromArchive ? "Archive/" : ""}${name}`;
+          if (name === "demo-chat" && !erase)
+            return Promise.reject({ kind: "TrashUnavailable", message: `cannot move ${path} to the Trash: no trash folder on this drive; nothing was deleted` });
+          list.splice(list.findIndex((p) => p.name === name), 1);
+          const closed = window.__session === name ? { project: name, revoked: 0 } : null;
+          if (closed) window.__session = null;
+          return { name, path, erased: Boolean(erase && name === "demo-chat"), session_closed: closed };
+        },
         project_clone: ({ name }) => {
           const slug = `${name}-clone`;
           if (projects.some((p) => p.name === slug))
