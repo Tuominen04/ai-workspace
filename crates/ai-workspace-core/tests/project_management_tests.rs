@@ -183,3 +183,120 @@ fn archiving_works_while_validation_blocks() {
         "and the workspace is clear again"
     );
 }
+
+#[test]
+fn clone_copies_everything_but_the_permission_state() {
+    let engine = test_engine("clone");
+    let created = engine
+        .create_project("Security", Some("Router notes"))
+        .expect("created");
+    engine
+        .set_project_model("security", Some("sec"))
+        .expect("model set");
+    let source = created.project.path.clone();
+    fs::write(source.join("Knowledge").join("router.md"), "# Router\n").expect("note");
+    fs::write(
+        source.join("Session").join("session-note-1.md"),
+        "# Earlier\n",
+    )
+    .expect("note");
+    // A grant makes the permission session state exist.
+    let outside = engine.paths().root.join("outside");
+    fs::create_dir_all(&outside).expect("outside folder");
+    engine
+        .grant(Some("security"), outside.to_str().expect("utf-8 path"))
+        .expect("grant");
+    assert!(source.join("Session").join("permissions.toml").is_file());
+    let before = snapshot(&source);
+
+    let (clone, metadata) = engine
+        .clone_project("security")
+        .expect("clone should succeed");
+    assert_eq!(clone.name, "security-clone");
+    assert_eq!(clone.path, engine.paths().projects.join("security-clone"));
+    assert_eq!(metadata.display_name, "Security (Clone)");
+    assert_eq!(metadata.project_id, "security-clone");
+    assert_eq!(metadata.description, "Router notes");
+    assert_eq!(metadata.model.as_deref(), Some("sec"));
+
+    let cloned = snapshot(&clone.path);
+    let expected: Vec<_> = before
+        .iter()
+        .filter(|(rel, _)| rel != "Session/permissions.toml" && rel != "project.toml")
+        .cloned()
+        .collect();
+    let got: Vec<_> = cloned
+        .iter()
+        .filter(|(rel, _)| rel != "project.toml")
+        .cloned()
+        .collect();
+    assert_eq!(
+        got, expected,
+        "every file but the permission state is copied unchanged"
+    );
+    assert_eq!(snapshot(&source), before, "the original is unchanged");
+
+    let (_, shown) = engine
+        .project_details("security-clone")
+        .expect("the clone loads");
+    assert_eq!(shown.display_name, "Security (Clone)");
+    assert!(engine.validate().expect("validate").valid);
+}
+
+#[test]
+fn clone_refuses_an_existing_destination_and_writes_nothing() {
+    let engine = test_engine("clone-exists");
+    engine.create_project("Router", None).expect("created");
+    engine.clone_project("router").expect("first clone");
+    fs::write(
+        engine
+            .paths()
+            .projects
+            .join("router-clone/Knowledge/mine.md"),
+        "keep me",
+    )
+    .expect("note in the clone");
+
+    match engine.clone_project("router") {
+        Err(AppError::AlreadyExists(path)) => {
+            assert_eq!(path, engine.paths().projects.join("router-clone"))
+        }
+        other => panic!("expected AlreadyExists, got {other:?}"),
+    }
+    assert_eq!(
+        fs::read_to_string(
+            engine
+                .paths()
+                .projects
+                .join("router-clone/Knowledge/mine.md")
+        )
+        .expect("still there"),
+        "keep me"
+    );
+}
+
+#[test]
+fn clone_is_gated_by_validation() {
+    let engine = test_engine("clone-gated");
+    engine.create_project("Router", None).expect("created");
+    let broken = engine.create_project("Broken", None).expect("created");
+    fs::write(broken.project.path.join("project.toml"), "not = [valid").expect("break it");
+    assert!(matches!(
+        engine.clone_project("router"),
+        Err(AppError::ValidationGateBlocked { .. })
+    ));
+    assert!(!engine.paths().projects.join("router-clone").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn clone_refuses_links_and_leaves_no_partial_copy() {
+    let engine = test_engine("clone-link");
+    let created = engine.create_project("Router", None).expect("created");
+    std::os::unix::fs::symlink("/etc", created.project.path.join("Knowledge/etc")).expect("link");
+    assert!(engine.clone_project("router").is_err());
+    assert!(
+        !engine.paths().projects.join("router-clone").exists(),
+        "a failed clone removes what it wrote"
+    );
+}

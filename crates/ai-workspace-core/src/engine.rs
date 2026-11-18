@@ -12,9 +12,10 @@ use crate::search::{self, SearchCandidate, SearchOutcome};
 use crate::workspace::{
     CreatedProject, PermissionGrantResult, PermissionRevokeResult, PermissionViewOptions,
     PermissionViewSnapshot, Project, ProjectMetadata, ValidationResult, archive_project,
-    create_project, discover_archived_projects, discover_projects, grant_temporary_permission,
-    inspect_project, now_unix, restore_project, revoke_temporary_permission, save_session_note,
-    set_project_model, validate_workspace, view_permissions,
+    clone_project, create_project, discover_archived_projects, discover_projects,
+    grant_temporary_permission, inspect_project, now_unix, restore_project,
+    revoke_temporary_permission, save_session_note, set_project_model, validate_workspace,
+    view_permissions,
 };
 use std::path::PathBuf;
 
@@ -149,6 +150,15 @@ impl Engine {
     pub fn archive_project(&self, name: &str) -> Result<PathBuf> {
         self.paths.ensure_layout()?;
         archive_project(&self.paths, name)
+    }
+
+    /// Clones a project into `<folder>-clone` (ADR-0015). Gated: it reads and writes
+    /// `project.toml`.
+    pub fn clone_project(&self, name: &str) -> Result<(Project, ProjectMetadata)> {
+        self.paths.ensure_layout()?;
+        self.enforce_validation_gate(GatedOperation::ProjectClone)?;
+        let config = load_workspace_config(&self.paths)?;
+        clone_project(&self.paths, &config, name)
     }
 
     /// Restores an archived project into `Projects/`. Not gated, like archiving.

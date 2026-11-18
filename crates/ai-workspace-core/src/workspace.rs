@@ -250,6 +250,70 @@ pub fn restore_project(paths: &WorkspacePaths, name: &str) -> Result<PathBuf> {
     Ok(to)
 }
 
+/// Clones a project into `<folder>-clone`, display name `<display name> (Clone)`, with a new
+/// project id and creation time (ADR-0015). Every file is copied, past sessions and notes
+/// included, except the permission session state, so the clone starts with no temporary
+/// grants. Refuses, writing nothing, if the destination exists; a symlink inside the project
+/// is refused rather than followed. A failed copy removes what it had written.
+pub fn clone_project(
+    paths: &WorkspacePaths,
+    config: &WorkspaceConfig,
+    project_name: &str,
+) -> Result<(Project, ProjectMetadata)> {
+    let (source, mut metadata) = inspect_project(paths, config, project_name)?;
+    let folder = format!("{}-clone", source.name);
+    let to = paths.projects.join(&folder);
+    if to.exists() {
+        return Err(AppError::AlreadyExists(to));
+    }
+
+    let skip = paths.project_permissions_file(&source.path);
+    let copied = copy_tree(&source.path, &to, &skip).and_then(|()| {
+        metadata.project_id = folder.clone();
+        metadata.display_name = format!("{} (Clone)", metadata.display_name);
+        metadata.created_at = format!("{}", unix_timestamp());
+        save_project_metadata(paths, &to, config.metadata_filename(), &metadata)
+    });
+    if let Err(error) = copied {
+        // Only the clone's own new folder is removed; the original is never touched.
+        let _ = fs::remove_dir_all(&to);
+        return Err(error);
+    }
+
+    Ok((
+        Project {
+            name: folder,
+            path: to,
+        },
+        metadata,
+    ))
+}
+
+/// Copies `from` into a new folder `to`, file by file, leaving out `skip`.
+fn copy_tree(from: &Path, to: &Path, skip: &Path) -> Result<()> {
+    fs::create_dir(to).map_err(|error| map_path_error(to, error))?;
+    for entry in fs::read_dir(from)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path == skip {
+            continue;
+        }
+        let target = to.join(entry.file_name());
+        let kind = entry.file_type()?;
+        if kind.is_dir() {
+            copy_tree(&path, &target, skip)?;
+        } else if kind.is_file() {
+            fs::copy(&path, &target).map_err(|error| map_path_error(&path, error))?;
+        } else {
+            return Err(AppError::Message(format!(
+                "cannot clone {}: links and special files are not copied",
+                path.display()
+            )));
+        }
+    }
+    Ok(())
+}
+
 /// `name` as a folder directly inside `dir`, checked to exist. Only plain folder names are
 /// accepted, so a name can never reach outside `dir`, and the archive folder itself is never
 /// a project.

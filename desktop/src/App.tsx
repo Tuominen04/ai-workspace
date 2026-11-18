@@ -8,7 +8,13 @@ import { Overview } from "./components/Overview";
 import { SearchPanel } from "./components/SearchPanel";
 import { Sidebar } from "./components/Sidebar";
 import { ValidationPanel } from "./components/ValidationPanel";
-import { engine, isDesktopRuntime, type ProjectMoved, type SessionInfo } from "./lib/engine";
+import {
+  engine,
+  isDesktopRuntime,
+  type ProjectDetails,
+  type ProjectMoved,
+  type SessionInfo,
+} from "./lib/engine";
 import { useLoad } from "./lib/useLoad";
 
 // The whole workspace and a project each have their own tabs; a project opens on its chat.
@@ -70,6 +76,12 @@ function Workspace() {
     select(null);
   }
 
+  /** A project was cloned: the clone is listed and opened on its chat. */
+  function clonedDone(clone: ProjectDetails) {
+    refresh();
+    select(clone.name);
+  }
+
   /** A project was restored: it is a normal project again, opened on its chat. */
   function restoredDone(moved: ProjectMoved) {
     refresh();
@@ -89,6 +101,7 @@ function Workspace() {
         onSelectArchived={selectArchived}
         onArchived={archivedDone}
         onRestored={restoredDone}
+        onCloned={clonedDone}
         onRefresh={refresh}
         onCreated={(created) => {
           refresh();
@@ -120,6 +133,7 @@ function Workspace() {
                 archived={archived}
                 onArchived={archivedDone}
                 onRestored={restoredDone}
+                onCloned={clonedDone}
               />
             ) : status.state === "failed" ? (
               <section className="panel">

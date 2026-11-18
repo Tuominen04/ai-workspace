@@ -45,6 +45,8 @@ fn gated_command(operation: GatedOperation) -> String {
         GatedOperation::ProjectCreate => "project create",
         GatedOperation::ProjectShow => "project show",
         GatedOperation::ProjectSetModel => "project set-model",
+        // Cloning is a desktop action (ADR-0015); the command line never runs this gate.
+        GatedOperation::ProjectClone => "project clone",
         GatedOperation::PermissionGrant => "permission grant",
         GatedOperation::PermissionRevoke => "permission revoke",
         GatedOperation::PermissionView => "permission view",

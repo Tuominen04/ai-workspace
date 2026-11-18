@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 
-import { engine, type ProjectMoved, type WorkspaceStatus } from "../lib/engine";
+import { engine, type ProjectDetails, type ProjectMoved, type WorkspaceStatus } from "../lib/engine";
 import { failureOf, type FailureInfo } from "../lib/failure";
 import { applyTheme, isTheme, savedTheme, THEMES, themeLabel, type Theme } from "../lib/theme";
 import type { Loaded } from "../lib/useLoad";
@@ -23,6 +23,7 @@ type Props = {
   onCreated: (project: string) => void;
   onArchived: (moved: ProjectMoved) => void;
   onRestored: (moved: ProjectMoved) => void;
+  onCloned: (clone: ProjectDetails) => void;
 };
 
 /** A right-click menu open on one project, at the pointer. */
@@ -44,9 +45,11 @@ export function Sidebar({
   onCreated,
   onArchived,
   onRestored,
+  onCloned,
 }: Props) {
   const [menu, setMenu] = useState<Menu | null>(null);
   const [failure, setFailure] = useState<FailureInfo | null>(null);
+  const dismissFailure = useCallback(() => setFailure(null), []);
 
   function openMenu(event: MouseEvent, name: string, archived: boolean) {
     event.preventDefault();
@@ -62,7 +65,7 @@ export function Sidebar({
     });
   }
 
-  async function run(action: () => Promise<ProjectMoved>, done: (moved: ProjectMoved) => void) {
+  async function run<T>(action: () => Promise<T>, done: (result: T) => void) {
     setMenu(null);
     try {
       done(await action());
@@ -136,12 +139,13 @@ export function Sidebar({
         </nav>
       )}
 
-      {failure && <Failure message={failure.message} kind={failure.kind} />}
+      {failure && <Failure message={failure.message} kind={failure.kind} onDismiss={dismissFailure} />}
       {menu && (
         <ProjectMenu
           menu={menu}
           onClose={() => setMenu(null)}
           onArchive={() => void run(() => engine.project.archive(menu.name), onArchived)}
+          onClone={() => void run(() => engine.project.clone(menu.name), onCloned)}
           onRestore={() => void run(() => engine.project.restore(menu.name), onRestored)}
         />
       )}
@@ -158,17 +162,19 @@ export function Sidebar({
   );
 }
 
-/** The right-click menu: Archive for a project, Restore for an archived one. Closes on a
+/** The right-click menu: Clone and Archive for a project, Restore for an archived one. Closes on a
  * choice, a click elsewhere, Escape or scrolling. */
 function ProjectMenu({
   menu,
   onClose,
   onArchive,
+  onClone,
   onRestore,
 }: {
   menu: Menu;
   onClose: () => void;
   onArchive: () => void;
+  onClone: () => void;
   onRestore: () => void;
 }) {
   const first = useRef<HTMLButtonElement>(null);
@@ -205,9 +211,14 @@ function ProjectMenu({
           Restore
         </button>
       ) : (
-        <button type="button" role="menuitem" ref={first} onClick={onArchive}>
-          Archive
-        </button>
+        <>
+          <button type="button" role="menuitem" ref={first} onClick={onClone}>
+            Clone
+          </button>
+          <button type="button" role="menuitem" onClick={onArchive}>
+            Archive
+          </button>
+        </>
       )}
     </div>
   );
@@ -245,6 +256,7 @@ function NewProject({ onCreated }: { onCreated: (project: string) => void }) {
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<FailureInfo | null>(null);
+  const dismissFailure = useCallback(() => setFailure(null), []);
 
   if (!open) {
     return (
@@ -296,7 +308,7 @@ function NewProject({ onCreated }: { onCreated: (project: string) => void }) {
           Cancel
         </button>
       </div>
-      {failure && <Failure message={failure.message} kind={failure.kind} />}
+      {failure && <Failure message={failure.message} kind={failure.kind} onDismiss={dismissFailure} />}
     </form>
   );
 }
