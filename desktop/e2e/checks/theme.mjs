@@ -12,6 +12,7 @@ const page = await browser.newPage({
 await stubEngine(page);
 await page.goto(URL);
 await page.getByRole("button", { name: "security" }).click();
+await page.getByRole("tab", { name: "Overview" }).click();
 await page.getByRole("heading", { name: "Security" }).waitFor();
 
 const background = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);

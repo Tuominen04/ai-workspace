@@ -16,6 +16,7 @@ const browser = await launch();
   });
   await page.goto(URL);
   await page.getByRole("button", { name: "security" }).click();
+  await page.getByRole("tab", { name: "Overview" }).click();
   await page.getByRole("alert").waitFor();
   const text = await page.getByRole("alert").textContent();
   check("a refused gate says so and points to Validation", text.includes("blocking issues") && text.includes("Validation tab"));
