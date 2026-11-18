@@ -114,27 +114,21 @@ temporary grants (ADR-0014).
 
 ## v0.9
 
-Runtime abstraction
-
-Support multiple runtimes.
-
----
-
-## v0.10
-
 Project management
 
 Create (done in v0.7)
 
-Delete
+Delete (to the desktop Trash)
 
-Archive
+Archive and restore (`Projects/Archive/`)
 
 Clone
 
+See ADR-0015 and `specs/008-project-management/`.
+
 ---
 
-## v0.11
+## v0.10
 
 Documentation
 
@@ -157,3 +151,12 @@ Context Builder
 Podman integration
 
 Fedora-first experience
+
+---
+
+## v1.1
+
+Runtime abstraction
+
+Support multiple runtimes. Moved after the stable release (ADR-0015): Ollama is the
+only runtime in use, so it is not urgent.

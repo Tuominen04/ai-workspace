@@ -549,3 +549,47 @@ permission model and what the model actually reads the same thing.
 Status
 
 Accepted. Amends ADR-0012 point 2 (which folders are read).
+
+---
+
+## ADR-0015
+
+Project management: archive, restore, clone and delete projects from the desktop app
+(spec `specs/008-project-management/`). Decided with the maintainer; built as separate
+pull requests and released as 0.9.0. Runtime abstraction, the old v0.9, moves after the
+stable release, to v1.1.
+
+1. **Archive is a folder.** Archiving moves `Projects/<name>` whole to
+   `Projects/Archive/<name>`; restoring moves it back. Project discovery skips
+   `Archive/`, which lists separately, at the bottom of the desktop sidebar, as
+   read-only projects that can be restored or deleted. `archive` becomes a reserved
+   project name.
+2. **Clone copies everything but the permission state.** The clone is
+   `<folder>-clone` with display name `<display name> (Clone)`, a new project id
+   and creation time. It copies all files, past sessions and notes included, except
+   `Session/permissions.toml`, so it starts with no temporary grants.
+3. **Delete goes to the Trash.** The folder moves to the freedesktop.org Trash, the
+   one GNOME Files uses, through the `trash` crate; it can be restored from there,
+   and GNOME can empty it after 30 days (a desktop setting, off by default). The
+   app never erases a project and does not fall back to erasing when the Trash is
+   unavailable: it refuses and says why. Delete asks for confirmation first.
+4. **Never overwrite.** When a destination exists, every operation refuses with
+   "Already exists", writing nothing; the person can rename or clone by hand.
+5. **Gate only what reads metadata.** Clone runs the validation gate. Archive,
+   restore and delete move whole folders without reading them and are not gated,
+   so a project with broken metadata can still be put away. An open chat session in
+   the project is ended first.
+6. **Desktop only.** The command line, a developer tool since ADR-0010, gets no new
+   commands.
+
+Reason
+
+The maintainer wants to tidy the workspace without losing work: archive what is
+finished, start new work from an old project, and remove what is unneeded with a
+way back. Keeping archive state in the folder layout and deletes in the system Trash
+keeps the filesystem the only store and every removal reversible. The `trash` crate
+is local only: no network, no D-Bus, no background process.
+
+Status
+
+Accepted

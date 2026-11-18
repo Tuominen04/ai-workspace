@@ -269,6 +269,10 @@ Everything user-created belongs here.
 
 No hidden application state should exist elsewhere unless required by external software.
 
+`Projects/Archive/` holds archived projects, whole and unchanged; a project is archived
+because of where its folder is, with no index. A deleted project goes to the user's
+desktop Trash, never erased by the app (ADR-0015).
+
 ---
 
 ## Base Layout
