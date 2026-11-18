@@ -137,6 +137,16 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
           if (closed) window.__session = null;
           return { name, path, session_closed: closed };
         },
+        project_clone: ({ name }) => {
+          const slug = `${name}-clone`;
+          if (projects.some((p) => p.name === slug))
+            return Promise.reject({ kind: "AlreadyExists", message: `Already exists: /home/me/AI/Projects/${slug}` });
+          const path = `/home/me/AI/Projects/${slug}`;
+          projects.push({ name: slug, path });
+          const source = fixture.details[name] ?? fixture.details.security;
+          fixture.details[slug] = { ...source, name: slug, path, display_name: `${source.display_name} (Clone)` };
+          return fixture.details[slug];
+        },
         project_restore: ({ name }) => {
           if (projects.some((p) => p.name === name))
             return Promise.reject({ kind: "AlreadyExists", message: `Already exists: /home/me/AI/Projects/${name}` });

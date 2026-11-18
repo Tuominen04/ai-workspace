@@ -270,3 +270,22 @@ fn archive_and_restore_move_a_project_and_status_lists_it() {
 
     let _ = std::fs::remove_dir_all(&engine.paths().root);
 }
+
+#[test]
+fn clone_returns_the_new_project_and_refuses_a_taken_name() {
+    let engine = test_engine("clone");
+    engine.init().expect("init should succeed");
+    engine
+        .create_project("Router", Some("Firewall notes"))
+        .expect("project should be created");
+
+    let clone = commands::clone(&engine, "router").expect("clone should succeed");
+    assert_eq!(clone.name, "router-clone");
+    assert_eq!(clone.display_name, "Router (Clone)");
+    assert_eq!(clone.description, "Firewall notes");
+
+    let refused = commands::clone(&engine, "router").expect_err("the clone exists");
+    assert_eq!(refused.kind, "AlreadyExists");
+
+    let _ = std::fs::remove_dir_all(&engine.paths().root);
+}

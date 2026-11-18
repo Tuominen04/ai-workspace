@@ -9,7 +9,7 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
 
 - **Sidebar** — **Whole workspace** at the top, then the projects; a dot marks the project with
   an open chat session. **New project** creates one (name and an optional description).
-  Right-clicking a project (or the context-menu key) offers **Archive**. **Archived (N)** at the
+  Right-clicking a project (or the context-menu key) offers **Clone** and **Archive**. **Archived (N)** at the
   bottom switches the sidebar to the archived projects (`Projects/Archive/`), with **← Projects**
   to go back; an archived project shows only a read-only Overview with **Restore**, also in its
   right-click menu, which moves it back among the projects (ADR-0015).
@@ -23,6 +23,9 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
   in the project's `project.toml`. **Archive** moves the project, unchanged, into
   `Projects/Archive/` (ending an open chat session in it first); it is offered even when the
   project's details cannot load. A name already taken there is refused with "Already exists".
+  **Clone** copies the project, files and past sessions included, into `<folder>-clone` with
+  the display name "<name> (Clone)" and opens it; the clone starts with no temporary grants,
+  and an existing `<folder>-clone` is refused with "Already exists".
 - **Validation** — a validation run, with how to clear each issue. Where the fix is to
   initialize the workspace, a button does it.
 - **Search** — ranked results from Base knowledge and the chosen project's Knowledge and

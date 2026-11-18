@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 
-import { engine, type ProjectMoved, type WorkspaceStatus } from "../lib/engine";
+import { engine, type ProjectDetails, type ProjectMoved, type WorkspaceStatus } from "../lib/engine";
 import { failureOf, type FailureInfo } from "../lib/failure";
 import { useLoad } from "../lib/useLoad";
 import { counted, dateText } from "../lib/words";
@@ -13,10 +13,11 @@ type Props = {
   archived: string | null;
   onArchived: (moved: ProjectMoved) => void;
   onRestored: (moved: ProjectMoved) => void;
+  onCloned: (clone: ProjectDetails) => void;
 };
 
 /** The selected project's details, an archived project, or the workspace's folders. */
-export function Overview({ status, project, archived, onArchived, onRestored }: Props) {
+export function Overview({ status, project, archived, onArchived, onRestored, onCloned }: Props) {
   if (archived !== null) {
     const summary = status.archived.find((p) => p.name === archived);
     return <ArchivedOverview name={archived} path={summary?.path ?? ""} onRestored={onRestored} />;
@@ -40,11 +41,11 @@ export function Overview({ status, project, archived, onArchived, onRestored }: 
       </section>
     );
   }
-  return <ProjectOverview name={project} onArchived={onArchived} />;
+  return <ProjectOverview name={project} onArchived={onArchived} onCloned={onCloned} />;
 }
 
-/** Runs one project action (archive, restore) and shows why it was refused, if it was. */
-function useProjectAction(run: () => Promise<ProjectMoved>, done: (moved: ProjectMoved) => void) {
+/** Runs one project action (archive, restore, clone) and shows why it was refused, if it was. */
+function useProjectAction<T>(run: () => Promise<T>, done: (result: T) => void) {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<FailureInfo | null>(null);
   async function act() {
@@ -92,8 +93,17 @@ function ArchivedOverview({
   );
 }
 
-function ProjectOverview({ name, onArchived }: { name: string; onArchived: (moved: ProjectMoved) => void }) {
+function ProjectOverview({
+  name,
+  onArchived,
+  onCloned,
+}: {
+  name: string;
+  onArchived: (moved: ProjectMoved) => void;
+  onCloned: (clone: ProjectDetails) => void;
+}) {
   const archive = useProjectAction(() => engine.project.archive(name), onArchived);
+  const clone = useProjectAction(() => engine.project.clone(name), onCloned);
   const [details, reload] = useLoad(() => engine.project.show(name), name);
 
   if (details.state === "loading") return <p className="muted panel">Loading {name}…</p>;
@@ -126,9 +136,21 @@ function ProjectOverview({ name, onArchived }: { name: string; onArchived: (move
     <section className="panel">
       <div className="panel-head">
         <h2>{p.display_name}</h2>
-        <div className="row">{archiveButton}</div>
+        <div className="row">
+          <button
+            type="button"
+            className="quiet"
+            onClick={() => void clone.act()}
+            disabled={clone.busy}
+            title={`Copy it, files and past sessions, into ${name}-clone`}
+          >
+            {clone.busy ? "Cloning…" : "Clone"}
+          </button>
+          {archiveButton}
+        </div>
       </div>
       {archive.failure && <Failure message={archive.failure.message} kind={archive.failure.kind} />}
+      {clone.failure && <Failure message={clone.failure.message} kind={clone.failure.kind} />}
       <p className="description">{p.description || <span className="muted">No description.</span>}</p>
       <dl className="facts">
         <dt>Folder</dt>

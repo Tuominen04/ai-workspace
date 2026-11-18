@@ -223,6 +223,12 @@ pub fn restore(engine: &Engine, name: &str) -> Outcome<ProjectMoved> {
     })
 }
 
+/// **Clone**: copies a project into `<folder>-clone` (ADR-0015) and returns the clone.
+pub fn clone(engine: &Engine, name: &str) -> Outcome<ProjectDetails> {
+    let (project, metadata) = engine.clone_project(name)?;
+    Ok(ProjectDetails::new(&project, &metadata))
+}
+
 /// Ends the open chat session if it is in `project`; a session elsewhere is left alone.
 fn close_session_in(open: &OpenSession, project: &str) -> Outcome<Option<SessionClosed>> {
     let in_project = lock(open)?
@@ -402,6 +408,11 @@ pub async fn project_archive(
     name: String,
 ) -> Outcome<ProjectMoved> {
     archive(&resolve(&choice)?, &open, &name)
+}
+
+#[tauri::command]
+pub async fn project_clone(choice: Choice<'_>, name: String) -> Outcome<ProjectDetails> {
+    clone(&resolve(&choice)?, &name)
 }
 
 #[tauri::command]

@@ -127,6 +127,8 @@ export const engine = {
       call<ProjectDetails>("project_set_model", { name, model }),
     /** Moves a project into Projects/Archive/, ending an open chat session in it first (ADR-0015). */
     archive: (name: string) => call<ProjectMoved>("project_archive", { name }),
+    /** Copies a project into `<folder>-clone`, display name "<name> (Clone)" (ADR-0015). */
+    clone: (name: string) => call<ProjectDetails>("project_clone", { name }),
     /** Moves an archived project back into Projects/. */
     restore: (name: string) => call<ProjectMoved>("project_restore", { name }),
   },
