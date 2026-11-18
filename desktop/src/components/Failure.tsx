@@ -22,11 +22,9 @@ export function Failure({ message, kind, onDismiss }: Props) {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onDismiss();
     };
-    // Listen from the next tick, so the click that caused the failure does not clear it.
-    const timer = window.setTimeout(() => {
-      document.addEventListener("pointerdown", onPointer);
-      document.addEventListener("keydown", onKey);
-    }, 0);
+    // Clicks count from the next tick, so the click that caused the failure does not clear it.
+    document.addEventListener("keydown", onKey);
+    const timer = window.setTimeout(() => document.addEventListener("pointerdown", onPointer), 0);
     return () => {
       window.clearTimeout(timer);
       document.removeEventListener("pointerdown", onPointer);
