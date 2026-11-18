@@ -1,13 +1,26 @@
 import { useState, type FormEvent } from "react";
 
-import { engine, type WorkspaceStatus } from "../lib/engine";
+import { engine, type ProjectMoved, type WorkspaceStatus } from "../lib/engine";
 import { failureOf, type FailureInfo } from "../lib/failure";
 import { useLoad } from "../lib/useLoad";
 import { counted, dateText } from "../lib/words";
 import { Failure } from "./Failure";
 
-/** The selected project's details, or the workspace's folders when none is selected. */
-export function Overview({ status, project }: { status: WorkspaceStatus; project: string | null }) {
+type Props = {
+  status: WorkspaceStatus;
+  project: string | null;
+  /** The selected archived project, if one is. */
+  archived: string | null;
+  onArchived: (moved: ProjectMoved) => void;
+  onRestored: (moved: ProjectMoved) => void;
+};
+
+/** The selected project's details, an archived project, or the workspace's folders. */
+export function Overview({ status, project, archived, onArchived, onRestored }: Props) {
+  if (archived !== null) {
+    const summary = status.archived.find((p) => p.name === archived);
+    return <ArchivedOverview name={archived} path={summary?.path ?? ""} onRestored={onRestored} />;
+  }
   if (project === null) {
     return (
       <section className="panel">
@@ -27,25 +40,95 @@ export function Overview({ status, project }: { status: WorkspaceStatus; project
       </section>
     );
   }
-  return <ProjectOverview name={project} />;
+  return <ProjectOverview name={project} onArchived={onArchived} />;
 }
 
-function ProjectOverview({ name }: { name: string }) {
+/** Runs one project action (archive, restore) and shows why it was refused, if it was. */
+function useProjectAction(run: () => Promise<ProjectMoved>, done: (moved: ProjectMoved) => void) {
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<FailureInfo | null>(null);
+  async function act() {
+    setBusy(true);
+    setFailure(null);
+    try {
+      done(await run());
+    } catch (thrown) {
+      setFailure(failureOf(thrown));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return { busy, failure, act };
+}
+
+/** An archived project: read-only, with Restore (ADR-0015). */
+function ArchivedOverview({
+  name,
+  path,
+  onRestored,
+}: {
+  name: string;
+  path: string;
+  onRestored: (moved: ProjectMoved) => void;
+}) {
+  const restore = useProjectAction(() => engine.project.restore(name), onRestored);
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <h2>{name}</h2>
+        <button type="button" onClick={() => void restore.act()} disabled={restore.busy}>
+          {restore.busy ? "Restoring…" : "Restore"}
+        </button>
+      </div>
+      <p className="muted">
+        Archived. Restore it to chat in it, search it or change its permissions again.
+      </p>
+      <dl className="facts">
+        <dt>Folder</dt>
+        <dd className="path">{path}</dd>
+      </dl>
+      {restore.failure && <Failure message={restore.failure.message} kind={restore.failure.kind} />}
+    </section>
+  );
+}
+
+function ProjectOverview({ name, onArchived }: { name: string; onArchived: (moved: ProjectMoved) => void }) {
+  const archive = useProjectAction(() => engine.project.archive(name), onArchived);
   const [details, reload] = useLoad(() => engine.project.show(name), name);
 
   if (details.state === "loading") return <p className="muted panel">Loading {name}…</p>;
+  const archiveButton = (
+    <button
+      type="button"
+      className="quiet"
+      onClick={() => void archive.act()}
+      disabled={archive.busy}
+      title="Move it to Projects/Archive/; it can be restored"
+    >
+      {archive.busy ? "Archiving…" : "Archive"}
+    </button>
+  );
+  // Archiving does not read the project, so it is offered even when its details cannot load.
   if (details.state === "failed")
     return (
       <section className="panel">
-        <h2>{name}</h2>
+        <div className="panel-head">
+          <h2>{name}</h2>
+          {archiveButton}
+        </div>
         <Failure message={details.message} kind={details.kind} />
+        {archive.failure && <Failure message={archive.failure.message} kind={archive.failure.kind} />}
       </section>
     );
 
   const p = details.value;
   return (
     <section className="panel">
-      <h2>{p.display_name}</h2>
+      <div className="panel-head">
+        <h2>{p.display_name}</h2>
+        <div className="row">{archiveButton}</div>
+      </div>
+      {archive.failure && <Failure message={archive.failure.message} kind={archive.failure.kind} />}
       <p className="description">{p.description || <span className="muted">No description.</span>}</p>
       <dl className="facts">
         <dt>Folder</dt>

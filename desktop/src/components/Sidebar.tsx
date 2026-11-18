@@ -11,7 +11,10 @@ type Props = {
   selected: string | null;
   /** The project with an open chat session, marked with a dot. */
   sessionProject: string | null;
+  /** The selected archived project, if one is. */
+  selectedArchived: string | null;
   onSelect: (project: string | null) => void;
+  onSelectArchived: (project: string) => void;
   onRefresh: () => void;
   /** A project was created: read the workspace again and select it. */
   onCreated: (project: string) => void;
@@ -19,7 +22,16 @@ type Props = {
 
 /** The whole workspace and its projects. Choosing one scopes the panels to it; the workspace
  * folder itself is shown in the whole workspace's Overview. */
-export function Sidebar({ status, selected, sessionProject, onSelect, onRefresh, onCreated }: Props) {
+export function Sidebar({
+  status,
+  selected,
+  sessionProject,
+  selectedArchived,
+  onSelect,
+  onSelectArchived,
+  onRefresh,
+  onCreated,
+}: Props) {
   return (
     <aside className="sidebar">
       <header>
@@ -36,7 +48,7 @@ export function Sidebar({ status, selected, sessionProject, onSelect, onRefresh,
           <nav aria-label="Projects">
             <button
               type="button"
-              className={selected === null ? "item active" : "item"}
+              className={selected === null && selectedArchived === null ? "item active" : "item"}
               onClick={() => onSelect(null)}
               title={status.value.root}
             >
@@ -58,6 +70,22 @@ export function Sidebar({ status, selected, sessionProject, onSelect, onRefresh,
             {status.value.projects.length === 0 && <p className="muted small">No projects yet.</p>}
           </nav>
           <NewProject onCreated={onCreated} />
+          {status.value.archived.length > 0 && (
+            <nav aria-label="Archived projects" className="archived">
+              <div className="label">Archived</div>
+              {status.value.archived.map((project) => (
+                <button
+                  type="button"
+                  key={project.name}
+                  className={selectedArchived === project.name ? "item active" : "item"}
+                  onClick={() => onSelectArchived(project.name)}
+                  title={project.path}
+                >
+                  {project.name}
+                </button>
+              ))}
+            </nav>
+          )}
         </>
       )}
 

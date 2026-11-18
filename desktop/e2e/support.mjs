@@ -25,6 +25,7 @@ export const FIXTURE = {
       { name: "security", path: "/home/me/AI/Projects/security" },
       { name: "demo-chat", path: "/home/me/AI/Projects/demo-chat" },
     ],
+    archived: [{ name: "old-lab", path: "/home/me/AI/Projects/Archive/old-lab" }],
   },
   details: {
     security: {
@@ -117,12 +118,35 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
       window.__calls = [];
       // A little state, so writes show up in later reads.
       const projects = [...fixture.status.projects];
+      const archived = [...(fixture.status.archived ?? [])];
       const grants = [
         { path: "/home/me/AI/Base", category: "default", status: "active", granted_at: "1794690257" },
         { path: "/home/me/AI/Projects/security", category: "default", status: "active", granted_at: "1794690257" },
       ];
       const answers = {
-        workspace_status: () => ({ ...fixture.status, projects: [...projects] }),
+        workspace_status: () => ({ ...fixture.status, projects: [...projects], archived: [...archived] }),
+        // Archive and restore move a project between the two lists; a taken name is refused.
+        project_archive: ({ name }) => {
+          if (archived.some((p) => p.name === name))
+            return Promise.reject({ kind: "AlreadyExists", message: `Already exists: /home/me/AI/Projects/Archive/${name}` });
+          const index = projects.findIndex((p) => p.name === name);
+          const path = `/home/me/AI/Projects/Archive/${name}`;
+          projects.splice(index, 1);
+          archived.push({ name, path });
+          const closed = window.__session === name ? { project: name, revoked: 0 } : null;
+          if (closed) window.__session = null;
+          return { name, path, session_closed: closed };
+        },
+        project_restore: ({ name }) => {
+          if (projects.some((p) => p.name === name))
+            return Promise.reject({ kind: "AlreadyExists", message: `Already exists: /home/me/AI/Projects/${name}` });
+          const index = archived.findIndex((p) => p.name === name);
+          const path = `/home/me/AI/Projects/${name}`;
+          archived.splice(index, 1);
+          projects.push({ name, path });
+          fixture.details[name] ??= { ...fixture.details.security, name, display_name: name, path };
+          return { name, path, session_closed: null };
+        },
         workspace_init: () => ({ root: fixture.status.root, config_file: fixture.config.config_file, config_created: true }),
         workspace_set_root: ({ path }) =>
           path.includes("nope")
@@ -175,7 +199,10 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
         project_show: ({ name }) =>
           fixture.details[name] ?? Promise.reject({ kind: "ProjectNotFound", message: `project '${name}' was not found` }),
         workspace_search: () => fixture.search,
-        chat_open: ({ project }) => ({ ...fixture.session, project }),
+        chat_open: ({ project }) => {
+          window.__session = project;
+          return { ...fixture.session, project };
+        },
         chat_send: ({ message, onPiece }) => {
           // "flaky" fails once, like a timeout, then works.
           if (message.includes("flaky") && !window.__flakyFailed) {

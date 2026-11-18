@@ -184,13 +184,32 @@ impl ValidationResult {
     }
 }
 
+/// The folder under `Projects/` that holds archived projects (ADR-0015).
+pub const ARCHIVE_DIR: &str = "Archive";
+
+/// The workspace's projects: the folders in `Projects/`, except the archive folder.
 pub fn discover_projects(paths: &WorkspacePaths) -> Result<Vec<Project>> {
-    if !paths.projects.exists() {
+    let mut projects = project_folders(&paths.projects)?;
+    projects.retain(|project| project.name != ARCHIVE_DIR);
+    Ok(projects)
+}
+
+/// The archived projects: the folders in `Projects/Archive/`.
+pub fn discover_archived_projects(paths: &WorkspacePaths) -> Result<Vec<Project>> {
+    project_folders(&archive_dir(paths))
+}
+
+fn archive_dir(paths: &WorkspacePaths) -> PathBuf {
+    paths.projects.join(ARCHIVE_DIR)
+}
+
+fn project_folders(dir: &Path) -> Result<Vec<Project>> {
+    if !dir.exists() {
         return Ok(Vec::new());
     }
 
     let mut projects = Vec::new();
-    for entry in fs::read_dir(&paths.projects)? {
+    for entry in fs::read_dir(dir)? {
         let entry = entry?;
         let file_type = entry.file_type()?;
         if !file_type.is_dir() {
@@ -204,6 +223,46 @@ pub fn discover_projects(paths: &WorkspacePaths) -> Result<Vec<Project>> {
 
     projects.sort_by(|left, right| left.name.cmp(&right.name));
     Ok(projects)
+}
+
+/// Moves a project, whole and unchanged, into `Projects/Archive/` and returns where it went.
+/// Refuses, moving nothing, if an archived project of that name exists (ADR-0015).
+pub fn archive_project(paths: &WorkspacePaths, name: &str) -> Result<PathBuf> {
+    let folder = existing_folder_name(&paths.projects, name)?;
+    let to = archive_dir(paths).join(&folder);
+    if to.exists() {
+        return Err(AppError::AlreadyExists(to));
+    }
+    fs::create_dir_all(archive_dir(paths))?;
+    fs::rename(paths.projects.join(&folder), &to)?;
+    Ok(to)
+}
+
+/// Moves an archived project back into `Projects/` and returns where it went. Refuses, moving
+/// nothing, if a project of that name exists.
+pub fn restore_project(paths: &WorkspacePaths, name: &str) -> Result<PathBuf> {
+    let folder = existing_folder_name(&archive_dir(paths), name)?;
+    let to = paths.projects.join(&folder);
+    if to.exists() {
+        return Err(AppError::AlreadyExists(to));
+    }
+    fs::rename(archive_dir(paths).join(&folder), &to)?;
+    Ok(to)
+}
+
+/// `name` as a folder directly inside `dir`, checked to exist. Only plain folder names are
+/// accepted, so a name can never reach outside `dir`, and the archive folder itself is never
+/// a project.
+fn existing_folder_name(dir: &Path, name: &str) -> Result<String> {
+    let plain = !name.is_empty()
+        && name != "."
+        && name != ".."
+        && name != ARCHIVE_DIR
+        && !name.contains(['/', '\\']);
+    if !plain || !dir.join(name).is_dir() {
+        return Err(AppError::ProjectNotFound(name.to_string()));
+    }
+    Ok(name.to_string())
 }
 
 pub fn normalize_project_name(input: &str) -> Result<String> {
@@ -225,7 +284,7 @@ pub fn normalize_project_name(input: &str) -> Result<String> {
         .collect::<Vec<_>>()
         .join("-");
 
-    let reserved = ["base", "projects", "cache", "logs", "config"];
+    let reserved = ["base", "projects", "cache", "logs", "config", "archive"];
     if reserved.contains(&normalized.as_str()) {
         return Err(AppError::InvalidProjectName(input.to_string()));
     }

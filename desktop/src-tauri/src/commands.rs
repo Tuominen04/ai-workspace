@@ -9,8 +9,8 @@
 //! Ollama, and a reply can take as long as the model needs, and neither may freeze the window.
 
 use crate::dto::{
-    CommandError, GrantDone, InitDone, NoteSaved, PermissionPage, ProjectDetails, RevokeDone,
-    RootSaved, SearchResults, SessionClosed, SessionInfo, SwitchDone, Validation,
+    CommandError, GrantDone, InitDone, NoteSaved, PermissionPage, ProjectDetails, ProjectMoved,
+    RevokeDone, RootSaved, SearchResults, SessionClosed, SessionInfo, SwitchDone, Validation,
     WorkspaceSettings, WorkspaceStatus,
 };
 use ai_workspace_core::workspace::PermissionViewOptions;
@@ -60,10 +60,12 @@ pub struct OpenSession(pub Mutex<Option<Session>>);
 
 pub fn status(engine: &Engine) -> Outcome<WorkspaceStatus> {
     let projects = engine.projects()?;
+    let archived = engine.archived_projects()?;
     Ok(WorkspaceStatus::new(
         engine.paths(),
         engine.root_source(),
         &projects,
+        &archived,
     ))
 }
 
@@ -196,6 +198,41 @@ pub fn set_root(choice: &RootChoice, open: &OpenSession, path: &str) -> Outcome<
             .map(|p| p.display().to_string()),
         session_closed,
     })
+}
+
+/// **Archive**: ends an open chat session in the project, then moves the project into
+/// `Projects/Archive/` (ADR-0015).
+pub fn archive(engine: &Engine, open: &OpenSession, name: &str) -> Outcome<ProjectMoved> {
+    let session_closed = close_session_in(open, name)?;
+    let path = engine.archive_project(name)?;
+    Ok(ProjectMoved {
+        name: name.to_string(),
+        path: path.display().to_string(),
+        session_closed,
+    })
+}
+
+/// **Restore**: moves an archived project back into `Projects/`. An archived project has no
+/// chat session, so there is none to end.
+pub fn restore(engine: &Engine, name: &str) -> Outcome<ProjectMoved> {
+    let path = engine.restore_project(name)?;
+    Ok(ProjectMoved {
+        name: name.to_string(),
+        path: path.display().to_string(),
+        session_closed: None,
+    })
+}
+
+/// Ends the open chat session if it is in `project`; a session elsewhere is left alone.
+fn close_session_in(open: &OpenSession, project: &str) -> Outcome<Option<SessionClosed>> {
+    let in_project = lock(open)?
+        .as_ref()
+        .is_some_and(|session| session.summary().project.name == project);
+    if in_project {
+        session_close(open)
+    } else {
+        Ok(None)
+    }
 }
 
 /// **Switch now**: from here until the app restarts, use the saved folder (else `~/AI`) even
@@ -356,6 +393,20 @@ pub async fn project_create(
     description: Option<String>,
 ) -> Outcome<ProjectDetails> {
     create_project(&resolve(&choice)?, &name, description.as_deref())
+}
+
+#[tauri::command]
+pub async fn project_archive(
+    choice: Choice<'_>,
+    open: tauri::State<'_, OpenSession>,
+    name: String,
+) -> Outcome<ProjectMoved> {
+    archive(&resolve(&choice)?, &open, &name)
+}
+
+#[tauri::command]
+pub async fn project_restore(choice: Choice<'_>, name: String) -> Outcome<ProjectMoved> {
+    restore(&resolve(&choice)?, &name)
 }
 
 #[tauri::command]

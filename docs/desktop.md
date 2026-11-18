@@ -9,6 +9,8 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
 
 - **Sidebar** — **Whole workspace** at the top, then the projects; a dot marks the project with
   an open chat session. **New project** creates one (name and an optional description).
+  **Archived** projects (`Projects/Archive/`) are listed at the bottom; one shows only a
+  read-only Overview with **Restore**, which moves it back among the projects (ADR-0015).
 - **Tabs** — the whole workspace shows **Overview**, **Validation**, **Search** and
   **Configuration**; a project shows **Chat** (opened first), **Overview**, **Search** and
   **Permissions**. Each tab's page is a centred column. An open chat session survives switching
@@ -16,7 +18,9 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
 - **Overview** — the workspace's folder and where that choice came from, or the chosen project's description, model and folders.
   **Change** next to the model picks the Ollama model the project chats with (installed models
   are suggested); **Use default** returns it to the workspace default. It is saved as `model`
-  in the project's `project.toml`.
+  in the project's `project.toml`. **Archive** moves the project, unchanged, into
+  `Projects/Archive/` (ending an open chat session in it first); it is offered even when the
+  project's details cannot load. A name already taken there is refused with "Already exists".
 - **Validation** — a validation run, with how to clear each issue. Where the fix is to
   initialize the workspace, a button does it.
 - **Search** — ranked results from Base knowledge and the chosen project's Knowledge and

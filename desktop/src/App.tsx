@@ -8,12 +8,14 @@ import { Overview } from "./components/Overview";
 import { SearchPanel } from "./components/SearchPanel";
 import { Sidebar } from "./components/Sidebar";
 import { ValidationPanel } from "./components/ValidationPanel";
-import { engine, isDesktopRuntime, type SessionInfo } from "./lib/engine";
+import { engine, isDesktopRuntime, type ProjectMoved, type SessionInfo } from "./lib/engine";
 import { useLoad } from "./lib/useLoad";
 
 // The whole workspace and a project each have their own tabs; a project opens on its chat.
 const WORKSPACE_TABS = ["Overview", "Validation", "Search", "Configuration"] as const;
 const PROJECT_TABS = ["Chat", "Overview", "Search", "Permissions"] as const;
+// An archived project is only looked at, restored or deleted (ADR-0015).
+const ARCHIVED_TABS = ["Overview"] as const;
 type Tab = (typeof WORKSPACE_TABS)[number] | (typeof PROJECT_TABS)[number];
 
 /** The tab a selection opens on: a project's chat, or the whole workspace's overview. */
@@ -42,11 +44,33 @@ function Workspace() {
   const [tab, setTab] = useState<Tab>("Overview");
   // Kept here, not in the chat panel, so switching tabs or projects does not lose the open session.
   const [session, setSession] = useState<SessionInfo | null>(null);
-  const tabs: readonly Tab[] = project === null ? WORKSPACE_TABS : PROJECT_TABS;
+  const [archived, setArchived] = useState<string | null>(null);
+  const tabs: readonly Tab[] =
+    archived !== null ? ARCHIVED_TABS : project === null ? WORKSPACE_TABS : PROJECT_TABS;
 
   function select(next: string | null) {
+    setArchived(null);
     setProject(next);
     setTab(firstTab(next));
+  }
+
+  function selectArchived(name: string) {
+    setProject(null);
+    setArchived(name);
+    setTab("Overview");
+  }
+
+  /** A project was archived: the whole workspace is shown again, as the project is gone. */
+  function archivedDone(moved: ProjectMoved) {
+    if (moved.session_closed) setSession(null);
+    refresh();
+    select(null);
+  }
+
+  /** A project was restored: it is a normal project again, opened on its chat. */
+  function restoredDone(moved: ProjectMoved) {
+    refresh();
+    select(moved.name);
   }
 
   return (
@@ -55,7 +79,9 @@ function Workspace() {
         status={status}
         selected={project}
         sessionProject={session?.project ?? null}
+        selectedArchived={archived}
         onSelect={select}
+        onSelectArchived={selectArchived}
         onRefresh={refresh}
         onCreated={(created) => {
           refresh();
@@ -81,7 +107,13 @@ function Workspace() {
         <div className="content">
           {tab === "Overview" &&
             (status.state === "ready" ? (
-              <Overview status={status.value} project={project} />
+              <Overview
+                status={status.value}
+                project={project}
+                archived={archived}
+                onArchived={archivedDone}
+                onRestored={restoredDone}
+              />
             ) : status.state === "failed" ? (
               <section className="panel">
                 <Failure message={status.message} kind={status.kind} />

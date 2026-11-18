@@ -168,6 +168,15 @@ button:focus-visible {
   margin-top: auto;
 }
 
+/* Archived projects sit at the bottom of the sidebar, just above the theme switch. */
+.sidebar .archived {
+  margin-top: auto;
+}
+
+.sidebar .archived + .theme {
+  margin-top: 0;
+}
+
 .theme select {
   font: inherit;
   color: inherit;

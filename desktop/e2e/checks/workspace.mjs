@@ -10,7 +10,7 @@ await stubEngine(page);
 await page.goto(URL);
 
 await page.getByRole("button", { name: "security" }).waitFor();
-check("the sidebar lists the projects", (await page.getByRole("navigation").textContent()).includes("demo-chat"));
+check("the sidebar lists the projects", (await page.getByRole("navigation", { name: "Projects", exact: true }).textContent()).includes("demo-chat"));
 const tabNames = async () => (await page.getByRole("tab").allTextContents()).map((t) => t.trim());
 check("Whole workspace comes first, above the projects", (await page.locator(".sidebar nav .item").first().textContent()) === "Whole workspace");
 check("the sidebar no longer shows the folder path", !(await page.locator(".sidebar").textContent()).includes("Chosen by"));
