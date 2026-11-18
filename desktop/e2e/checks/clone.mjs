@@ -36,5 +36,26 @@ await projectsNav.getByRole("button", { name: "security", exact: true }).click({
 await page.getByRole("menuitem", { name: "Clone" }).click();
 await page.getByRole("alert").waitFor();
 check("cloning when the clone exists is refused", (await page.getByRole("alert").textContent()).includes("Already exists"));
+await page.getByRole("tab", { name: "Search" }).click();
+check("clicking elsewhere dismisses the message", (await page.getByRole("alert").count()) === 0);
+
+// The same refusal on the Overview: a click on it dismisses it, and so does another project.
+await projectsNav.getByRole("button", { name: "security", exact: true }).click();
+await page.getByRole("tab", { name: "Overview" }).click();
+await page.getByRole("heading", { name: "Security", exact: true }).waitFor();
+await page.getByRole("button", { name: "Clone", exact: true }).click();
+await page.getByRole("alert").waitFor();
+await page.getByRole("alert").click();
+check("clicking the message dismisses it", (await page.getByRole("alert").count()) === 0);
+await page.getByRole("button", { name: "Clone", exact: true }).click();
+await page.getByRole("alert").waitFor();
+await page.keyboard.press("Escape");
+check("Escape dismisses it", (await page.getByRole("alert").count()) === 0);
+await page.getByRole("button", { name: "Clone", exact: true }).click();
+await page.getByRole("alert").waitFor();
+await projectsNav.getByRole("button", { name: "security-clone", exact: true }).click();
+await page.getByRole("tab", { name: "Overview" }).click();
+await page.getByRole("heading", { name: "Security (Clone)" }).waitFor();
+check("another project never shows the old message", (await page.getByRole("alert").count()) === 0);
 
 await finish(browser);

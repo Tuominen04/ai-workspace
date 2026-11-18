@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 
 import { engine, type ProjectDetails, type ProjectMoved, type WorkspaceStatus } from "../lib/engine";
 import { failureOf, type FailureInfo } from "../lib/failure";
@@ -23,6 +23,7 @@ export function Overview({ status, project, archived, onArchived, onRestored, on
     const summary = status.archived.find((p) => p.name === archived);
     return (
       <ArchivedOverview
+        key={archived}
         name={archived}
         path={summary?.path ?? ""}
         onRestored={onRestored}
@@ -51,6 +52,7 @@ export function Overview({ status, project, archived, onArchived, onRestored, on
   }
   return (
     <ProjectOverview
+      key={project}
       name={project}
       onArchived={onArchived}
       onCloned={onCloned}
@@ -74,7 +76,8 @@ function useProjectAction<T>(run: () => Promise<T>, done: (result: T) => void) {
       setBusy(false);
     }
   }
-  return { busy, failure, act };
+  const dismiss = useCallback(() => setFailure(null), []);
+  return { busy, failure, act, dismiss };
 }
 
 /** An archived project: read-only, with Restore (ADR-0015). */
@@ -110,7 +113,9 @@ function ArchivedOverview({
         <dt>Folder</dt>
         <dd className="path">{path}</dd>
       </dl>
-      {restore.failure && <Failure message={restore.failure.message} kind={restore.failure.kind} />}
+      {restore.failure && (
+        <Failure message={restore.failure.message} kind={restore.failure.kind} onDismiss={restore.dismiss} />
+      )}
     </section>
   );
 }
@@ -157,7 +162,9 @@ function ProjectOverview({
           <div className="row">{archiveButton}</div>
         </div>
         <Failure message={details.message} kind={details.kind} />
-        {archive.failure && <Failure message={archive.failure.message} kind={archive.failure.kind} />}
+        {archive.failure && (
+        <Failure message={archive.failure.message} kind={archive.failure.kind} onDismiss={archive.dismiss} />
+      )}
       </section>
     );
 
@@ -179,8 +186,12 @@ function ProjectOverview({
           {archiveButton}
         </div>
       </div>
-      {archive.failure && <Failure message={archive.failure.message} kind={archive.failure.kind} />}
-      {clone.failure && <Failure message={clone.failure.message} kind={clone.failure.kind} />}
+      {archive.failure && (
+        <Failure message={archive.failure.message} kind={archive.failure.kind} onDismiss={archive.dismiss} />
+      )}
+      {clone.failure && (
+        <Failure message={clone.failure.message} kind={clone.failure.kind} onDismiss={clone.dismiss} />
+      )}
       <p className="description">{p.description || <span className="muted">No description.</span>}</p>
       <dl className="facts">
         <dt>Folder</dt>
