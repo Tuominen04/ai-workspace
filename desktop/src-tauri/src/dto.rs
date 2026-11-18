@@ -47,6 +47,7 @@ impl From<AppError> for CommandError {
             AppError::InvalidProjectName(_) => "InvalidProjectName",
             AppError::InvalidModelName(_) => "InvalidModelName",
             AppError::ProjectNotFound(_) => "ProjectNotFound",
+            AppError::AlreadyExists(_) => "AlreadyExists",
             AppError::ValidationGateBlocked { .. } => "ValidationGateBlocked",
             AppError::PermissionDenied(_) => "PermissionDenied",
             AppError::InvalidPermissionPath(_) => "InvalidPermissionPath",
@@ -98,18 +99,36 @@ pub struct WorkspaceStatus {
     pub base: String,
     pub projects_dir: String,
     pub projects: Vec<ProjectSummary>,
+    /// The archived projects, in `Projects/Archive/` (ADR-0015).
+    pub archived: Vec<ProjectSummary>,
 }
 
 impl WorkspaceStatus {
-    pub fn new(paths: &WorkspacePaths, source: &RootSource, projects: &[Project]) -> Self {
+    pub fn new(
+        paths: &WorkspacePaths,
+        source: &RootSource,
+        projects: &[Project],
+        archived: &[Project],
+    ) -> Self {
         Self {
             root: path_text(&paths.root),
             root_source: source.describe(),
             base: path_text(&paths.base),
             projects_dir: path_text(&paths.projects),
             projects: projects.iter().map(ProjectSummary::from).collect(),
+            archived: archived.iter().map(ProjectSummary::from).collect(),
         }
     }
+}
+
+/// Where an archived or restored project went.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct ProjectMoved {
+    pub name: String,
+    pub path: String,
+    /// Set when a chat session in that project was ended first.
+    pub session_closed: Option<SessionClosed>,
 }
 
 #[derive(Debug, Clone, Serialize, TS)]

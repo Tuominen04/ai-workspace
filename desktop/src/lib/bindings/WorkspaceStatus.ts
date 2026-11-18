@@ -8,4 +8,8 @@ export type WorkspaceStatus = { root: string,
 /**
  * Where the folder was chosen from, in words.
  */
-root_source: string, base: string, projects_dir: string, projects: Array<ProjectSummary>, };
+root_source: string, base: string, projects_dir: string, projects: Array<ProjectSummary>, 
+/**
+ * The archived projects, in `Projects/Archive/` (ADR-0015).
+ */
+archived: Array<ProjectSummary>, };

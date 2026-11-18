@@ -46,6 +46,8 @@ pub enum AppError {
     InvalidProjectName(String),
     InvalidModelName(String),
     ProjectNotFound(String),
+    /// A project operation was refused because its destination exists; nothing was written.
+    AlreadyExists(PathBuf),
     /// A gated operation was refused because validation found blocking
     /// issues. Carries the full result so a front end can show them.
     ValidationGateBlocked {
@@ -92,6 +94,7 @@ impl fmt::Display for AppError {
                 "invalid model name '{name}': use an Ollama model name such as sec or qwen3:8b, without spaces"
             ),
             Self::ProjectNotFound(project) => write!(f, "project '{project}' was not found"),
+            Self::AlreadyExists(path) => write!(f, "Already exists: {}", path.display()),
             Self::ValidationGateBlocked { operation, .. } => write!(
                 f,
                 "cannot run {} because workspace validation has blocking issues",

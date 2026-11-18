@@ -233,3 +233,40 @@ fn notes_are_saved_on_request_and_drafting_needs_a_session() {
 
     let _ = std::fs::remove_dir_all(&engine.paths().root);
 }
+
+#[test]
+fn archive_and_restore_move_a_project_and_status_lists_it() {
+    let engine = test_engine("archive");
+    engine.init().expect("init should succeed");
+    engine
+        .create_project("Router", None)
+        .expect("project should be created");
+    let open = OpenSession::default();
+
+    let moved = commands::archive(&engine, &open, "router").expect("archive should succeed");
+    assert!(moved.path.ends_with("Archive/router"));
+    assert!(moved.session_closed.is_none(), "no session was open");
+    let status = commands::status(&engine).expect("status should succeed");
+    assert!(status.projects.is_empty());
+    assert_eq!(status.archived.len(), 1);
+    assert_eq!(status.archived[0].name, "router");
+
+    engine
+        .create_project("Router", None)
+        .expect("a new project of the same name");
+    let refused = commands::restore(&engine, "router").expect_err("the destination exists");
+    assert_eq!(refused.kind, "AlreadyExists");
+    assert!(refused.message.starts_with("Already exists: "));
+
+    std::fs::remove_dir_all(engine.paths().projects.join("router")).expect("clear the way");
+    let restored = commands::restore(&engine, "router").expect("restore should succeed");
+    assert_eq!(
+        restored.path,
+        engine.paths().projects.join("router").display().to_string()
+    );
+    let status = commands::status(&engine).expect("status should succeed");
+    assert_eq!(status.projects.len(), 1);
+    assert!(status.archived.is_empty());
+
+    let _ = std::fs::remove_dir_all(&engine.paths().root);
+}

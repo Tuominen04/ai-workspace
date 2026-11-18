@@ -16,6 +16,7 @@ import type { Issue } from "./bindings/Issue";
 import type { NoteSaved } from "./bindings/NoteSaved";
 import type { PermissionPage } from "./bindings/PermissionPage";
 import type { ProjectDetails } from "./bindings/ProjectDetails";
+import type { ProjectMoved } from "./bindings/ProjectMoved";
 import type { ProjectSummary } from "./bindings/ProjectSummary";
 import type { RevokeDone } from "./bindings/RevokeDone";
 import type { RootSaved } from "./bindings/RootSaved";
@@ -40,6 +41,7 @@ export type {
   NoteSaved,
   PermissionPage,
   ProjectDetails,
+  ProjectMoved,
   ProjectSummary,
   RevokeDone,
   RootSaved,
@@ -123,6 +125,10 @@ export const engine = {
     /** Sets the Ollama model a project uses; `null` returns it to the workspace default. */
     setModel: (name: string, model: string | null) =>
       call<ProjectDetails>("project_set_model", { name, model }),
+    /** Moves a project into Projects/Archive/, ending an open chat session in it first (ADR-0015). */
+    archive: (name: string) => call<ProjectMoved>("project_archive", { name }),
+    /** Moves an archived project back into Projects/. */
+    restore: (name: string) => call<ProjectMoved>("project_restore", { name }),
   },
   models: {
     /** Models Ollama has installed, for suggestions; empty when Ollama cannot be asked. */

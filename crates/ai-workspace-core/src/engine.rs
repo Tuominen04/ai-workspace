@@ -11,10 +11,10 @@ use crate::paths::{
 use crate::search::{self, SearchCandidate, SearchOutcome};
 use crate::workspace::{
     CreatedProject, PermissionGrantResult, PermissionRevokeResult, PermissionViewOptions,
-    PermissionViewSnapshot, Project, ProjectMetadata, ValidationResult, create_project,
-    discover_projects, grant_temporary_permission, inspect_project, now_unix,
-    revoke_temporary_permission, save_session_note, set_project_model, validate_workspace,
-    view_permissions,
+    PermissionViewSnapshot, Project, ProjectMetadata, ValidationResult, archive_project,
+    create_project, discover_archived_projects, discover_projects, grant_temporary_permission,
+    inspect_project, now_unix, restore_project, revoke_temporary_permission, save_session_note,
+    set_project_model, validate_workspace, view_permissions,
 };
 use std::path::PathBuf;
 
@@ -135,6 +135,26 @@ impl Engine {
         self.enforce_validation_gate(GatedOperation::ProjectSetModel)?;
         let config = load_workspace_config(&self.paths)?;
         set_project_model(&self.paths, &config, name, model)
+    }
+
+    /// The archived projects, in `Projects/Archive/` (ADR-0015).
+    pub fn archived_projects(&self) -> Result<Vec<Project>> {
+        self.paths.ensure_layout()?;
+        discover_archived_projects(&self.paths)
+    }
+
+    /// Archives a project: moves its folder, unchanged, into `Projects/Archive/`. Not gated: it
+    /// moves the folder without reading it, so a project with broken metadata can still be put
+    /// away (ADR-0015). Ending an open session in the project is the front end's job.
+    pub fn archive_project(&self, name: &str) -> Result<PathBuf> {
+        self.paths.ensure_layout()?;
+        archive_project(&self.paths, name)
+    }
+
+    /// Restores an archived project into `Projects/`. Not gated, like archiving.
+    pub fn restore_project(&self, name: &str) -> Result<PathBuf> {
+        self.paths.ensure_layout()?;
+        restore_project(&self.paths, name)
     }
 
     /// Saves a session note in the project's Session folder and returns its path. Not gated by
