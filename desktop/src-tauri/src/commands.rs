@@ -9,11 +9,11 @@
 //! Ollama, and a reply can take as long as the model needs, and neither may freeze the window.
 
 use crate::dto::{
-    CommandError, GrantDone, InitDone, NoteSaved, PermissionPage, ProjectDetails, ProjectMoved,
-    RevokeDone, RootSaved, SearchResults, SessionClosed, SessionInfo, SwitchDone, Validation,
-    WorkspaceSettings, WorkspaceStatus,
+    CommandError, GrantDone, InitDone, NoteSaved, PermissionPage, ProjectDeleted, ProjectDetails,
+    ProjectMoved, RevokeDone, RootSaved, SearchResults, SessionClosed, SessionInfo, SwitchDone,
+    Validation, WorkspaceSettings, WorkspaceStatus,
 };
-use ai_workspace_core::workspace::PermissionViewOptions;
+use ai_workspace_core::workspace::{Deleted, PermissionViewOptions};
 use ai_workspace_core::{Engine, Session};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -223,6 +223,30 @@ pub fn restore(engine: &Engine, name: &str) -> Outcome<ProjectMoved> {
     })
 }
 
+/// **Delete**: ends an open chat session in the project, then moves it to the Trash. With
+/// `erase`, sent only after the person confirmed erasing, a project the Trash cannot take is
+/// erased instead (ADR-0015).
+pub fn delete(
+    engine: &Engine,
+    open: &OpenSession,
+    name: &str,
+    archived: bool,
+    erase: bool,
+) -> Outcome<ProjectDeleted> {
+    let session_closed = if archived {
+        None
+    } else {
+        close_session_in(open, name)?
+    };
+    let (path, how) = engine.delete_project(name, archived, erase)?;
+    Ok(ProjectDeleted {
+        name: name.to_string(),
+        path: path.display().to_string(),
+        erased: how == Deleted::Erased,
+        session_closed,
+    })
+}
+
 /// **Clone**: copies a project into `<folder>-clone` (ADR-0015) and returns the clone.
 pub fn clone(engine: &Engine, name: &str) -> Outcome<ProjectDetails> {
     let (project, metadata) = engine.clone_project(name)?;
@@ -408,6 +432,17 @@ pub async fn project_archive(
     name: String,
 ) -> Outcome<ProjectMoved> {
     archive(&resolve(&choice)?, &open, &name)
+}
+
+#[tauri::command]
+pub async fn project_delete(
+    choice: Choice<'_>,
+    open: tauri::State<'_, OpenSession>,
+    name: String,
+    archived: bool,
+    erase: bool,
+) -> Outcome<ProjectDeleted> {
+    delete(&resolve(&choice)?, &open, &name, archived, erase)
 }
 
 #[tauri::command]

@@ -15,6 +15,7 @@ import type { InitDone } from "./bindings/InitDone";
 import type { Issue } from "./bindings/Issue";
 import type { NoteSaved } from "./bindings/NoteSaved";
 import type { PermissionPage } from "./bindings/PermissionPage";
+import type { ProjectDeleted } from "./bindings/ProjectDeleted";
 import type { ProjectDetails } from "./bindings/ProjectDetails";
 import type { ProjectMoved } from "./bindings/ProjectMoved";
 import type { ProjectSummary } from "./bindings/ProjectSummary";
@@ -40,6 +41,7 @@ export type {
   Issue,
   NoteSaved,
   PermissionPage,
+  ProjectDeleted,
   ProjectDetails,
   ProjectMoved,
   ProjectSummary,
@@ -127,6 +129,10 @@ export const engine = {
       call<ProjectDetails>("project_set_model", { name, model }),
     /** Moves a project into Projects/Archive/, ending an open chat session in it first (ADR-0015). */
     archive: (name: string) => call<ProjectMoved>("project_archive", { name }),
+    /** Moves a project, or an archived one, to the Trash; `erase` only after the person confirmed
+     * erasing a project the Trash cannot take (ADR-0015). */
+    delete: (name: string, archived: boolean, erase: boolean) =>
+      call<ProjectDeleted>("project_delete", { name, archived, erase }),
     /** Copies a project into `<folder>-clone`, display name "<name> (Clone)" (ADR-0015). */
     clone: (name: string) => call<ProjectDetails>("project_clone", { name }),
     /** Moves an archived project back into Projects/. */

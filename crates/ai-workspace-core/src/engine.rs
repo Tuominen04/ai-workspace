@@ -10,9 +10,9 @@ use crate::paths::{
 };
 use crate::search::{self, SearchCandidate, SearchOutcome};
 use crate::workspace::{
-    CreatedProject, PermissionGrantResult, PermissionRevokeResult, PermissionViewOptions,
+    CreatedProject, Deleted, PermissionGrantResult, PermissionRevokeResult, PermissionViewOptions,
     PermissionViewSnapshot, Project, ProjectMetadata, ValidationResult, archive_project,
-    clone_project, create_project, discover_archived_projects, discover_projects,
+    clone_project, create_project, delete_project, discover_archived_projects, discover_projects,
     grant_temporary_permission, inspect_project, now_unix, restore_project,
     revoke_temporary_permission, save_session_note, set_project_model, validate_workspace,
     view_permissions,
@@ -159,6 +159,20 @@ impl Engine {
         self.enforce_validation_gate(GatedOperation::ProjectClone)?;
         let config = load_workspace_config(&self.paths)?;
         clone_project(&self.paths, &config, name)
+    }
+
+    /// Deletes a project, or with `archived` an archived one, by moving it to the desktop
+    /// Trash. With `erase_without_trash`, given only after the person confirmed a second
+    /// time, a project the Trash cannot take is erased instead (ADR-0015). Not gated, like
+    /// archiving. Ending an open session in the project is the front end's job.
+    pub fn delete_project(
+        &self,
+        name: &str,
+        archived: bool,
+        erase_without_trash: bool,
+    ) -> Result<(PathBuf, Deleted)> {
+        self.paths.ensure_layout()?;
+        delete_project(&self.paths, name, archived, erase_without_trash)
     }
 
     /// Restores an archived project into `Projects/`. Not gated, like archiving.

@@ -50,6 +50,12 @@ pub enum AppError {
     ProjectNotFound(String),
     /// A project operation was refused because its destination exists; nothing was written.
     AlreadyExists(PathBuf),
+    /// A project could not be moved to the Trash; nothing was deleted. The person may choose
+    /// to erase it instead (ADR-0015).
+    TrashUnavailable {
+        path: PathBuf,
+        reason: String,
+    },
     /// A gated operation was refused because validation found blocking
     /// issues. Carries the full result so a front end can show them.
     ValidationGateBlocked {
@@ -97,6 +103,11 @@ impl fmt::Display for AppError {
             ),
             Self::ProjectNotFound(project) => write!(f, "project '{project}' was not found"),
             Self::AlreadyExists(path) => write!(f, "Already exists: {}", path.display()),
+            Self::TrashUnavailable { path, reason } => write!(
+                f,
+                "cannot move {} to the Trash: {reason}; nothing was deleted",
+                path.display()
+            ),
             Self::ValidationGateBlocked { operation, .. } => write!(
                 f,
                 "cannot run {} because workspace validation has blocking issues",

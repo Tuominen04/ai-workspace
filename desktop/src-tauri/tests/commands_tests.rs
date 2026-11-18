@@ -289,3 +289,21 @@ fn clone_returns_the_new_project_and_refuses_a_taken_name() {
 
     let _ = std::fs::remove_dir_all(&engine.paths().root);
 }
+
+#[test]
+fn deleting_a_project_that_is_not_there_is_refused() {
+    // The Trash itself is covered in the core (trash_tests), against a temporary Trash; this
+    // test must not reach the real one.
+    let engine = test_engine("delete");
+    engine.init().expect("init should succeed");
+    let open = OpenSession::default();
+    let refused = commands::delete(&engine, &open, "missing", false, false)
+        .expect_err("there is no such project");
+    assert_eq!(refused.kind, "ProjectNotFound");
+    let refused = commands::delete(&engine, &open, "../Base", false, true)
+        .expect_err("only project folders can be deleted");
+    assert_eq!(refused.kind, "ProjectNotFound");
+    assert!(engine.paths().base.is_dir());
+
+    let _ = std::fs::remove_dir_all(&engine.paths().root);
+}
