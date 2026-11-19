@@ -23,8 +23,9 @@ You need Fedora on x86_64.
 
 ### 1. Install Ollama and a model
 
-Follow Ollama's [Linux download page](https://ollama.com/download/linux), then download a
-model, for example:
+Install Ollama from its [Linux download page](https://ollama.com/download/linux) (a one-line
+installer), or follow its [manual install](https://docs.ollama.com/linux#manual-install) steps
+if you prefer not to run a script. Then download a model, for example:
 
 ```bash
 ollama pull qwen3:8b
@@ -32,7 +33,7 @@ ollama pull qwen3:8b
 
 Any model works; Ollama's [model library](https://ollama.com/library) lists them. Larger models
 answer better but need more memory. For using a graphics card or other Ollama settings, see
-Ollama's [documentation](https://github.com/ollama/ollama/tree/main/docs).
+Ollama's [documentation](https://docs.ollama.com).
 
 ### 2. Install AI Workspace
 

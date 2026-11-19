@@ -83,7 +83,7 @@ ollama pull qwen3:8b
 A model you built with your own instructions (an Ollama Modelfile with a `SYSTEM` prompt, such
 as a security advisor) keeps them: the chat shows "the model's own instructions are kept", and
 your notes are added after its rules. See Ollama's
-[Modelfile documentation](https://github.com/ollama/ollama/tree/main/docs) to make one.
+[Modelfile reference](https://docs.ollama.com/modelfile) to make one.
 
 ## Chat
 
@@ -179,7 +179,7 @@ standard folders.
 |---|---|
 | "No local runtime is running" | Install Ollama (see the [README](../README.md#quick-start)) and start the session again. |
 | The model answers with an error about the model | It is not downloaded: `ollama pull <model>`, or pick an installed one on the project's Overview. |
-| Replies are very slow | Use a smaller model, or set Ollama up to use your graphics card (Ollama's [documentation](https://github.com/ollama/ollama/tree/main/docs)). |
+| Replies are very slow | Use a smaller model, or set Ollama up to use your graphics card (Ollama's [documentation](https://docs.ollama.com)). |
 | A reply stopped halfway | **Retry**. |
 | A note is missing from the context list | It may not be `.md`, its name may look like a secret, or it did not fit: ask about it by name, or use a model with a larger context window. |
 | "…validation has blocking issues" | Open **Validation** on Whole workspace and fix what it lists. |
