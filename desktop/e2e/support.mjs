@@ -263,6 +263,16 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
           }));
         },
         chat_close: () => ({ project: fixture.session.project, revoked: 1 }),
+        // Tauri's event listener, and the window close the shell would do.
+        "plugin:event|listen": ({ event, handler }) => {
+          (window.__listeners[event] ??= []).push(handler);
+          return handler;
+        },
+        "plugin:event|unlisten": () => null,
+        app_quit: () => {
+          window.__quit = true;
+          return null;
+        },
         chat_draft_note: () => "# Router hardening\n- Discussed SSH exposure\n- Next: review the guest VLAN",
         note_save: ({ project, text }) =>
           text.trim() === ""
@@ -283,6 +293,11 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
             resolve(pieces.join(""));
           }, gap * (pieces.length + 1));
         });
+      // What the shell's close request would deliver: listeners by event name.
+      window.__listeners = {};
+      window.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener: () => {} };
+      window.__emit = (event, payload) =>
+        (window.__listeners[event] ?? []).forEach((id) => callbacks.get(id)?.({ event, id, payload }));
       window.__TAURI_INTERNALS__ = {
         invoke: async (command, args) => {
           window.__calls.push({ command, args });

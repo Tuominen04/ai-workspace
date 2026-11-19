@@ -5,6 +5,7 @@
 // interface imports `invoke`, so the whole surface is one file to read.
 
 import { Channel, invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 import type { ChatReply } from "./bindings/ChatReply";
 import type { CommandError } from "./bindings/CommandError";
@@ -154,6 +155,16 @@ export const engine = {
       call<PermissionPage>("permission_list", { project, filter, page, pageSize: null }),
     grant: (project: string, path: string) => call<GrantDone>("permission_grant", { project, path }),
     revoke: (project: string, path: string) => call<RevokeDone>("permission_revoke", { project, path }),
+  },
+  app: {
+    /**
+     * Called when the window is being closed with an answered chat open; the shell has held
+     * the close and passes the chat's project. Returns the function that stops listening.
+     */
+    onCloseRequested: (handler: (project: string) => void): Promise<UnlistenFn> =>
+      listen<string>("close-requested", (event) => handler(event.payload)),
+    /** Closes the window once the save-on-close question is answered. */
+    quit: () => call<null>("app_quit"),
   },
   chat: {
     /** Opens a session in a project, closing any open one first. May take a while: it can start Ollama. */

@@ -11,6 +11,10 @@ type Props = {
   project: string | null;
   session: SessionInfo | null;
   onSession: (session: SessionInfo | null) => void;
+  /** The app is closing: ask about a note, then call `onQuit` once the session has ended. */
+  quitting: boolean;
+  onQuit: () => void;
+  onCancelQuit: () => void;
 };
 
 /**
@@ -18,7 +22,14 @@ type Props = {
  * permissions and builds the first context; every message rebuilds the context from what was
  * asked; closing revokes temporary permissions.
  */
-export function ChatPanel({ project, session, onSession }: Props) {
+export function ChatPanel({
+  project,
+  session,
+  onSession,
+  quitting,
+  onQuit,
+  onCancelQuit,
+}: Props) {
   const [lines, setLines] = useState<Line[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState<
@@ -63,6 +74,12 @@ export function ChatPanel({ project, session, onSession }: Props) {
     } else {
       void close(null);
     }
+  }
+
+  /** Back to the conversation; a pending app close is called off. */
+  function keepChatting() {
+    setEnding(null);
+    if (quitting) onCancelQuit();
   }
 
   async function draftNote() {
@@ -111,6 +128,7 @@ export function ChatPanel({ project, session, onSession }: Props) {
           text: `Session in ${closed.project} closed; ${counted(closed.revoked, "temporary permission")} revoked.`,
         });
       setLines(notes);
+      if (quitting) onQuit();
     } catch (thrown) {
       setError(messageOf(thrown));
     } finally {
@@ -294,11 +312,12 @@ export function ChatPanel({ project, session, onSession }: Props) {
         <div ref={end} />
       </div>
 
-      {ending === "ask" ? (
+      {ending === "ask" || (quitting && ending === null) ? (
         <div className="ending" role="group" aria-label="End session">
           <p>
-            Save a note for next time? The model drafts it and you can edit it
-            before saving.
+            {quitting
+              ? "AI Workspace is closing. Save a note about this session? Otherwise the conversation is deleted. The model drafts the note and you can edit it before saving."
+              : "Save a note for next time? The model drafts it and you can edit it before saving."}
           </p>
           <div className="row">
             <button type="button" onClick={draftNote} disabled={busy !== null}>
@@ -310,12 +329,12 @@ export function ChatPanel({ project, session, onSession }: Props) {
               onClick={() => close(null)}
               disabled={busy !== null}
             >
-              End without a note
+              {quitting ? "Close without a note" : "End without a note"}
             </button>
             <button
               type="button"
               className="quiet"
-              onClick={() => setEnding(null)}
+              onClick={keepChatting}
               disabled={busy !== null}
             >
               Keep chatting
@@ -340,7 +359,11 @@ export function ChatPanel({ project, session, onSession }: Props) {
               onClick={saveNoteAndClose}
               disabled={busy !== null || noteDraft.trim() === ""}
             >
-              {busy === "saving" ? "Saving…" : "Save note and end"}
+              {busy === "saving"
+                ? "Saving…"
+                : quitting
+                  ? "Save note and close"
+                  : "Save note and end"}
             </button>
             <button
               type="button"
@@ -348,12 +371,12 @@ export function ChatPanel({ project, session, onSession }: Props) {
               onClick={() => close(null)}
               disabled={busy !== null}
             >
-              End without saving
+              {quitting ? "Close without saving" : "End without saving"}
             </button>
             <button
               type="button"
               className="quiet"
-              onClick={() => setEnding(null)}
+              onClick={keepChatting}
               disabled={busy !== null}
             >
               Keep chatting
