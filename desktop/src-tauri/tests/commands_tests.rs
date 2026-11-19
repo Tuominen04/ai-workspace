@@ -307,3 +307,28 @@ fn deleting_a_project_that_is_not_there_is_refused() {
 
     let _ = std::fs::remove_dir_all(&engine.paths().root);
 }
+
+#[test]
+fn rename_returns_the_project_under_its_new_name() {
+    let engine = test_engine("rename");
+    engine.init().expect("init should succeed");
+    engine
+        .create_project("Security", None)
+        .expect("project should be created");
+    engine
+        .create_project("Lab", None)
+        .expect("project should be created");
+    let open = OpenSession::default();
+
+    let renamed = commands::rename(&engine, &open, "security", "Home Security").expect("renamed");
+    assert_eq!(renamed.project.name, "home-security");
+    assert_eq!(renamed.project.display_name, "Home Security");
+    assert!(renamed.session_closed.is_none());
+
+    let refused = commands::rename(&engine, &open, "lab", "Home Security").expect_err("taken");
+    assert_eq!(refused.kind, "AlreadyExists");
+    let refused = commands::rename(&engine, &open, "lab", "Archive").expect_err("reserved");
+    assert_eq!(refused.kind, "InvalidProjectName");
+
+    let _ = std::fs::remove_dir_all(&engine.paths().root);
+}

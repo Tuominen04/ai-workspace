@@ -337,6 +337,48 @@ pub fn clone_project(
     ))
 }
 
+/// Renames a project: its display name becomes `new_name` and its folder moves to the
+/// normalized name, e.g. "Home Security" to `Projects/home-security` (ADR-0015 point 7). A
+/// taken folder is refused with `AlreadyExists`. The project's permission state names its old
+/// folder, so it is ended first, as ending a chat session does: temporary grants are revoked
+/// and logged. If writing the new metadata fails, the folder is moved back.
+pub fn rename_project(
+    paths: &WorkspacePaths,
+    config: &WorkspaceConfig,
+    project_name: &str,
+    new_name: &str,
+) -> Result<(Project, ProjectMetadata)> {
+    let (project, mut metadata) = inspect_project(paths, config, project_name)?;
+    let new_name = new_name.trim();
+    let folder = normalize_project_name(new_name)?;
+    let to = paths.projects.join(&folder);
+    let moves = folder != project.name;
+    if moves && to.exists() {
+        return Err(AppError::AlreadyExists(to));
+    }
+
+    terminate_permission_session(paths, &project)?;
+    if moves {
+        fs::rename(&project.path, &to).map_err(|error| map_path_error(&project.path, error))?;
+    }
+    metadata.project_id = folder.clone();
+    metadata.display_name = new_name.to_string();
+    if let Err(error) = save_project_metadata(paths, &to, config.metadata_filename(), &metadata) {
+        if moves {
+            let _ = fs::rename(&to, &project.path);
+        }
+        return Err(error);
+    }
+
+    Ok((
+        Project {
+            name: folder,
+            path: to,
+        },
+        metadata,
+    ))
+}
+
 /// Copies `from` into a new folder `to`, file by file, leaving out `skip`.
 fn copy_tree(from: &Path, to: &Path, skip: &Path) -> Result<()> {
     fs::create_dir(to).map_err(|error| map_path_error(to, error))?;

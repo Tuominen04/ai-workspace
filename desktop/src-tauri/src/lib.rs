@@ -28,6 +28,7 @@ pub fn run() {
             commands::project_restore,
             commands::project_clone,
             commands::project_delete,
+            commands::project_rename,
             commands::project_set_model,
             commands::models_installed,
             commands::permission_list,

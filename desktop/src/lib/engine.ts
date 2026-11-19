@@ -18,6 +18,7 @@ import type { PermissionPage } from "./bindings/PermissionPage";
 import type { ProjectDeleted } from "./bindings/ProjectDeleted";
 import type { ProjectDetails } from "./bindings/ProjectDetails";
 import type { ProjectMoved } from "./bindings/ProjectMoved";
+import type { ProjectRenamed } from "./bindings/ProjectRenamed";
 import type { ProjectSummary } from "./bindings/ProjectSummary";
 import type { RevokeDone } from "./bindings/RevokeDone";
 import type { RootSaved } from "./bindings/RootSaved";
@@ -44,6 +45,7 @@ export type {
   ProjectDeleted,
   ProjectDetails,
   ProjectMoved,
+  ProjectRenamed,
   ProjectSummary,
   RevokeDone,
   RootSaved,
@@ -133,6 +135,8 @@ export const engine = {
      * erasing a project the Trash cannot take (ADR-0015). */
     delete: (name: string, archived: boolean, erase: boolean) =>
       call<ProjectDeleted>("project_delete", { name, archived, erase }),
+    /** Renames a project: display name and folder (ADR-0015 point 7). */
+    rename: (name: string, newName: string) => call<ProjectRenamed>("project_rename", { name, newName }),
     /** Copies a project into `<folder>-clone`, display name "<name> (Clone)" (ADR-0015). */
     clone: (name: string) => call<ProjectDetails>("project_clone", { name }),
     /** Moves an archived project back into Projects/. */

@@ -9,7 +9,8 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
 
 - **Sidebar** — **Whole workspace** at the top, then the projects; a dot marks the project with
   an open chat session. **New project** creates one (name and an optional description).
-  Right-clicking a project (or the context-menu key) offers **Clone**, **Archive** and **Delete…**. **Archived (N)** at the
+  Right-clicking a project (or the context-menu key) offers **Rename…**, **Clone**, **Archive**
+  and **Delete…**. **Archived (N)** at the
   bottom switches the sidebar to the archived projects (`Projects/Archive/`), with **← Projects**
   to go back; an archived project shows only a read-only Overview with **Restore**, also in its
   right-click menu, which moves it back among the projects, and **Delete…** (ADR-0015).
@@ -23,6 +24,10 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
   in the project's `project.toml`. **Archive** moves the project, unchanged, into
   `Projects/Archive/` (ending an open chat session in it first); it is offered even when the
   project's details cannot load. A name already taken there is refused with "Already exists".
+  **Rename…** changes the project's name and moves its folder to match ("Home Security" becomes
+  `Projects/home-security`); the dialog shows the folder before saving. An open chat session in
+  the project is ended and its temporary grants end; a taken folder is refused with "Already
+  exists". Archived projects are restored before renaming.
   **Clone** copies the project, files and past sessions included, into `<folder>-clone` with
   the display name "<name> (Clone)" and opens it; the clone starts with no temporary grants,
   and an existing `<folder>-clone` is refused with "Already exists". **Delete…** asks first,

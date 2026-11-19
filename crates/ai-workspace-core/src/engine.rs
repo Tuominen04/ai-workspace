@@ -13,7 +13,7 @@ use crate::workspace::{
     CreatedProject, Deleted, PermissionGrantResult, PermissionRevokeResult, PermissionViewOptions,
     PermissionViewSnapshot, Project, ProjectMetadata, ValidationResult, archive_project,
     clone_project, create_project, delete_project, discover_archived_projects, discover_projects,
-    grant_temporary_permission, inspect_project, now_unix, restore_project,
+    grant_temporary_permission, inspect_project, now_unix, rename_project, restore_project,
     revoke_temporary_permission, save_session_note, set_project_model, validate_workspace,
     view_permissions,
 };
@@ -173,6 +173,16 @@ impl Engine {
     ) -> Result<(PathBuf, Deleted)> {
         self.paths.ensure_layout()?;
         delete_project(&self.paths, name, archived, erase_without_trash)
+    }
+
+    /// Renames a project: display name and folder (ADR-0015 point 7). Gated: it reads and
+    /// writes `project.toml`. Ending an open chat session in the project is the front end's
+    /// job; the project's permission state is ended here.
+    pub fn rename_project(&self, name: &str, new_name: &str) -> Result<(Project, ProjectMetadata)> {
+        self.paths.ensure_layout()?;
+        self.enforce_validation_gate(GatedOperation::ProjectRename)?;
+        let config = load_workspace_config(&self.paths)?;
+        rename_project(&self.paths, &config, name, new_name)
     }
 
     /// Restores an archived project into `Projects/`. Not gated, like archiving.

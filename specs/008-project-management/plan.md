@@ -22,6 +22,7 @@ Archive/restore, clone and delete projects from the desktop app (ADR-0015). Each
 - `archive_project(paths, name)` and `restore_project(paths, name)` use `fs::rename`, within the same filesystem, so the move is atomic. The destination is checked first.
 - `clone_project(paths, config, name)` copies recursively into `<folder>-clone`. It skips `Session/permissions.toml`, rewrites `project.toml` (`project_id`, `display_name`, `created_at`), and refuses symlinks rather than following them. A failed copy removes the partial clone.
 - `delete_project(paths, name, archived, erase_without_trash)` calls `trash::delete`. If the Trash refuses, it returns `AppError::TrashUnavailable` unless `erase_without_trash` (the second confirmation) is set, in which case it erases the folder.
+- `rename_project(paths, config, name, new_name)` normalizes the new name to a folder, refuses a taken one, ends the permission session (`terminate_permission_session`), moves the folder with `fs::rename` and rewrites `project.toml` (`project_id`, `display_name`); if writing the metadata fails, the folder is moved back.
 - `AppError::AlreadyExists(PathBuf)`, displayed as "Already exists: <path>".
 - `Engine::archive_project`, `restore_project`, `clone_project` (gated), `delete_project`, `archived_projects`.
 

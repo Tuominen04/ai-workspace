@@ -25,7 +25,7 @@ check("its name says it is a clone", true);
 // From the right-click menu, with Clone first.
 await projectsNav.getByRole("button", { name: "demo-chat", exact: true }).click({ button: "right" });
 const items = (await page.getByRole("menuitem").allTextContents()).map((t) => t.trim());
-check("a project's menu offers Clone, Archive and Delete", JSON.stringify(items) === JSON.stringify(["Clone", "Archive", "Delete…"]), JSON.stringify(items));
+check("a project's menu offers Rename, Clone, Archive and Delete", JSON.stringify(items) === JSON.stringify(["Rename…", "Clone", "Archive", "Delete…"]), JSON.stringify(items));
 if (SHOTS) await page.screenshot({ path: `${SHOTS}/clone-menu.png` });
 await page.getByRole("menuitem", { name: "Clone" }).click();
 await page.getByRole("button", { name: "Start session in demo-chat-clone" }).waitFor();

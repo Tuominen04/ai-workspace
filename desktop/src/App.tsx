@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ChatPanel } from "./components/ChatPanel";
 import { ConfigPanel } from "./components/ConfigPanel";
 import { DeleteDialog } from "./components/DeleteDialog";
+import { RenameDialog } from "./components/RenameDialog";
 import { PermissionsPanel } from "./components/PermissionsPanel";
 import { Failure } from "./components/Failure";
 import { Overview } from "./components/Overview";
@@ -15,6 +16,7 @@ import {
   type ProjectDeleted,
   type ProjectDetails,
   type ProjectMoved,
+  type ProjectRenamed,
   type SessionInfo,
 } from "./lib/engine";
 import { useLoad } from "./lib/useLoad";
@@ -57,6 +59,8 @@ function Workspace() {
   const [showArchived, setShowArchived] = useState(false);
   // The project being deleted, while its confirmation is open.
   const [deleting, setDeleting] = useState<{ name: string; archived: boolean } | null>(null);
+  // The project being renamed, while its dialog is open.
+  const [renaming, setRenaming] = useState<string | null>(null);
   // What the last delete did, shown until the next selection.
   const [notice, setNotice] = useState<string | null>(null);
   const tabs: readonly Tab[] =
@@ -81,6 +85,15 @@ function Workspace() {
         ? `Erased ${deleted.name}.`
         : `Moved ${deleted.name} to the Trash. Restore it from the Files app's Trash if you need it back.`,
     );
+  }
+
+  /** A project was renamed: it is selected under its new name, on its Overview. */
+  function renamedDone(renamed: ProjectRenamed) {
+    setRenaming(null);
+    if (renamed.session_closed) setSession(null);
+    refresh();
+    select(renamed.project.name);
+    setTab("Overview");
   }
 
   function selectArchived(name: string) {
@@ -124,6 +137,7 @@ function Workspace() {
         onRestored={restoredDone}
         onCloned={clonedDone}
         onDelete={(name, isArchived) => setDeleting({ name, archived: isArchived })}
+        onRename={setRenaming}
         onRefresh={refresh}
         onCreated={(created) => {
           refresh();
@@ -162,6 +176,7 @@ function Workspace() {
                 onRestored={restoredDone}
                 onCloned={clonedDone}
                 onDelete={(name, isArchived) => setDeleting({ name, archived: isArchived })}
+                onRename={setRenaming}
               />
             ) : status.state === "failed" ? (
               <section className="panel">
@@ -192,6 +207,9 @@ function Workspace() {
           )}
         </div>
       </main>
+      {renaming && (
+        <RenameDialog name={renaming} onRenamed={renamedDone} onCancel={() => setRenaming(null)} />
+      )}
       {deleting && (
         <DeleteDialog
           name={deleting.name}

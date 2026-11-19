@@ -124,6 +124,8 @@ Archive and restore (`Projects/Archive/`)
 
 Clone
 
+Rename (folder and display name)
+
 See ADR-0015 and `specs/008-project-management/`.
 
 ---

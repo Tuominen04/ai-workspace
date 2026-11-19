@@ -135,6 +135,15 @@ pub struct ProjectDeleted {
     pub session_closed: Option<SessionClosed>,
 }
 
+/// A renamed project, under its new folder and display name (ADR-0015 point 7).
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct ProjectRenamed {
+    pub project: ProjectDetails,
+    /// Set when a chat session in that project was ended first.
+    pub session_closed: Option<SessionClosed>,
+}
+
 /// Where an archived or restored project went.
 #[derive(Debug, Clone, Serialize, TS)]
 #[ts(export, export_to = "../../src/lib/bindings/")]
