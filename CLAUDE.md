@@ -91,6 +91,7 @@ These apply regardless of which assistant is editing this repo:
 
 - Add tests when a change affects behavior, workflows, validation, or safety — not for every tiny refactor or rename.
 - Cover at least one happy path and the critical failure/safety path (e.g. an invalid permission path, a blocked validation gate).
+- The workspace format is frozen for 1.x (ADR-0016, `docs/workspace-format.md`): `crates/ai-workspace-core/tests/fixtures/workspace-1.0/` was written by 1.0 and `format_tests.rs` must keep reading it. Never edit the fixture to make a test pass; new keys need defaults, and unknown keys stay ignored.
 - Tests that only use the library live in `crates/ai-workspace-core/tests/` and build their own temp `WorkspacePaths` (see `workspace_tests.rs`, `engine_tests.rs`). Tests that run the binary live in `crates/ai-workspace-cli/tests/` and use `assert_cmd`; set `AI_WORKSPACE_HOME`, `HOME` and `XDG_CONFIG_HOME` to temp directories so the real workspace and `~/.config` are never touched (see `root_setting_tests.rs`).
 
 ## Spec-Kit Workflow
