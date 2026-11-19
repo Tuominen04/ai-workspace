@@ -1,0 +1,9 @@
+event_id = "grant-1795111673"
+session_id = "home-lab-1795111673"
+event_type = "grant"
+path = "/home/me/granted"
+category = "temporary"
+new_status = "active"
+occurred_at = "1795111673"
+
+---
