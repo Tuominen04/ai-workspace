@@ -98,8 +98,10 @@ anything itself, so you fetch the image once:
    podman pull docker.io/ollama/ollama:latest
    ```
 
-2. In `Config/workspace.toml` of your workspace, add this line near the top, above any
-   `[table]`:
+2. Open your workspace's configuration file: `Config/workspace.toml` inside your workspace
+   folder (`~/AI/Config/workspace.toml` unless you chose another folder; **Configuration** in
+   the app shows the exact path as "Configuration file"). Add this line near the top, above
+   any `[table]`:
 
    ```toml
    runtime = "podman"
