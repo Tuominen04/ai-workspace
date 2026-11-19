@@ -96,7 +96,7 @@ impl Session {
         let (_, metadata) = inspect_project(&paths, &config, &project.name)?;
         let initial_query = initial_context_query(&metadata);
         let mut runtime = RuntimeManager::new();
-        let runtime_status = runtime.ensure_ollama()?;
+        let runtime_status = runtime.ensure_runtime(config.runtime, &config.podman)?;
 
         let model = resolve_model(&config, &metadata);
         let (agent, window) = if runtime_status.running {

@@ -1,3 +1,4 @@
+use crate::config::{Gpu, PodmanSettings, Runtime};
 use crate::error::{AppError, Result};
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
@@ -153,6 +154,52 @@ pub struct RuntimeStatus {
 
 pub struct RuntimeManager {
     ollama: Option<Child>,
+    /// Set when this manager started the Podman container, so it stops it again.
+    container_started: bool,
+}
+
+/// The name of the container the app starts, and of the volume that keeps its models
+/// (ADR-0016). The app only ever stops or removes a container with this name.
+pub const PODMAN_NAME: &str = "ai-workspace-ollama";
+/// How long a freshly started container gets to answer; the first start can be slow.
+const CONTAINER_READY_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// The arguments of `podman run` for the Ollama container: detached, removed when stopped,
+/// never pulling, published on 127.0.0.1 only, models in a named volume, plus the GPU's
+/// devices (ADR-0016).
+pub fn podman_run_args(settings: &PodmanSettings) -> Vec<String> {
+    let mut args: Vec<String> = [
+        "run",
+        "--detach",
+        "--rm",
+        "--pull=never",
+        "--name",
+        PODMAN_NAME,
+        "--publish",
+        "127.0.0.1:11434:11434",
+        "--volume",
+        "ai-workspace-ollama:/root/.ollama",
+    ]
+    .iter()
+    .map(|arg| arg.to_string())
+    .collect();
+    match settings.gpu {
+        Gpu::None => {}
+        Gpu::Nvidia => args.extend(["--device".into(), "nvidia.com/gpu=all".into()]),
+        Gpu::Amd => args.extend([
+            "--device".into(),
+            "/dev/kfd".into(),
+            "--device".into(),
+            "/dev/dri".into(),
+        ]),
+    }
+    args.push(settings.image().to_string());
+    args
+}
+
+/// The command a person runs once to download the image (the app never does).
+pub fn podman_pull_command(settings: &PodmanSettings) -> String {
+    format!("podman pull {}", settings.image())
 }
 
 impl Default for RuntimeManager {
@@ -163,7 +210,86 @@ impl Default for RuntimeManager {
 
 impl RuntimeManager {
     pub fn new() -> Self {
-        Self { ollama: None }
+        Self {
+            ollama: None,
+            container_started: false,
+        }
+    }
+
+    /// Makes sure Ollama answers on 127.0.0.1:11434: uses whatever already does, else starts
+    /// it the way `runtime` says (ADR-0016).
+    pub fn ensure_runtime(
+        &mut self,
+        runtime: Runtime,
+        podman: &PodmanSettings,
+    ) -> Result<RuntimeStatus> {
+        match runtime {
+            Runtime::Ollama => self.ensure_ollama(),
+            Runtime::Podman => self.ensure_podman(podman),
+        }
+    }
+
+    /// Starts the Ollama container unless something already answers. Never pulls: a missing
+    /// image is reported with the command that downloads it.
+    pub fn ensure_podman(&mut self, settings: &PodmanSettings) -> Result<RuntimeStatus> {
+        if is_ollama_running() {
+            return Ok(already_running());
+        }
+        let not_running = |detail: String| RuntimeStatus {
+            running: false,
+            started_here: false,
+            detail,
+        };
+
+        let image = settings.image();
+        match podman(&["image", "exists", image]) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(not_running(
+                    "Podman is not installed; session continues without a local runtime"
+                        .to_string(),
+                ));
+            }
+            Err(error) => return Err(error.into()),
+            Ok(false) => {
+                return Ok(not_running(format!(
+                    "The Ollama image {image} is not downloaded. Download it once with: {}",
+                    podman_pull_command(settings)
+                )));
+            }
+            Ok(true) => {}
+        }
+
+        // A container of ours already running is still starting up: wait for it, leave it.
+        if podman(&["container", "exists", PODMAN_NAME])? {
+            if container_running()? {
+                wait_for_ollama_ready(CONTAINER_READY_TIMEOUT);
+                return Ok(RuntimeStatus {
+                    running: is_ollama_running(),
+                    started_here: false,
+                    detail: format!("Using the running {PODMAN_NAME} container"),
+                });
+            }
+            // Left over and stopped (for example after a crash): only this one is removed.
+            let _ = podman(&["rm", PODMAN_NAME]);
+        }
+
+        let output = Command::new("podman")
+            .args(podman_run_args(settings))
+            .stdin(Stdio::null())
+            .output()?;
+        if !output.status.success() {
+            return Ok(not_running(format!(
+                "Podman could not start Ollama: {}",
+                String::from_utf8_lossy(&output.stderr).trim()
+            )));
+        }
+        self.container_started = true;
+        wait_for_ollama_ready(CONTAINER_READY_TIMEOUT);
+        Ok(RuntimeStatus {
+            running: is_ollama_running(),
+            started_here: true,
+            detail: format!("Started Ollama in the {PODMAN_NAME} container for this session"),
+        })
     }
 
     pub fn ensure_ollama(&mut self) -> Result<RuntimeStatus> {
@@ -309,6 +435,39 @@ impl Drop for RuntimeManager {
             let _ = child.kill();
             let _ = child.wait();
         }
+        // Only the container this manager started; `--rm` removes it once stopped. The
+        // volume, and so the downloaded models, stays.
+        if self.container_started {
+            self.container_started = false;
+            let _ = podman(&["stop", "--time", "5", PODMAN_NAME]);
+        }
+    }
+}
+
+/// Runs a `podman` subcommand quietly and says whether it succeeded.
+fn podman(args: &[&str]) -> std::io::Result<bool> {
+    Command::new("podman")
+        .args(args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|status| status.success())
+}
+
+fn container_running() -> std::io::Result<bool> {
+    let output = Command::new("podman")
+        .args(["inspect", "--format", "{{.State.Running}}", PODMAN_NAME])
+        .stdin(Stdio::null())
+        .output()?;
+    Ok(output.status.success() && String::from_utf8_lossy(&output.stdout).trim() == "true")
+}
+
+fn already_running() -> RuntimeStatus {
+    RuntimeStatus {
+        running: true,
+        started_here: false,
+        detail: "Ollama is already running on 127.0.0.1:11434".to_string(),
     }
 }
 
