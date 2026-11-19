@@ -101,6 +101,9 @@ On a project's **Chat**, **Start session**. AI Workspace starts Ollama if it is 
 - **End session:** after at least one answer, you can **Draft a note**. The model writes a
   short summary, you edit it, and **Save note and end** saves it in the project's `Session`
   folder, where the next chat reads it. **End without a note** saves nothing.
+- **Closing the app** with a chat that has answers asks the same question first, since the
+  conversation itself is not kept: **Draft a note** (then **Save note and close**), **Close
+  without a note**, or **Keep chatting**.
 
 Ending a chat also ends any temporary permissions you gave during it.
 

@@ -58,6 +58,24 @@ pub fn source_text(choice: &RootChoice, described: String) -> String {
 #[derive(Default)]
 pub struct OpenSession(pub Mutex<Option<Session>>);
 
+/// Set once the person has answered the save-on-close question, so the next close request
+/// really closes the window.
+#[derive(Default)]
+pub struct QuitAllowed(pub std::sync::atomic::AtomicBool);
+
+/// Whether closing the window should first ask about saving the open chat: the project of a
+/// session that has at least one answer, unless the person already answered. A session with
+/// nothing answered has nothing to save, so it simply ends with the app.
+pub fn needs_save_prompt(open: &OpenSession, allowed: &QuitAllowed) -> Option<String> {
+    if allowed.0.load(Ordering::SeqCst) {
+        return None;
+    }
+    let slot = open.0.lock().ok()?;
+    slot.as_ref()
+        .filter(|session| session.exchanges() > 0)
+        .map(|session| session.summary().project.name.clone())
+}
+
 pub fn status(engine: &Engine) -> Outcome<WorkspaceStatus> {
     let projects = engine.projects()?;
     let archived = engine.archived_projects()?;
@@ -565,6 +583,19 @@ pub async fn chat_draft_note(open: tauri::State<'_, OpenSession>) -> Outcome<Str
 #[tauri::command]
 pub async fn note_save(choice: Choice<'_>, project: String, text: String) -> Outcome<NoteSaved> {
     save_note(&resolve(&choice)?, &project, &text)
+}
+
+/// Closes the window after the save-on-close question was answered (the note saved, or
+/// declined). The chat session is closed on exit, as always.
+#[tauri::command]
+pub async fn app_quit(
+    window: tauri::Window,
+    allowed: tauri::State<'_, QuitAllowed>,
+) -> Outcome<()> {
+    allowed.0.store(true, Ordering::SeqCst);
+    window
+        .close()
+        .map_err(|error| CommandError::shell(format!("could not close the window: {error}")))
 }
 
 #[tauri::command]

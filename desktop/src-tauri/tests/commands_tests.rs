@@ -332,3 +332,21 @@ fn rename_returns_the_project_under_its_new_name() {
 
     let _ = std::fs::remove_dir_all(&engine.paths().root);
 }
+
+#[test]
+fn closing_asks_first_only_about_an_answered_chat() {
+    use std::sync::atomic::Ordering;
+    let open = OpenSession::default();
+    let allowed = commands::QuitAllowed::default();
+    assert_eq!(
+        commands::needs_save_prompt(&open, &allowed),
+        None,
+        "no chat open: close at once"
+    );
+    allowed.0.store(true, Ordering::SeqCst);
+    assert_eq!(
+        commands::needs_save_prompt(&open, &allowed),
+        None,
+        "answered already: close"
+    );
+}
