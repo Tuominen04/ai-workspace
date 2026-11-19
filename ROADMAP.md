@@ -133,15 +133,14 @@ See ADR-0015 and `specs/008-project-management/`.
 
 ---
 
-## v0.10
+## v1.0
 
 Documentation
 
-Complete user documentation.
-
----
-
-## v1.0
+Complete user documentation: a short README for someone who downloads a release (what it is,
+Ollama, quick start) and a user guide (`docs/user-guide.md`) covering every feature, where
+things are kept and what to do when something goes wrong. The vision text moves to
+`docs/vision.md`.
 
 Stable release
 
@@ -156,6 +155,8 @@ Context Builder
 Podman integration
 
 Fedora-first experience
+
+
 
 ---
 

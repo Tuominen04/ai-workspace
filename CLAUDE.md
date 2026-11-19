@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `ai-workspace` (binary name `ai-workspace`) is a local-first AI workspace manager for Fedora. It is **not** a chatbot — it launches project-aware sessions that assemble context from the filesystem and hand it to a local LLM runtime (Ollama). The filesystem is always the source of truth; the app must never become a hidden store of state.
 
-Read `README.md` for the full vision/phase breakdown before making architectural changes — it explains *why* the layering below exists.
+Read `docs/vision.md` for the full vision/phase breakdown before making architectural changes — it explains *why* the layering below exists. `README.md` is the user-facing overview and quick start, and `docs/user-guide.md` the full user guide; keep both in step with user-visible changes.
 
 ## Commands
 
