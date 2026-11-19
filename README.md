@@ -32,8 +32,9 @@ ollama pull qwen3:8b
 ```
 
 Any model works; Ollama's [model library](https://ollama.com/library) lists them. Larger models
-answer better but need more memory. For using a graphics card or other Ollama settings, see
-Ollama's [documentation](https://docs.ollama.com).
+answer better but need more memory. To use a graphics card, see Ollama's
+[GPU page](https://docs.ollama.com/gpu); for anything else, its
+[documentation](https://docs.ollama.com).
 
 ### 2. Install AI Workspace
 
