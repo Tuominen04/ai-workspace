@@ -25,10 +25,10 @@ You need Fedora on x86_64.
 
 Install Ollama from its [Linux download page](https://ollama.com/download/linux) (a one-line
 installer), or follow its [manual install](https://docs.ollama.com/linux#manual-install) steps
-if you prefer not to run a script. Then download a model, for example:
+if you prefer not to run a script. Then download a model from Ollama [library](https://ollama.com/library?sort=newest), and run:
 
 ```bash
-ollama pull qwen3:8b
+ollama pull <model>
 ```
 
 Any model works; Ollama's [model library](https://ollama.com/library) lists them. Larger models
