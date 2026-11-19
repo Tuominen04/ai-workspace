@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-18
 
-**Status**: Draft
+**Status**: Implemented (0.9.0)
 
 **Input**: Maintainer: "Deleting: does Fedora support an auto-cleanup (like 30 days) trash can? That would be great; if not, just hard delete. Archive: `/path/to/Projects/Archive/`. Clone: `<Cloned Project> (Clone)`, copy the old project's sessions too. Already exists: block with a notice. Archived projects at the bottom of the sidebar. Desktop only."
 

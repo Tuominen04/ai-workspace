@@ -126,6 +126,9 @@ Clone
 
 Rename (folder and display name)
 
+All from a project's right-click menu or Overview. The desktop app also gained tabs per
+selection (a project opens on its chat) and an Archived view in the sidebar.
+
 See ADR-0015 and `specs/008-project-management/`.
 
 ---
