@@ -198,3 +198,42 @@ fn a_stream_that_stops_before_done_fails_the_request() {
     );
     assert!(matches!(result, Err(AppError::RuntimeRequestFailed(_))));
 }
+
+fn ndjson_response(lines: &[&str]) -> String {
+    let body = lines.join("\n");
+    format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: application/x-ndjson\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        body.len(),
+        body
+    )
+}
+
+#[test]
+fn an_empty_reply_is_a_failure_that_says_the_window_was_full() {
+    // What Ollama sends when the conversation fills the window: no text, done_reason "length".
+    let base_url = spawn_mock_server(ndjson_response(&[
+        r#"{"message":{"role":"assistant","content":""},"done":false}"#,
+        r#"{"message":{"role":"assistant","content":""},"done":true,"done_reason":"length"}"#,
+    ]));
+    let messages = vec![ChatMessage::user("hi".to_string())];
+    match RuntimeManager::new().send_chat_message(&base_url, "sec", &messages) {
+        Err(AppError::RuntimeRequestFailed(reason)) => {
+            assert!(reason.contains("context window was full"), "{reason}")
+        }
+        other => panic!("expected a failure, got {other:?}"),
+    }
+}
+
+#[test]
+fn an_empty_reply_for_another_reason_is_a_failure_too() {
+    let base_url = spawn_mock_server(ndjson_response(&[
+        r#"{"message":{"role":"assistant","content":"  "},"done":true,"done_reason":"stop"}"#,
+    ]));
+    let messages = vec![ChatMessage::user("hi".to_string())];
+    match RuntimeManager::new().send_chat_message(&base_url, "sec", &messages) {
+        Err(AppError::RuntimeRequestFailed(reason)) => {
+            assert!(reason.contains("empty reply"), "{reason}")
+        }
+        other => panic!("expected a failure, got {other:?}"),
+    }
+}

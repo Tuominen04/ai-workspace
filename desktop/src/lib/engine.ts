@@ -6,6 +6,7 @@
 
 import { Channel, invoke } from "@tauri-apps/api/core";
 
+import type { ChatReply } from "./bindings/ChatReply";
 import type { CommandError } from "./bindings/CommandError";
 import type { Fix } from "./bindings/Fix";
 import type { FixAction } from "./bindings/FixAction";
@@ -33,6 +34,7 @@ import type { WorkspaceSettings } from "./bindings/WorkspaceSettings";
 import type { WorkspaceStatus } from "./bindings/WorkspaceStatus";
 
 export type {
+  ChatReply,
   CommandError,
   Fix,
   FixAction,
@@ -162,7 +164,7 @@ export const engine = {
      */
     send: (message: string, onPiece: (piece: string) => void = () => {}) => {
       const pieces = new Channel<string>(onPiece);
-      return call<string>("chat_send", { message, onPiece: pieces });
+      return call<ChatReply>("chat_send", { message, onPiece: pieces });
     },
     close: () => call<SessionClosed | null>("chat_close"),
     /** The model's draft of a note about the open session; nothing is saved. */

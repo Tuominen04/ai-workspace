@@ -254,7 +254,12 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
           // Streamed in a few pieces, as Ollama does; slower for "slowly" so a check can watch.
           const size = Math.ceil(text.length / 4);
           const pieces = [0, 1, 2, 3].map((n) => text.slice(n * size, (n + 1) * size)).filter(Boolean);
-          return stream(onPiece, pieces, message.includes("slowly") ? 300 : 30);
+          // "long chat" stands for a conversation that outgrew the model's window.
+          if (message.includes("long chat")) window.__leftOut = (window.__leftOut ?? 0) + 2;
+          return stream(onPiece, pieces, message.includes("slowly") ? 300 : 30).then((reply) => ({
+            text: reply,
+            left_out_exchanges: window.__leftOut ?? 0,
+          }));
         },
         chat_close: () => ({ project: fixture.session.project, revoked: 1 }),
         chat_draft_note: () => "# Router hardening\n- Discussed SSH exposure\n- Next: review the guest VLAN",

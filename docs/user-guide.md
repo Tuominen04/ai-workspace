@@ -119,6 +119,11 @@ skipped by mistake.
 How much fits depends on the model's context window. The most relevant notes for your question
 come first; a note that does not fit whole is cut and marked.
 
+The conversation itself is sent with every message too. When a long chat no longer fits, the
+model gets the latest messages and the oldest ones are left out; the chat says so when that
+happens. For a fresh start with what matters kept, end the session with a note and start a new
+one.
+
 ## Permissions
 
 Beyond `Base` and the project, the model reads only what you grant. On a project's

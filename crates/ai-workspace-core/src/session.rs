@@ -15,6 +15,9 @@ use crate::workspace::{
 };
 use std::fmt;
 
+/// Bytes of conversation sent with each message when the model's window is unknown.
+const DEFAULT_HISTORY_BYTES: usize = 10_000;
+
 /// An open session. Close it with [`Session::close`]; dropping it without
 /// closing still ends its permission session (temporary grants are revoked)
 /// and stops a runtime it started, so a front end that fails half-way does not
@@ -28,6 +31,8 @@ pub struct Session {
     initial_context: ContextSnapshot,
     runtime_status: RuntimeStatus,
     history: Vec<ChatMessage>,
+    /// Earlier exchanges left out of the last request because they no longer fit the window.
+    left_out: usize,
     closed: bool,
     // Declared last so it is dropped after the permission session is closed
     // in `Drop`, matching the order of `close`.
@@ -137,6 +142,7 @@ impl Session {
             initial_context,
             runtime_status,
             history,
+            left_out: 0,
             closed: false,
             runtime,
         })
@@ -174,12 +180,33 @@ impl Session {
                 "there is nothing to note yet: no message has been answered".to_string(),
             ));
         }
-        let mut messages = self.history.clone();
-        messages.push(ChatMessage::user(NOTE_REQUEST.to_string()));
+        let mut history = self.history.clone();
+        history.push(ChatMessage::user(NOTE_REQUEST.to_string()));
+        let (messages, _) = self.messages_to_send(&history);
         let reply = self
             .runtime
             .send_chat_message(OLLAMA_BASE_URL, &self.model, &messages)?;
         Ok(reply.content.trim().to_string())
+    }
+
+    /// How many earlier exchanges the last message left out because the conversation no
+    /// longer fits the model's window; 0 while everything fits.
+    pub fn left_out_exchanges(&self) -> usize {
+        self.left_out
+    }
+
+    /// Bytes of conversation (the person's messages and the replies) sent with each message:
+    /// one byte per window token, about a quarter of the window, next to the workspace text
+    /// (`ContextBudget`, 1.5 bytes per token), so even dense text leaves room for a long reply.
+    fn history_budget(&self) -> usize {
+        match self.budget.window_tokens {
+            Some(tokens) => tokens as usize,
+            None => DEFAULT_HISTORY_BYTES,
+        }
+    }
+
+    fn messages_to_send(&self, history: &[ChatMessage]) -> (Vec<ChatMessage>, usize) {
+        recent_messages(history, self.history_budget())
     }
 
     /// `true` when a runtime is available, so [`Session::send`] can be used.
@@ -219,16 +246,16 @@ impl Session {
         }
 
         self.history.push(ChatMessage::user(message.to_string()));
+        let (messages, left_out) = self.messages_to_send(&self.history);
 
-        match self.runtime.stream_chat_message(
-            OLLAMA_BASE_URL,
-            &self.model,
-            &self.history,
-            on_piece,
-        ) {
+        match self
+            .runtime
+            .stream_chat_message(OLLAMA_BASE_URL, &self.model, &messages, on_piece)
+        {
             Ok(reply) => {
                 let content = reply.content.clone();
                 self.history.push(reply);
+                self.left_out = left_out;
                 Ok(content)
             }
             Err(error) => {
@@ -268,5 +295,93 @@ fn initial_context_query(metadata: &ProjectMetadata) -> String {
         metadata.display_name.clone()
     } else {
         description.to_string()
+    }
+}
+
+/// The messages for the next request: the system message, then the most recent exchanges whose
+/// text fits `budget` bytes, always including the last message. Whole exchanges are dropped
+/// from the start, so the model never sees a reply without its question. Returns them with how
+/// many exchanges were left out.
+fn recent_messages(history: &[ChatMessage], budget: usize) -> (Vec<ChatMessage>, usize) {
+    let Some((system, rest)) = history.split_first() else {
+        return (Vec::new(), 0);
+    };
+    let mut start = rest.len();
+    let mut used = 0;
+    while start > 0 {
+        let size = rest[start - 1].content.len();
+        let is_last = start == rest.len();
+        if !is_last && used + size > budget {
+            break;
+        }
+        used += size;
+        start -= 1;
+    }
+    // Begin on a question, not on a reply whose question no longer fits.
+    while start < rest.len().saturating_sub(1) && rest[start].role != "user" {
+        start += 1;
+    }
+    let left_out = rest[..start]
+        .iter()
+        .filter(|m| m.role == "assistant")
+        .count();
+    let mut messages = Vec::with_capacity(rest.len() - start + 1);
+    messages.push(system.clone());
+    messages.extend_from_slice(&rest[start..]);
+    (messages, left_out)
+}
+
+#[cfg(test)]
+mod recent_messages_tests {
+    use super::*;
+
+    fn chat(exchanges: usize, size: usize) -> Vec<ChatMessage> {
+        let mut history = vec![ChatMessage::system("workspace notes".to_string())];
+        for n in 0..exchanges {
+            history.push(ChatMessage::user(format!("q{n}:{}", "x".repeat(size))));
+            history.push(ChatMessage {
+                role: "assistant".to_string(),
+                content: format!("a{n}:{}", "y".repeat(size)),
+            });
+        }
+        history
+    }
+
+    #[test]
+    fn everything_is_sent_while_it_fits() {
+        let mut history = chat(3, 10);
+        history.push(ChatMessage::user("next".to_string()));
+        let (messages, left_out) = recent_messages(&history, 10_000);
+        assert_eq!(messages.len(), history.len());
+        assert_eq!(left_out, 0);
+    }
+
+    #[test]
+    fn the_oldest_exchanges_are_left_out_whole() {
+        // Each exchange is about 2 x 1000 bytes; a 4500-byte budget keeps two of them.
+        let mut history = chat(5, 1000);
+        history.push(ChatMessage::user("next".to_string()));
+        let (messages, left_out) = recent_messages(&history, 4500);
+        assert_eq!(
+            messages[0].role, "system",
+            "the workspace notes always come first"
+        );
+        assert_eq!(messages[1].role, "user", "it starts on a question");
+        assert!(
+            messages[1].content.starts_with("q3:"),
+            "{}",
+            messages[1].content
+        );
+        assert_eq!(messages.last().map(|m| m.content.as_str()), Some("next"));
+        assert_eq!(left_out, 3);
+    }
+
+    #[test]
+    fn the_new_message_is_sent_even_when_it_alone_is_too_long() {
+        let mut history = chat(2, 10);
+        history.push(ChatMessage::user("z".repeat(50_000)));
+        let (messages, left_out) = recent_messages(&history, 1000);
+        assert_eq!(messages.len(), 2, "system and the new message");
+        assert_eq!(left_out, 2);
     }
 }

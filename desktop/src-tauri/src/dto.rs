@@ -395,6 +395,15 @@ impl SessionInfo {
     }
 }
 
+/// One answered message.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct ChatReply {
+    pub text: String,
+    /// Earlier exchanges the model no longer sees because the conversation outgrew its window.
+    pub left_out_exchanges: u32,
+}
+
 /// What closing a session did.
 #[derive(Debug, Clone, Serialize, TS)]
 #[ts(export, export_to = "../../src/lib/bindings/")]
