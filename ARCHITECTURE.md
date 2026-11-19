@@ -388,6 +388,10 @@ conversation, and Runtime is responsible for however that reaches the LLM
 
 A future runtime should be replaceable without changing Workspace Core.
 
+Ollama can be started two ways, chosen by `runtime` in `workspace.toml`: the installed
+`ollama serve`, or the Ollama image in a Podman container (ADR-0016). Either way the app
+talks to `127.0.0.1:11434` and uses whatever already answers there.
+
 ---
 
 ## Search Abstraction

@@ -603,3 +603,41 @@ is local only: no network, no D-Bus, no background process.
 Status
 
 Accepted
+
+---
+
+## ADR-0016
+
+What 1.0 means (spec `specs/009-stable-release/`). Decided with the maintainer.
+
+1. **Ollama in Podman.** `workspace.toml` gains `runtime = "ollama" | "podman"` (default
+   `"ollama"`) and a `[podman]` table (`image`, `gpu = "none" | "nvidia" | "amd"`). With
+   `"podman"`, a session that finds nothing on `127.0.0.1:11434` starts the Ollama image as
+   the container `ai-workspace-ollama`, published only on `127.0.0.1:11434`, with models in
+   the named volume `ai-workspace-ollama`, started with `--pull=never`. Whatever already
+   answers on that port is used instead, whatever the setting. The app never downloads the
+   image or models: a missing image is reported with the `podman pull` command. CPU by
+   default; `nvidia` adds the CDI device, `amd` the ROCm image and its devices. A container
+   the app started is stopped (and removed) with the session or the app, as `ollama serve`
+   is today; a container the person started is never touched. This is still Ollama, started
+   differently; several runtimes remain v1.1.
+2. **The workspace format is frozen for 1.x.** The layout and every file the app reads or
+   writes are documented; every 1.x reads a 1.0 workspace unchanged, unknown keys are
+   ignored, and an incompatible change waits for 2.0 or comes with a migration the person
+   starts that keeps a copy. A 1.0 workspace is kept as a test fixture.
+3. **Release gate.** 1.0 is tagged only after a written checklist passes on the current
+   Fedora with real Ollama and a real model, for both runtimes, and with no issue labelled
+   `bug` open.
+4. **Fedora-first needs nothing new** beyond confirming the RPM in that test pass, and the
+   developer command line stays as it is (ADR-0010).
+
+Reason
+
+The maintainer prefers containers and wants 1.0 to be a promise: notes written today stay
+readable, and the release is tested against the real runtime, not only the stub. Starting
+the container only on demand, binding it to localhost and never pulling keeps the
+local-first and no-background-service rules.
+
+Status
+
+Accepted

@@ -133,30 +133,34 @@ See ADR-0015 and `specs/008-project-management/`.
 
 ---
 
-## v1.0
+## v0.10
 
 Documentation
 
 Complete user documentation: a short README for someone who downloads a release (what it is,
 Ollama, quick start) and a user guide (`docs/user-guide.md`) covering every feature, where
 things are kept and what to do when something goes wrong. The vision text moves to
-`docs/vision.md`.
+`docs/vision.md`. Shipped as documentation only, without a release: the package does not
+contain these files.
 
-Stable release
+---
 
-Stable architecture
+## v1.0
 
-Workspace manager
+Stable release (ADR-0016, `specs/009-stable-release/`)
 
-Permission model
+Ollama in Podman: a `runtime = "podman"` setting lets the app start Ollama as a Podman
+container (published on 127.0.0.1 only, models in a volume, CPU by default, NVIDIA or AMD
+optional) and stop it again. The app never downloads the image or models.
 
-Context Builder
+Stable workspace format: the folder layout and every file the app reads or writes are written
+down and frozen for 1.x; a 1.0 workspace is kept as a test fixture.
 
-Podman integration
+Released after a real-Ollama test pass on the current Fedora, covering both runtimes, with no
+known bugs open.
 
-Fedora-first experience
-
-
+Already in place: the workspace manager, permission model, Context Builder and Fedora RPM.
+The developer command line stays unreleased.
 
 ---
 
