@@ -233,7 +233,7 @@ impl RuntimeManager {
     /// image is reported with the command that downloads it.
     pub fn ensure_podman(&mut self, settings: &PodmanSettings) -> Result<RuntimeStatus> {
         if is_ollama_running() {
-            return Ok(already_running());
+            return Ok(already_running(Runtime::Podman));
         }
         let not_running = |detail: String| RuntimeStatus {
             running: false,
@@ -294,11 +294,7 @@ impl RuntimeManager {
 
     pub fn ensure_ollama(&mut self) -> Result<RuntimeStatus> {
         if is_ollama_running() {
-            return Ok(RuntimeStatus {
-                running: true,
-                started_here: false,
-                detail: "Ollama is already running on 127.0.0.1:11434".to_string(),
-            });
+            return Ok(already_running(Runtime::Ollama));
         }
 
         match Command::new("ollama")
@@ -365,7 +361,7 @@ impl RuntimeManager {
             .post(&format!("{base_url}/api/chat"))
             .set("Content-Type", "application/json")
             .send_bytes(&body_bytes)
-            .map_err(|e| failed(e.to_string()))?;
+            .map_err(|e| request_failed(model, e))?;
 
         let mut content = String::new();
         let mut role = "assistant".to_string();
@@ -420,7 +416,7 @@ impl RuntimeManager {
             .set("Content-Type", "application/json")
             .timeout(SHOW_REQUEST_TIMEOUT)
             .send_bytes(&body)
-            .map_err(|error| AppError::RuntimeRequestFailed(error.to_string()))?
+            .map_err(|error| request_failed(model, error))?
             .into_string()
             .map_err(|error| AppError::RuntimeRequestFailed(error.to_string()))?;
         let parsed: ShowResponse = serde_json::from_str(&text)
@@ -444,6 +440,23 @@ impl Drop for RuntimeManager {
     }
 }
 
+/// A failed request to Ollama: a 404 means it does not have the model, said plainly with the
+/// command that downloads it (a session using Podman puts in the `podman exec` form).
+fn request_failed(model: &str, error: ureq::Error) -> AppError {
+    match error {
+        ureq::Error::Status(404, _) => AppError::ModelNotInstalled {
+            model: model.to_string(),
+            pull_command: format!("ollama pull {model}"),
+        },
+        other => AppError::RuntimeRequestFailed(other.to_string()),
+    }
+}
+
+/// The command that downloads `model` into the Ollama the app started in Podman.
+pub fn podman_model_pull_command(model: &str) -> String {
+    format!("podman exec {PODMAN_NAME} ollama pull {model}")
+}
+
 /// Runs a `podman` subcommand quietly and says whether it succeeded.
 fn podman(args: &[&str]) -> std::io::Result<bool> {
     Command::new("podman")
@@ -463,11 +476,23 @@ fn container_running() -> std::io::Result<bool> {
     Ok(output.status.success() && String::from_utf8_lossy(&output.stdout).trim() == "true")
 }
 
-fn already_running() -> RuntimeStatus {
+/// Something already answers on 127.0.0.1:11434 and is used as it is. Says which: the app's
+/// own container (left running, for example started by hand), or another Ollama, which with
+/// `runtime = "podman"` means the container is not what answers.
+fn already_running(runtime: Runtime) -> RuntimeStatus {
+    // Without Podman, or with no such container, it is not the app's container.
+    let ours = container_running().unwrap_or(false);
+    let detail = match (ours, runtime) {
+        (true, _) => format!(
+            "Using Ollama in the {PODMAN_NAME} container, which was already running (it is left running)"
+        ),
+        (false, Runtime::Podman) => "Using an Ollama already running on 127.0.0.1:11434, not the app's Podman container; stop it to use the container".to_string(),
+        (false, Runtime::Ollama) => "Ollama is already running on 127.0.0.1:11434".to_string(),
+    };
     RuntimeStatus {
         running: true,
         started_here: false,
-        detail: "Ollama is already running on 127.0.0.1:11434".to_string(),
+        detail,
     }
 }
 

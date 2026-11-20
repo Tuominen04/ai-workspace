@@ -98,14 +98,21 @@ anything itself, so you fetch the image once:
    podman pull docker.io/ollama/ollama:latest
    ```
 
-2. In `Config/workspace.toml` of your workspace, add this line near the top, above any
-   `[table]`:
+2. Open your workspace's configuration file: `Config/workspace.toml` inside your workspace
+   folder (`~/AI/Config/workspace.toml` unless you chose another folder; **Configuration** in
+   the app shows the exact path as "Configuration file"). Add this line near the top, above
+   any `[table]`:
 
    ```toml
    runtime = "podman"
    ```
 
-3. Start a chat session. **Configuration** shows "Runs Ollama with: Podman container".
+3. Start a chat session. The line above the context list says which Ollama answers: "Started
+   Ollama in the ai-workspace-ollama container" when the app started it, "Using Ollama in the
+   ai-workspace-ollama container, which was already running" when it was running already, or
+   "Using an Ollama already running on 127.0.0.1:11434, not the app's Podman container" when
+   something else answers. **Configuration** shows the setting: "Runs Ollama with: Podman
+   container".
 4. While the session is open, download a model into the container:
 
    ```bash
@@ -113,11 +120,36 @@ anything itself, so you fetch the image once:
    ```
 
    Models are kept in the Podman volume `ai-workspace-ollama`, so they survive the container
-   being stopped.
+   being stopped. Then choose the model on the project's **Overview** (or as `default_model`).
+
+The container has its own models: those of an installed Ollama are not in it, so download
+them again into the container.
 
 The container is reachable only from your own computer (`127.0.0.1:11434`). If an Ollama is
 already running there (one you started yourself, in a container or not), the app uses it and
-starts nothing.
+starts nothing. So stop an installed Ollama first (`sudo systemctl stop ollama`), and check
+that nothing listens on the port (`ss -tlnp | grep 11434` prints nothing); otherwise the app
+quietly uses that one instead.
+
+**Your own models (Modelfiles):** `ollama create` run inside the container cannot see files in
+your home folder. While a session has the container running, either use an installed `ollama`
+command, which reads the Modelfile on your computer and sends it to the container:
+
+```bash
+ollama create sec -f ~/path/to/sec.Modelfile
+```
+
+or copy the file in first:
+
+```bash
+podman cp ~/path/to/sec.Modelfile ai-workspace-ollama:/tmp/sec.Modelfile
+podman exec ai-workspace-ollama ollama create sec -f /tmp/sec.Modelfile
+```
+
+The Modelfile's `FROM` line must name a model the container already has, written exactly as
+`ollama list` shows it (for example `qwen3:8b`, with a colon); otherwise Ollama tries to
+download it and fails with "file does not exist". Check with
+`podman exec ai-workspace-ollama ollama list`.
 
 **Graphics card:** add a `[podman]` table at the end of `workspace.toml`:
 
@@ -225,7 +257,8 @@ standard folders.
 |---|---|
 | "No local runtime is running" | Install Ollama (see the [README](../README.md#quick-start)), or set up [Ollama in Podman](#running-ollama-in-podman), and start the session again. |
 | "The Ollama image … is not downloaded" | Run the `podman pull` command it shows, then start the session again. |
-| The model answers with an error about the model | It is not downloaded: `ollama pull <model>`, or pick an installed one on the project's Overview. |
+| The chat uses an Ollama you did not expect | Something already answers on `127.0.0.1:11434` (an installed Ollama, or a container you started); stop it, then start the session again. |
+| "The model '…' is not installed in Ollama" | Run the download command it shows (`ollama pull …`, or `podman exec ai-workspace-ollama ollama pull …` with Ollama in Podman), or choose an installed model on the project's Overview. |
 | Replies are very slow | Use a smaller model, or set Ollama up to use your graphics card (Ollama's [GPU page](https://docs.ollama.com/gpu)). |
 | A reply stopped halfway | **Retry**. |
 | A note is missing from the context list | It may not be `.md`, its name may look like a secret, or it did not fit: ask about it by name, or use a model with a larger context window. |
