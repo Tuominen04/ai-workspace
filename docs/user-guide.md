@@ -7,6 +7,7 @@ Everything AI Workspace does, for the person using it. To install it, see the
 - [The window](#the-window)
 - [Projects](#projects)
 - [Models](#models)
+- [Running Ollama in Podman](#running-ollama-in-podman)
 - [Chat](#chat)
 - [What the model reads](#what-the-model-reads)
 - [Permissions](#permissions)
@@ -84,6 +85,78 @@ A model you built with your own instructions (an Ollama Modelfile with a `SYSTEM
 as a security advisor) keeps them: the chat shows "the model's own instructions are kept", and
 your notes are added after its rules. See Ollama's
 [Modelfile reference](https://docs.ollama.com/modelfile) to make one.
+
+## Running Ollama in Podman
+
+Instead of installing Ollama, you can run it in a Podman container; AI Workspace then starts
+the container when a chat needs it and stops it when the app closes. The app never downloads
+anything itself, so you fetch the image once:
+
+1. Get the image (Podman comes with Fedora Workstation):
+
+   ```bash
+   podman pull docker.io/ollama/ollama:latest
+   ```
+
+2. Open your workspace's configuration file: `Config/workspace.toml` inside your workspace
+   folder (`~/AI/Config/workspace.toml` unless you chose another folder; **Configuration** in
+   the app shows the exact path as "Configuration file"). Add this line near the top, above
+   any `[table]`:
+
+   ```toml
+   runtime = "podman"
+   ```
+
+3. Start a chat session. **Configuration** shows "Runs Ollama with: Podman container".
+4. While the session is open, download a model into the container:
+
+   ```bash
+   podman exec ai-workspace-ollama ollama pull qwen3:8b
+   ```
+
+   Models are kept in the Podman volume `ai-workspace-ollama`, so they survive the container
+   being stopped. Then choose the model on the project's **Overview** (or as `default_model`).
+
+The container has its own models: those of an installed Ollama are not in it, so download
+them again into the container.
+
+The container is reachable only from your own computer (`127.0.0.1:11434`). If an Ollama is
+already running there (one you started yourself, in a container or not), the app uses it and
+starts nothing. So stop an installed Ollama first (`sudo systemctl stop ollama`), and check
+that nothing listens on the port (`ss -tlnp | grep 11434` prints nothing); otherwise the app
+quietly uses that one instead.
+
+**Your own models (Modelfiles):** `ollama create` run inside the container cannot see files in
+your home folder. While a session has the container running, either use an installed `ollama`
+command, which reads the Modelfile on your computer and sends it to the container:
+
+```bash
+ollama create sec -f ~/path/to/sec.Modelfile
+```
+
+or copy the file in first:
+
+```bash
+podman cp ~/path/to/sec.Modelfile ai-workspace-ollama:/tmp/sec.Modelfile
+podman exec ai-workspace-ollama ollama create sec -f /tmp/sec.Modelfile
+```
+
+The Modelfile's `FROM` line must name a model the container already has, written exactly as
+`ollama list` shows it (for example `qwen3:8b`, with a colon); otherwise Ollama tries to
+download it and fails with "file does not exist". Check with
+`podman exec ai-workspace-ollama ollama list`.
+
+**Graphics card:** add a `[podman]` table at the end of `workspace.toml`:
+
+```toml
+[podman]
+gpu = "nvidia"   # or "amd"
+```
+
+NVIDIA needs the NVIDIA Container Toolkit set up for Podman; AMD uses Ollama's ROCm image,
+which you pull instead with `podman pull docker.io/ollama/ollama:rocm`. Ollama's
+[container page](https://docs.ollama.com/docker) describes both. To use another image, set
+`image = "…"` in the same table.
 
 ## Chat
 
@@ -177,7 +250,9 @@ standard folders.
 
 | What you see | What to do |
 |---|---|
-| "No local runtime is running" | Install Ollama (see the [README](../README.md#quick-start)) and start the session again. |
+| "No local runtime is running" | Install Ollama (see the [README](../README.md#quick-start)), or set up [Ollama in Podman](#running-ollama-in-podman), and start the session again. |
+| "The Ollama image … is not downloaded" | Run the `podman pull` command it shows, then start the session again. |
+| The chat uses an Ollama you did not expect | Something already answers on `127.0.0.1:11434` (an installed Ollama, or a container you started); stop it, then start the session again. |
 | The model answers with an error about the model | It is not downloaded: `ollama pull <model>`, or pick an installed one on the project's Overview. |
 | Replies are very slow | Use a smaller model, or set Ollama up to use your graphics card (Ollama's [GPU page](https://docs.ollama.com/gpu)). |
 | A reply stopped halfway | **Retry**. |

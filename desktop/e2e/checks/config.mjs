@@ -14,6 +14,7 @@ const browser = await launch();
   const text = await page.locator(".content").textContent();
   check("the configuration file and default model are shown", text.includes("/home/me/AI/Config/workspace.toml") && text.includes("qwen3.6:latest"));
   check("new project folders are listed", text.includes("Knowledge, Specs, Resources, Session"));
+  check("how Ollama is run is shown", text.includes("Runs Ollama with") && text.includes("the installed ollama command"));
   check("the folders recorded in the file are shown apart", text.includes("Recorded in the file"));
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/configuration.png` });
   await page.close();
