@@ -55,6 +55,7 @@ impl From<AppError> for CommandError {
             AppError::PermissionGrantNotFound(_) => "PermissionGrantNotFound",
             AppError::MissingProjectContext => "MissingProjectContext",
             AppError::RuntimeRequestFailed(_) => "RuntimeRequestFailed",
+            AppError::ModelNotInstalled { .. } => "ModelNotInstalled",
             AppError::InvalidWorkspaceRoot { .. } => "InvalidWorkspaceRoot",
         };
         Self {
