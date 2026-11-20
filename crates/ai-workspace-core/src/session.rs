@@ -3,12 +3,14 @@
 //! replies as data; a front end does the prompting and rendering. See
 //! ADR-0008.
 
-use crate::config::load_workspace_config;
+use crate::config::{Runtime, load_workspace_config};
 use crate::context::{ContextBudget, ContextSnapshot, build_context_snapshot_within};
 use crate::engine::Engine;
 use crate::error::{AppError, Result};
 use crate::paths::WorkspacePaths;
-use crate::runtime::{ChatMessage, OLLAMA_BASE_URL, RuntimeManager, RuntimeStatus};
+use crate::runtime::{
+    ChatMessage, OLLAMA_BASE_URL, RuntimeManager, RuntimeStatus, podman_model_pull_command,
+};
 use crate::workspace::{
     Project, ProjectMetadata, initialize_permission_session, inspect_project, resolve_model,
     terminate_permission_session,
@@ -30,6 +32,8 @@ pub struct Session {
     budget: ContextBudget,
     initial_context: ContextSnapshot,
     runtime_status: RuntimeStatus,
+    /// How Ollama is started for this workspace, so a missing model's download command fits.
+    runtime_kind: Runtime,
     history: Vec<ChatMessage>,
     /// Earlier exchanges left out of the last request because they no longer fit the window.
     left_out: usize,
@@ -101,7 +105,7 @@ impl Session {
         let (_, metadata) = inspect_project(&paths, &config, &project.name)?;
         let initial_query = initial_context_query(&metadata);
         let mut runtime = RuntimeManager::new();
-        let runtime_status = runtime.ensure_ollama()?;
+        let runtime_status = runtime.ensure_runtime(config.runtime, &config.podman)?;
 
         let model = resolve_model(&config, &metadata);
         let (agent, window) = if runtime_status.running {
@@ -113,7 +117,10 @@ impl Session {
                     },
                     info.num_ctx,
                 ),
-                Err(error) => (AgentInstructions::Unknown(error.to_string()), None),
+                Err(error) => (
+                    AgentInstructions::Unknown(for_runtime(error, config.runtime).to_string()),
+                    None,
+                ),
             }
         } else {
             (
@@ -141,6 +148,7 @@ impl Session {
             project: project.clone(),
             initial_context,
             runtime_status,
+            runtime_kind: config.runtime,
             history,
             left_out: 0,
             closed: false,
@@ -185,7 +193,8 @@ impl Session {
         let (messages, _) = self.messages_to_send(&history);
         let reply = self
             .runtime
-            .send_chat_message(OLLAMA_BASE_URL, &self.model, &messages)?;
+            .send_chat_message(OLLAMA_BASE_URL, &self.model, &messages)
+            .map_err(|error| for_runtime(error, self.runtime_kind))?;
         Ok(reply.content.trim().to_string())
     }
 
@@ -260,7 +269,7 @@ impl Session {
             }
             Err(error) => {
                 self.history.pop();
-                Err(error)
+                Err(for_runtime(error, self.runtime_kind))
             }
         }
     }
@@ -383,5 +392,57 @@ mod recent_messages_tests {
         let (messages, left_out) = recent_messages(&history, 1000);
         assert_eq!(messages.len(), 2, "system and the new message");
         assert_eq!(left_out, 2);
+    }
+}
+
+/// A missing model's download command, for the runtime in use: with Podman, the model goes into
+/// the container the app runs (ADR-0016).
+fn for_runtime(error: AppError, runtime: Runtime) -> AppError {
+    match (error, runtime) {
+        (AppError::ModelNotInstalled { model, .. }, Runtime::Podman) => {
+            let pull_command = podman_model_pull_command(&model);
+            AppError::ModelNotInstalled {
+                model,
+                pull_command,
+            }
+        }
+        (error, _) => error,
+    }
+}
+
+#[cfg(test)]
+mod for_runtime_tests {
+    use super::*;
+
+    fn missing() -> AppError {
+        AppError::ModelNotInstalled {
+            model: "qwen3:8b".to_string(),
+            pull_command: "ollama pull qwen3:8b".to_string(),
+        }
+    }
+
+    #[test]
+    fn the_installed_ollama_keeps_its_own_command() {
+        let message = for_runtime(missing(), Runtime::Ollama).to_string();
+        assert!(message.contains("`ollama pull qwen3:8b`"), "{message}");
+    }
+
+    #[test]
+    fn podman_gets_the_command_for_its_container() {
+        let message = for_runtime(missing(), Runtime::Podman).to_string();
+        assert!(
+            message.contains("`podman exec ai-workspace-ollama ollama pull qwen3:8b`"),
+            "{message}"
+        );
+        assert!(message.starts_with("the model 'qwen3:8b' is not installed in Ollama"));
+    }
+
+    #[test]
+    fn other_errors_pass_through() {
+        let other = for_runtime(
+            AppError::RuntimeRequestFailed("timed out".to_string()),
+            Runtime::Podman,
+        );
+        assert!(matches!(other, AppError::RuntimeRequestFailed(_)));
     }
 }

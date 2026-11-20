@@ -54,6 +54,7 @@ fn configuration_is_read_and_a_missing_file_is_reported() {
         ["Knowledge", "Specs", "Resources", "Session"]
     );
     assert!(settings.config_file.ends_with("workspace.toml"));
+    assert_eq!(settings.runtime, "the installed ollama command");
 
     std::fs::remove_file(engine.paths().workspace_config_file())
         .expect("test should remove the workspace config");

@@ -62,6 +62,8 @@ export function ConfigPanel({ onChanged }: Props) {
             <dd className="path">{settings.value.config_file}</dd>
             <dt>Default model</dt>
             <dd>{settings.value.default_model}</dd>
+            <dt>Runs Ollama with</dt>
+            <dd>{settings.value.runtime}</dd>
             <dt>Project file</dt>
             <dd>{settings.value.project_metadata_file}</dd>
             <dt>New project folders</dt>

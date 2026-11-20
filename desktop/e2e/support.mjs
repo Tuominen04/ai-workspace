@@ -79,6 +79,7 @@ export const FIXTURE = {
     root_source: "user config file /home/me/.config/ai-workspace/config.toml",
     config_file: "/home/me/AI/Config/workspace.toml",
     default_model: "qwen3.6:latest",
+    runtime: "the installed ollama command",
     project_metadata_file: "project.toml",
     default_project_directories: ["Knowledge", "Specs", "Resources", "Session"],
     recorded_root: "/home/me/AI",

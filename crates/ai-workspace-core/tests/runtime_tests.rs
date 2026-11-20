@@ -119,11 +119,25 @@ fn show_model_reports_a_model_without_instructions() {
 }
 
 #[test]
-fn show_model_maps_an_unknown_model_to_runtime_request_failed() {
+fn show_model_maps_an_unknown_model_to_model_not_installed() {
+    // Was a generic RuntimeRequestFailed ("status code 404") until #42.
     let response =
         "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".to_string();
     let base_url = spawn_mock_server(response);
     let result = RuntimeManager::new().show_model(&base_url, "missing");
+    assert!(matches!(
+        result,
+        Err(AppError::ModelNotInstalled { ref model, .. }) if model == "missing"
+    ));
+}
+
+#[test]
+fn other_http_errors_stay_runtime_request_failed() {
+    let response =
+        "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+            .to_string();
+    let base_url = spawn_mock_server(response);
+    let result = RuntimeManager::new().show_model(&base_url, "sec");
     assert!(matches!(result, Err(AppError::RuntimeRequestFailed(_))));
 }
 
@@ -236,4 +250,39 @@ fn an_empty_reply_for_another_reason_is_a_failure_too() {
         }
         other => panic!("expected a failure, got {other:?}"),
     }
+}
+
+#[test]
+fn a_missing_model_is_said_plainly_with_the_download_command() {
+    // What Ollama answers for a model it does not have.
+    let body = r#"{"error":"model 'qwen3.6:latest' not found"}"#;
+    let not_found = format!(
+        "HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        body.len(),
+        body
+    );
+    let messages = vec![ChatMessage::user("hi".to_string())];
+    let chat = RuntimeManager::new().send_chat_message(
+        &spawn_mock_server(not_found.clone()),
+        "qwen3.6:latest",
+        &messages,
+    );
+    match chat {
+        Err(AppError::ModelNotInstalled {
+            model,
+            pull_command,
+        }) => {
+            assert_eq!(model, "qwen3.6:latest");
+            assert_eq!(pull_command, "ollama pull qwen3.6:latest");
+        }
+        other => panic!("expected ModelNotInstalled, got {other:?}"),
+    }
+
+    let show = RuntimeManager::new().show_model(&spawn_mock_server(not_found), "qwen3.6:latest");
+    let message = show.expect_err("a missing model").to_string();
+    assert!(
+        message.starts_with("the model 'qwen3.6:latest' is not installed in Ollama")
+            && !message.contains("404"),
+        "{message}"
+    );
 }

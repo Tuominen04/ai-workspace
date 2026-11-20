@@ -15,7 +15,12 @@ config_file: string,
 /**
  * The model used by projects that name none.
  */
-default_model: string, project_metadata_file: string, default_project_directories: Array<string>, 
+default_model: string, 
+/**
+ * How Ollama is started, in words: the installed command or a Podman container with
+ * its image and graphics card (ADR-0016).
+ */
+runtime: string, project_metadata_file: string, default_project_directories: Array<string>, 
 /**
  * The folders as recorded in the file when it was written. Shown for reference: the
  * folders in use always follow `active_root`.
