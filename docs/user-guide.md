@@ -173,6 +173,9 @@ On a project's **Chat**, **Start session**. AI Workspace starts Ollama if it is 
 - **Replies** appear as they are written and are formatted (headings, lists, tables, code).
   Links and images in a reply are shown as text and never opened, so nothing reaches the
   internet.
+- **Scrolling:** while you are at the end of the conversation, it follows a reply as it is
+  written. Scroll up to read and it stays where you are, also when the reply finishes; scroll
+  back down to the end, or send a message, and it follows again.
 - **Retry:** if a reply fails, your question stays and **Retry** sends it again.
 - **Switching** tabs or projects keeps the chat; it stays open until you end it or close the
   app.
