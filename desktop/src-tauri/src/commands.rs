@@ -15,8 +15,8 @@ use crate::dto::{
 };
 use ai_workspace_core::workspace::{Deleted, PermissionViewOptions};
 use ai_workspace_core::{Engine, Session};
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Mutex, TryLockError};
 
 type Outcome<T> = Result<T, CommandError>;
 
@@ -55,8 +55,23 @@ pub fn source_text(choice: &RootChoice, described: String) -> String {
 }
 
 /// The one open session, if any. Opening another closes it; so does quitting the app.
+///
+/// `slot` stays locked for as long as the model writes a reply or a note, so the window's own
+/// thread never waits on it: it reads `project` instead, which is only ever locked briefly.
 #[derive(Default)]
-pub struct OpenSession(pub Mutex<Option<Session>>);
+pub struct OpenSession {
+    slot: Mutex<Option<Session>>,
+    /// The open session's project, kept next to `slot` for checks that must not wait.
+    project: Mutex<Option<String>>,
+}
+
+impl OpenSession {
+    fn set_project(&self, project: Option<String>) {
+        if let Ok(mut name) = self.project.lock() {
+            *name = project;
+        }
+    }
+}
 
 /// Set once the person has answered the save-on-close question, so the next close request
 /// really closes the window.
@@ -66,14 +81,22 @@ pub struct QuitAllowed(pub std::sync::atomic::AtomicBool);
 /// Whether closing the window should first ask about saving the open chat: the project of a
 /// session that has at least one answer, unless the person already answered. A session with
 /// nothing answered has nothing to save, so it simply ends with the app.
+///
+/// Called on the window's thread, so it never waits for the session: while the model is
+/// writing a reply or a note, the session is busy and there is a conversation to save, so it
+/// asks at once (the answer is possible once the model is done).
 pub fn needs_save_prompt(open: &OpenSession, allowed: &QuitAllowed) -> Option<String> {
     if allowed.0.load(Ordering::SeqCst) {
         return None;
     }
-    let slot = open.0.lock().ok()?;
-    slot.as_ref()
-        .filter(|session| session.exchanges() > 0)
-        .map(|session| session.summary().project.name.clone())
+    match open.slot.try_lock() {
+        Ok(slot) => slot
+            .as_ref()
+            .filter(|session| session.exchanges() > 0)
+            .map(|session| session.summary().project.name.clone()),
+        Err(TryLockError::WouldBlock) => open.project.lock().ok()?.clone(),
+        Err(TryLockError::Poisoned(_)) => None,
+    }
 }
 
 pub fn status(engine: &Engine) -> Outcome<WorkspaceStatus> {
@@ -317,6 +340,7 @@ pub fn switch_to_saved(choice: &RootChoice, open: &OpenSession) -> Outcome<Switc
 pub fn session_open(engine: &Engine, open: &OpenSession, name: &str) -> Outcome<SessionInfo> {
     let mut slot = lock(open)?;
     if let Some(previous) = slot.take() {
+        open.set_project(None);
         previous.close()?;
     }
 
@@ -330,6 +354,7 @@ pub fn session_open(engine: &Engine, open: &OpenSession, name: &str) -> Outcome<
 
     let session = Session::open(engine, project)?;
     let info = SessionInfo::new(&session.summary());
+    open.set_project(Some(info.project.clone()));
     *slot = Some(session);
     Ok(info)
 }
@@ -377,6 +402,7 @@ pub fn session_close(open: &OpenSession) -> Outcome<Option<SessionClosed>> {
     let Some(session) = slot.take() else {
         return Ok(None);
     };
+    open.set_project(None);
     let project = session.summary().project.name.clone();
     let revoked = session.close()?;
     Ok(Some(SessionClosed {
@@ -386,7 +412,7 @@ pub fn session_close(open: &OpenSession) -> Outcome<Option<SessionClosed>> {
 }
 
 fn lock(open: &OpenSession) -> Outcome<std::sync::MutexGuard<'_, Option<Session>>> {
-    open.0.lock().map_err(|_| {
+    open.slot.lock().map_err(|_| {
         CommandError::shell(
             "the session state is unusable after an earlier failure; restart the app",
         )
@@ -601,4 +627,58 @@ pub async fn app_quit(
 #[tauri::command]
 pub async fn chat_close(open: tauri::State<'_, OpenSession>) -> Outcome<Option<SessionClosed>> {
     session_close(&open)
+}
+
+#[cfg(test)]
+mod close_check_tests {
+    use super::*;
+    use std::sync::mpsc;
+    use std::thread;
+    use std::time::Duration;
+
+    #[test]
+    fn closing_during_a_reply_asks_at_once_instead_of_waiting() {
+        let open = std::sync::Arc::new(OpenSession::default());
+        open.set_project(Some("project-a".to_string()));
+        let allowed = QuitAllowed::default();
+
+        // A reply being written holds the session for its whole length.
+        let (held, release) = (mpsc::channel(), mpsc::channel::<()>());
+        let busy = std::sync::Arc::clone(&open);
+        let writer = thread::spawn(move || {
+            let _slot = busy.slot.lock().expect("lock");
+            held.0.send(()).expect("held");
+            let _ = release.1.recv_timeout(Duration::from_secs(10));
+        });
+        held.1.recv().expect("the reply holds the session");
+
+        let (answer, answered) = mpsc::channel();
+        let checking = std::sync::Arc::clone(&open);
+        thread::spawn(move || {
+            let _ = answer.send(needs_save_prompt(&checking, &allowed));
+        });
+        let asked = answered.recv_timeout(Duration::from_secs(2));
+        release.0.send(()).expect("release");
+        writer.join().expect("writer");
+        assert_eq!(
+            asked.expect("the close check must not wait for the reply"),
+            Some("project-a".to_string())
+        );
+    }
+
+    #[test]
+    fn a_closed_session_leaves_nothing_to_ask_about() {
+        let open = OpenSession::default();
+        open.set_project(Some("project-a".to_string()));
+        assert!(
+            session_close(&open)
+                .expect("nothing open is fine")
+                .is_none()
+        );
+        assert_eq!(
+            needs_save_prompt(&open, &QuitAllowed::default()),
+            None,
+            "free and empty: close at once"
+        );
+    }
 }

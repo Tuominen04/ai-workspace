@@ -52,4 +52,31 @@ await second.waitForFunction(() => window.__quit === true);
 const saved = await second.evaluate(() => window.__calls.some((c) => c.command === "note_save"));
 check("closing without a note saves nothing and closes", !saved);
 
+await second.close();
+
+// Closed while a reply is still being written: asked at once, answerable when the reply is done.
+const third = await browser.newPage();
+await stubEngine(third);
+await third.goto(URL);
+const done = third.locator(".line.ai:not(.streaming):not(.thinking)");
+const ask = async (text) => {
+  await third.getByLabel("Message").fill(text);
+  await third.waitForFunction(() => !document.querySelector(".composer button[type=submit]").disabled);
+  await third.locator(".composer button[type=submit]").click();
+};
+await third.getByRole("button", { name: "security", exact: true }).click();
+await third.getByRole("button", { name: "Start session in security" }).click();
+await ask("First question");
+await done.first().waitFor();
+await ask("Now answer slowly");
+await third.locator(".line.ai.streaming").waitFor();
+await third.evaluate(() => window.__emit("close-requested", "security"));
+const closeNow = third.getByRole("button", { name: "Close without a note" });
+await closeNow.waitFor();
+check("closing mid-reply asks at once, but waits for the reply to answer", await closeNow.isDisabled());
+await done.filter({ hasText: "You asked: Now answer slowly" }).waitFor();
+await closeNow.click();
+await third.waitForFunction(() => window.__quit === true);
+check("once the reply is done the question can be answered", await third.evaluate(() => window.__quit === true));
+
 await finish(browser);

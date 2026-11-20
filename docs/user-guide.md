@@ -181,7 +181,8 @@ On a project's **Chat**, **Start session**. AI Workspace starts Ollama if it is 
   folder, where the next chat reads it. **End without a note** saves nothing.
 - **Closing the app** with a chat that has answers asks the same question first, since the
   conversation itself is not kept: **Draft a note** (then **Save note and close**), **Close
-  without a note**, or **Keep chatting**.
+  without a note**, or **Keep chatting**. Closed while a reply is still being written, it asks
+  at once and the choices work as soon as the reply is done.
 
 Ending a chat also ends any temporary permissions you gave during it.
 
