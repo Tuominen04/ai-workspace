@@ -55,6 +55,7 @@ impl From<AppError> for CommandError {
             AppError::PermissionGrantNotFound(_) => "PermissionGrantNotFound",
             AppError::MissingProjectContext => "MissingProjectContext",
             AppError::RuntimeRequestFailed(_) => "RuntimeRequestFailed",
+            AppError::ModelNotInstalled { .. } => "ModelNotInstalled",
             AppError::InvalidWorkspaceRoot { .. } => "InvalidWorkspaceRoot",
         };
         Self {
@@ -424,6 +425,9 @@ pub struct WorkspaceSettings {
     pub config_file: String,
     /// The model used by projects that name none.
     pub default_model: String,
+    /// How Ollama is started, in words: the installed command or a Podman container with
+    /// its image and graphics card (ADR-0016).
+    pub runtime: String,
     pub project_metadata_file: String,
     pub default_project_directories: Vec<String>,
     /// The folders as recorded in the file when it was written. Shown for reference: the
@@ -443,6 +447,7 @@ impl WorkspaceSettings {
             root_source: source.describe(),
             config_file: path_text(&paths.workspace_config_file()),
             default_model: config.default_model.clone(),
+            runtime: runtime_text(config),
             project_metadata_file: config.project_metadata_file.clone(),
             default_project_directories: config.default_project_directories.clone(),
             recorded_root: config.root_path.clone(),
@@ -451,6 +456,21 @@ impl WorkspaceSettings {
             recorded_cache: config.cache_path.clone(),
             recorded_logs: config.logs_path.clone(),
             recorded_config: config.config_path.clone(),
+        }
+    }
+}
+
+fn runtime_text(config: &WorkspaceConfig) -> String {
+    use ai_workspace_core::config::{Gpu, Runtime};
+    match config.runtime {
+        Runtime::Ollama => "the installed ollama command".to_string(),
+        Runtime::Podman => {
+            let gpu = match config.podman.gpu {
+                Gpu::None => "CPU",
+                Gpu::Nvidia => "NVIDIA graphics card",
+                Gpu::Amd => "AMD graphics card",
+            };
+            format!("Podman container ({}, {gpu})", config.podman.image())
         }
     }
 }
