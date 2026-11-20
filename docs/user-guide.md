@@ -107,7 +107,12 @@ anything itself, so you fetch the image once:
    runtime = "podman"
    ```
 
-3. Start a chat session. **Configuration** shows "Runs Ollama with: Podman container".
+3. Start a chat session. The line above the context list says which Ollama answers: "Started
+   Ollama in the ai-workspace-ollama container" when the app started it, "Using Ollama in the
+   ai-workspace-ollama container, which was already running" when it was running already, or
+   "Using an Ollama already running on 127.0.0.1:11434, not the app's Podman container" when
+   something else answers. **Configuration** shows the setting: "Runs Ollama with: Podman
+   container".
 4. While the session is open, download a model into the container:
 
    ```bash
