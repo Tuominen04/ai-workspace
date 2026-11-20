@@ -22,6 +22,9 @@ type Props = {
  * permissions and builds the first context; every message rebuilds the context from what was
  * asked; closing revokes temporary permissions.
  */
+/** How near the end (in pixels) still counts as being at the end of the conversation. */
+const FOLLOW_SLACK = 24;
+
 export function ChatPanel({
   project,
   session,
@@ -43,15 +46,28 @@ export function ChatPanel({
   const [streaming, setStreaming] = useState<string | null>(null);
   // Earlier exchanges the model no longer sees (the chat outgrew its window).
   const [leftOut, setLeftOut] = useState(0);
-  const end = useRef<HTMLDivElement>(null);
   const prompt = useRef<HTMLDivElement>(null);
   // Ending or closing asks at the top of the chat, next to End session; while it asks, the
   // view stays there instead of following the conversation to its end.
   const asking = ending !== null || quitting;
 
+  // The conversation follows a reply as it is written only while the person is at its end:
+  // scrolling up to read stops it, scrolling back down to the end starts it again.
+  const transcript = useRef<HTMLDivElement>(null);
+  const following = useRef(true);
+
+  function followFromHere() {
+    const box = transcript.current;
+    if (box === null) return;
+    following.current =
+      box.scrollHeight - box.scrollTop - box.clientHeight <= FOLLOW_SLACK;
+  }
+
   useEffect(() => {
-    if (!asking) end.current?.scrollIntoView?.({ block: "end" });
-  }, [lines, busy, asking]);
+    const box = transcript.current;
+    if (asking || !following.current || box === null) return;
+    box.scrollTop = box.scrollHeight;
+  }, [lines, busy, streaming, asking]);
 
   useEffect(() => {
     if (asking) prompt.current?.scrollIntoView?.({ block: "nearest" });
@@ -65,6 +81,7 @@ export function ChatPanel({
       const opened = await engine.chat.open(project);
       onSession(opened);
       setLines([]);
+      following.current = true;
       setLeftOut(0);
     } catch (thrown) {
       setError(messageOf(thrown));
@@ -151,6 +168,8 @@ export function ChatPanel({
     // Writing on instead of answering the end or close question means keep chatting.
     if (asking) keepChatting();
     setDraft("");
+    // Sending a message shows it and follows the reply again.
+    following.current = true;
     setLines((all) => [...all, { who: "you", text: message }]);
     await ask(message);
   }
@@ -375,7 +394,12 @@ export function ChatPanel({
         </p>
       )}
 
-      <div className="transcript" aria-live="polite">
+      <div
+        ref={transcript}
+        className="transcript"
+        aria-live="polite"
+        onScroll={followFromHere}
+      >
         {lines.length === 0 && session.can_chat && (
           <p className="muted">Ask a question about {session.project}.</p>
         )}
@@ -402,7 +426,6 @@ export function ChatPanel({
               <Markdown text={streaming} />
             </div>
           ))}
-        <div ref={end} />
       </div>
 
       {session.can_chat ? (
