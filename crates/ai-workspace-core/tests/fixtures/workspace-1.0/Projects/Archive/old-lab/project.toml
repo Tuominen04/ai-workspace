@@ -1,0 +1,8 @@
+project_id = "old-lab"
+display_name = "Old Lab"
+description = "A finished project"
+created_at = "1795111673"
+knowledge_dir = "Knowledge"
+specs_dir = "Specs"
+resources_dir = "Resources"
+session_dir = "Session"
