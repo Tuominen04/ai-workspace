@@ -182,6 +182,9 @@ On a project's **Chat**, **Start session**. AI Workspace starts Ollama if it is 
 - **Closing the app** with a chat that has answers asks the same question first, since the
   conversation itself is not kept: **Draft a note** (then **Save note and close**), **Close
   without a note**, or **Keep chatting**.
+- **Where it asks:** both questions appear at the top of the chat, next to **End session**, so
+  a long conversation never hides them. The message box stays open: sending another message
+  instead of answering means you keep chatting, and the session (and the app) stay open.
 
 Ending a chat also ends any temporary permissions you gave during it.
 

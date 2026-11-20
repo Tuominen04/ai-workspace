@@ -44,10 +44,18 @@ export function ChatPanel({
   // Earlier exchanges the model no longer sees (the chat outgrew its window).
   const [leftOut, setLeftOut] = useState(0);
   const end = useRef<HTMLDivElement>(null);
+  const prompt = useRef<HTMLDivElement>(null);
+  // Ending or closing asks at the top of the chat, next to End session; while it asks, the
+  // view stays there instead of following the conversation to its end.
+  const asking = ending !== null || quitting;
 
   useEffect(() => {
-    end.current?.scrollIntoView?.({ block: "end" });
-  }, [lines, busy]);
+    if (!asking) end.current?.scrollIntoView?.({ block: "end" });
+  }, [lines, busy, asking]);
+
+  useEffect(() => {
+    if (asking) prompt.current?.scrollIntoView?.({ block: "nearest" });
+  }, [asking, ending]);
 
   async function open() {
     if (project === null) return;
@@ -140,6 +148,8 @@ export function ChatPanel({
     event.preventDefault();
     const message = draft.trim();
     if (message === "" || busy !== null) return;
+    // Writing on instead of answering the end or close question means keep chatting.
+    if (asking) keepChatting();
     setDraft("");
     setLines((all) => [...all, { who: "you", text: message }]);
     await ask(message);
@@ -243,6 +253,89 @@ export function ChatPanel({
         </button>
       </header>
 
+      {ending === "ask" || (quitting && ending === null) ? (
+        <div
+          ref={prompt}
+          className="ending"
+          role="group"
+          aria-label="End session"
+        >
+          <p>
+            {quitting
+              ? "AI Workspace is closing. Save a note about this session? Otherwise the conversation is deleted. The model drafts the note and you can edit it before saving."
+              : "Save a note for next time? The model drafts it and you can edit it before saving."}
+          </p>
+          <div className="row">
+            <button type="button" onClick={draftNote} disabled={busy !== null}>
+              {busy === "drafting" ? "Drafting…" : "Draft a note"}
+            </button>
+            <button
+              type="button"
+              className="quiet"
+              onClick={() => close(null)}
+              disabled={busy !== null}
+            >
+              {quitting ? "Close without a note" : "End without a note"}
+            </button>
+            <button
+              type="button"
+              className="quiet"
+              onClick={keepChatting}
+              disabled={busy !== null}
+            >
+              Keep chatting
+            </button>
+          </div>
+        </div>
+      ) : ending === "edit" ? (
+        <div
+          ref={prompt}
+          className="ending"
+          role="group"
+          aria-label="Edit the session note"
+        >
+          <p className="muted small">
+            Saved into this project&apos;s Session folder, where later sessions
+            read it. Edit freely.
+          </p>
+          <textarea
+            value={noteDraft}
+            onChange={(event) => setNoteDraft(event.target.value)}
+            aria-label="Session note"
+            rows={10}
+          />
+          <div className="row">
+            <button
+              type="button"
+              onClick={saveNoteAndClose}
+              disabled={busy !== null || noteDraft.trim() === ""}
+            >
+              {busy === "saving"
+                ? "Saving…"
+                : quitting
+                  ? "Save note and close"
+                  : "Save note and end"}
+            </button>
+            <button
+              type="button"
+              className="quiet"
+              onClick={() => close(null)}
+              disabled={busy !== null}
+            >
+              {quitting ? "Close without saving" : "End without saving"}
+            </button>
+            <button
+              type="button"
+              className="quiet"
+              onClick={keepChatting}
+              disabled={busy !== null}
+            >
+              Keep chatting
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <p
         className={session.agent_included ? "agent ok" : "agent"}
         title={session.agent}
@@ -312,78 +405,7 @@ export function ChatPanel({
         <div ref={end} />
       </div>
 
-      {ending === "ask" || (quitting && ending === null) ? (
-        <div className="ending" role="group" aria-label="End session">
-          <p>
-            {quitting
-              ? "AI Workspace is closing. Save a note about this session? Otherwise the conversation is deleted. The model drafts the note and you can edit it before saving."
-              : "Save a note for next time? The model drafts it and you can edit it before saving."}
-          </p>
-          <div className="row">
-            <button type="button" onClick={draftNote} disabled={busy !== null}>
-              {busy === "drafting" ? "Drafting…" : "Draft a note"}
-            </button>
-            <button
-              type="button"
-              className="quiet"
-              onClick={() => close(null)}
-              disabled={busy !== null}
-            >
-              {quitting ? "Close without a note" : "End without a note"}
-            </button>
-            <button
-              type="button"
-              className="quiet"
-              onClick={keepChatting}
-              disabled={busy !== null}
-            >
-              Keep chatting
-            </button>
-          </div>
-        </div>
-      ) : ending === "edit" ? (
-        <div className="ending" role="group" aria-label="Edit the session note">
-          <p className="muted small">
-            Saved into this project&apos;s Session folder, where later sessions
-            read it. Edit freely.
-          </p>
-          <textarea
-            value={noteDraft}
-            onChange={(event) => setNoteDraft(event.target.value)}
-            aria-label="Session note"
-            rows={10}
-          />
-          <div className="row">
-            <button
-              type="button"
-              onClick={saveNoteAndClose}
-              disabled={busy !== null || noteDraft.trim() === ""}
-            >
-              {busy === "saving"
-                ? "Saving…"
-                : quitting
-                  ? "Save note and close"
-                  : "Save note and end"}
-            </button>
-            <button
-              type="button"
-              className="quiet"
-              onClick={() => close(null)}
-              disabled={busy !== null}
-            >
-              {quitting ? "Close without saving" : "End without saving"}
-            </button>
-            <button
-              type="button"
-              className="quiet"
-              onClick={keepChatting}
-              disabled={busy !== null}
-            >
-              Keep chatting
-            </button>
-          </div>
-        </div>
-      ) : session.can_chat ? (
+      {session.can_chat ? (
         <form className="composer" onSubmit={send}>
           <textarea
             value={draft}
