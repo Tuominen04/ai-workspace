@@ -365,7 +365,7 @@ impl RuntimeManager {
             .post(&format!("{base_url}/api/chat"))
             .set("Content-Type", "application/json")
             .send_bytes(&body_bytes)
-            .map_err(|e| failed(e.to_string()))?;
+            .map_err(|e| request_failed(model, e))?;
 
         let mut content = String::new();
         let mut role = "assistant".to_string();
@@ -420,7 +420,7 @@ impl RuntimeManager {
             .set("Content-Type", "application/json")
             .timeout(SHOW_REQUEST_TIMEOUT)
             .send_bytes(&body)
-            .map_err(|error| AppError::RuntimeRequestFailed(error.to_string()))?
+            .map_err(|error| request_failed(model, error))?
             .into_string()
             .map_err(|error| AppError::RuntimeRequestFailed(error.to_string()))?;
         let parsed: ShowResponse = serde_json::from_str(&text)
@@ -442,6 +442,23 @@ impl Drop for RuntimeManager {
             let _ = podman(&["stop", "--time", "5", PODMAN_NAME]);
         }
     }
+}
+
+/// A failed request to Ollama: a 404 means it does not have the model, said plainly with the
+/// command that downloads it (a session using Podman puts in the `podman exec` form).
+fn request_failed(model: &str, error: ureq::Error) -> AppError {
+    match error {
+        ureq::Error::Status(404, _) => AppError::ModelNotInstalled {
+            model: model.to_string(),
+            pull_command: format!("ollama pull {model}"),
+        },
+        other => AppError::RuntimeRequestFailed(other.to_string()),
+    }
+}
+
+/// The command that downloads `model` into the Ollama the app started in Podman.
+pub fn podman_model_pull_command(model: &str) -> String {
+    format!("podman exec {PODMAN_NAME} ollama pull {model}")
 }
 
 /// Runs a `podman` subcommand quietly and says whether it succeeded.
