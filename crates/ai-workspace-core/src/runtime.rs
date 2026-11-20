@@ -54,6 +54,9 @@ struct ChatChunk {
     done: bool,
     #[serde(default)]
     error: Option<String>,
+    /// Why the reply ended, on the last piece: "stop", or "length" when the window was full.
+    #[serde(default)]
+    done_reason: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -383,6 +386,17 @@ impl RuntimeManager {
                 }
             }
             if chunk.done {
+                // An empty answer is a failure, not a reply: shown as one, the chat would just
+                // seem to stop (it happened when a long chat filled the model's window).
+                if content.trim().is_empty() {
+                    return Err(failed(match chunk.done_reason.as_deref() {
+                        Some("length") => {
+                            "the model's context window was full, so it had no room to answer"
+                                .to_string()
+                        }
+                        _ => "the model returned an empty reply".to_string(),
+                    }));
+                }
                 return Ok(ChatMessage { role, content });
             }
         }

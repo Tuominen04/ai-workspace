@@ -31,6 +31,16 @@ says so: `[truncated: N of M bytes shown]`. Smaller files later in the order can
 still fit whole. Sessions show the budget and any cut file (the CLI summary,
 the desktop chat's context list).
 
+## The conversation
+
+Each message also sends the conversation so far, after the workspace text. It gets about a
+quarter of the model's window (one byte per `num_ctx` token; 10,000 bytes when the window is
+unknown), leaving room for a long reply even with dense text. When it no longer fits, whole exchanges are left out from the
+start: the newest message always goes, and the model never sees a reply without its question.
+The desktop chat says how many earlier exchanges are no longer seen. A reply that comes back
+empty (Ollama's answer when the window was full) is a failure with **Retry**, never an empty
+answer.
+
 ## What is read (ADR-0014)
 
 `context::readable_sources` defines it once, for both chat context and search:

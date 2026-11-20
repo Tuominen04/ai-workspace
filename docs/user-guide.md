@@ -173,12 +173,22 @@ On a project's **Chat**, **Start session**. AI Workspace starts Ollama if it is 
 - **Replies** appear as they are written and are formatted (headings, lists, tables, code).
   Links and images in a reply are shown as text and never opened, so nothing reaches the
   internet.
+- **Scrolling:** while you are at the end of the conversation, it follows a reply as it is
+  written. Scroll up to read and it stays where you are, also when the reply finishes; scroll
+  back down to the end, or send a message, and it follows again.
 - **Retry:** if a reply fails, your question stays and **Retry** sends it again.
 - **Switching** tabs or projects keeps the chat; it stays open until you end it or close the
   app.
 - **End session:** after at least one answer, you can **Draft a note**. The model writes a
   short summary, you edit it, and **Save note and end** saves it in the project's `Session`
   folder, where the next chat reads it. **End without a note** saves nothing.
+- **Closing the app** with a chat that has answers asks the same question first, since the
+  conversation itself is not kept: **Draft a note** (then **Save note and close**), **Close
+  without a note**, or **Keep chatting**. Closed while a reply is still being written, it asks
+  at once and the choices work as soon as the reply is done.
+- **Where it asks:** both questions appear at the top of the chat, next to **End session**, so
+  a long conversation never hides them. The message box stays open: sending another message
+  instead of answering means you keep chatting, and the session (and the app) stay open.
 
 Ending a chat also ends any temporary permissions you gave during it.
 
@@ -196,6 +206,11 @@ skipped by mistake.
 
 How much fits depends on the model's context window. The most relevant notes for your question
 come first; a note that does not fit whole is cut and marked.
+
+The conversation itself is sent with every message too. When a long chat no longer fits, the
+model gets the latest messages and the oldest ones are left out; the chat says so when that
+happens. For a fresh start with what matters kept, end the session with a note and start a new
+one.
 
 ## Permissions
 
