@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ChatPanel } from "./components/ChatPanel";
 import { ConfigPanel } from "./components/ConfigPanel";
@@ -22,7 +22,12 @@ import {
 import { useLoad } from "./lib/useLoad";
 
 // The whole workspace and a project each have their own tabs; a project opens on its chat.
-const WORKSPACE_TABS = ["Overview", "Validation", "Search", "Configuration"] as const;
+const WORKSPACE_TABS = [
+  "Overview",
+  "Validation",
+  "Search",
+  "Configuration",
+] as const;
 const PROJECT_TABS = ["Chat", "Overview", "Search", "Permissions"] as const;
 // An archived project is only looked at, restored or deleted (ADR-0015).
 const ARCHIVED_TABS = ["Overview"] as const;
@@ -58,13 +63,48 @@ function Workspace() {
   // The sidebar lists either the projects or the archived projects.
   const [showArchived, setShowArchived] = useState(false);
   // The project being deleted, while its confirmation is open.
-  const [deleting, setDeleting] = useState<{ name: string; archived: boolean } | null>(null);
+  const [deleting, setDeleting] = useState<{
+    name: string;
+    archived: boolean;
+  } | null>(null);
+  // Set while the window waits to close until the open chat is saved or let go.
+  const [quitting, setQuitting] = useState(false);
+
   // The project being renamed, while its dialog is open.
   const [renaming, setRenaming] = useState<string | null>(null);
   // What the last delete did, shown until the next selection.
   const [notice, setNotice] = useState<string | null>(null);
+
+  // The shell holds a close request while an answered chat is open (it sends the chat's
+  // project): show that chat, which asks whether to save a note first.
+  useEffect(() => {
+    let stop: (() => void) | null = null;
+    let gone = false;
+    void engine.app
+      .onCloseRequested((name) => {
+        setQuitting(true);
+        setNotice(null);
+        setArchived(null);
+        setShowArchived(false);
+        setProject(name);
+        setTab("Chat");
+      })
+      .then((unlisten) => {
+        if (gone) unlisten();
+        else stop = unlisten;
+      });
+    return () => {
+      gone = true;
+      stop?.();
+    };
+  }, []);
+
   const tabs: readonly Tab[] =
-    archived !== null ? ARCHIVED_TABS : project === null ? WORKSPACE_TABS : PROJECT_TABS;
+    archived !== null
+      ? ARCHIVED_TABS
+      : project === null
+        ? WORKSPACE_TABS
+        : PROJECT_TABS;
 
   function select(next: string | null) {
     setNotice(null);
@@ -136,7 +176,9 @@ function Workspace() {
         onArchived={archivedDone}
         onRestored={restoredDone}
         onCloned={clonedDone}
-        onDelete={(name, isArchived) => setDeleting({ name, archived: isArchived })}
+        onDelete={(name, isArchived) =>
+          setDeleting({ name, archived: isArchived })
+        }
         onRename={setRenaming}
         onRefresh={refresh}
         onCreated={(created) => {
@@ -156,7 +198,9 @@ function Workspace() {
               onClick={() => setTab(name)}
             >
               {name}
-              {name === "Chat" && session !== null && <span className="dot" aria-label="session open" />}
+              {name === "Chat" && session !== null && (
+                <span className="dot" aria-label="session open" />
+              )}
             </button>
           ))}
         </div>
@@ -175,7 +219,9 @@ function Workspace() {
                 onArchived={archivedDone}
                 onRestored={restoredDone}
                 onCloned={clonedDone}
-                onDelete={(name, isArchived) => setDeleting({ name, archived: isArchived })}
+                onDelete={(name, isArchived) =>
+                  setDeleting({ name, archived: isArchived })
+                }
                 onRename={setRenaming}
               />
             ) : status.state === "failed" ? (
@@ -191,9 +237,18 @@ function Workspace() {
               and a reply still on its way survive switching tabs, until the session ends or the
               app closes. */}
           <div className="tab-page" hidden={project === null || tab !== "Chat"}>
-            <ChatPanel project={project} session={session} onSession={setSession} />
+            <ChatPanel
+              project={project}
+              session={session}
+              onSession={setSession}
+              quitting={quitting}
+              onQuit={() => void engine.app.quit()}
+              onCancelQuit={() => setQuitting(false)}
+            />
           </div>
-          {tab === "Permissions" && project !== null && <PermissionsPanel project={project} />}
+          {tab === "Permissions" && project !== null && (
+            <PermissionsPanel project={project} />
+          )}
           {tab === "Configuration" && (
             <ConfigPanel
               onChanged={(change) => {
@@ -208,7 +263,11 @@ function Workspace() {
         </div>
       </main>
       {renaming && (
-        <RenameDialog name={renaming} onRenamed={renamedDone} onCancel={() => setRenaming(null)} />
+        <RenameDialog
+          name={renaming}
+          onRenamed={renamedDone}
+          onCancel={() => setRenaming(null)}
+        />
       )}
       {deleting && (
         <DeleteDialog

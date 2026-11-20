@@ -459,7 +459,9 @@ maintainer; built as separate pull requests and released together as 0.8.0.
    desktop app offers to save a short Markdown note, drafted by the model and
    editable first, into `Projects/<name>/Session/`, where later sessions pick
    it up as context. Nothing is written without the person's OK, in line with
-   the no-automatic-writes rule.
+   the no-automatic-writes rule. Closing the window with an answered chat open asks the same question
+   before the window closes, since the conversation itself is not kept (amended
+   with the maintainer).
 
 Reason
 

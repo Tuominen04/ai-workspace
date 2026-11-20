@@ -69,6 +69,12 @@ pub enum AppError {
     PermissionGrantNotFound(String),
     MissingProjectContext,
     RuntimeRequestFailed(String),
+    /// Ollama does not have the model (it answered 404). Carries the command that downloads
+    /// it, for the runtime in use.
+    ModelNotInstalled {
+        model: String,
+        pull_command: String,
+    },
     InvalidWorkspaceRoot {
         input: String,
         reason: String,
@@ -126,6 +132,13 @@ impl fmt::Display for AppError {
             }
             Self::MissingProjectContext => f.write_str(
                 "this needs a project; name one, or keep only one project in the workspace",
+            ),
+            Self::ModelNotInstalled {
+                model,
+                pull_command,
+            } => write!(
+                f,
+                "the model '{model}' is not installed in Ollama; download it with `{pull_command}`, or choose another model"
             ),
             Self::RuntimeRequestFailed(reason) => {
                 write!(f, "request to the AI runtime failed: {reason}")

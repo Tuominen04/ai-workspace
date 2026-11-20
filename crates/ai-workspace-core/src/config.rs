@@ -16,10 +16,66 @@ pub struct WorkspaceConfig {
     pub project_metadata_file: String,
     #[serde(default = "default_model_value")]
     pub default_model: String,
+    /// How Ollama is started when nothing answers on 127.0.0.1:11434 (ADR-0016).
+    #[serde(default)]
+    pub runtime: Runtime,
+    /// Settings for `runtime = "podman"`.
+    #[serde(default)]
+    pub podman: PodmanSettings,
 }
 
 fn default_model_value() -> String {
     "qwen3.6:latest".to_string()
+}
+
+/// How Ollama is started (ADR-0016).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Runtime {
+    /// The installed `ollama serve`.
+    #[default]
+    Ollama,
+    /// The Ollama image in a Podman container.
+    Podman,
+}
+
+/// The `[podman]` table of `workspace.toml`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PodmanSettings {
+    /// The image to run; unset means the official image, or its ROCm tag for `gpu = "amd"`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub image: Option<String>,
+    #[serde(default)]
+    pub gpu: Gpu,
+}
+
+/// The graphics card a Podman-run Ollama gets.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Gpu {
+    /// CPU only.
+    #[default]
+    None,
+    /// NVIDIA, through the Container Device Interface.
+    Nvidia,
+    /// AMD, through the ROCm image and its devices.
+    Amd,
+}
+
+/// The official Ollama image.
+pub const OLLAMA_IMAGE: &str = "docker.io/ollama/ollama:latest";
+/// The official Ollama image for AMD graphics cards.
+pub const OLLAMA_ROCM_IMAGE: &str = "docker.io/ollama/ollama:rocm";
+
+impl PodmanSettings {
+    /// The image to run: the one set, else the official one for the GPU setting.
+    pub fn image(&self) -> &str {
+        match (&self.image, self.gpu) {
+            (Some(image), _) if !image.trim().is_empty() => image.trim(),
+            (_, Gpu::Amd) => OLLAMA_ROCM_IMAGE,
+            _ => OLLAMA_IMAGE,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -45,6 +101,8 @@ impl WorkspaceConfig {
             ],
             project_metadata_file: "project.toml".to_string(),
             default_model: default_model_value(),
+            runtime: Runtime::default(),
+            podman: PodmanSettings::default(),
         }
     }
 

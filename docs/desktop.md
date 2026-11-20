@@ -56,8 +56,8 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
   **End session** after at least one answer offers a note for next time: **Draft a note** asks
   the model for a short Markdown summary, which you can edit, then **Save note and end** writes
   it as `session-note-YYYY-MM-DD-HHMMSS.md` (UTC) in the project's Session folder, where later
-  sessions read it as context. **End without a note** writes nothing. Quitting the app ends a
-  session without a note.
+  sessions read it as context. **End without a note** writes nothing. Closing the window while a chat with answers is open asks the same question first ("AI Workspace
+  is closing"): save a note and close, close without a note, or keep chatting.
 - **Permissions** — what the model may read, beyond Base and the project folder, and the
   chosen project's grants: the defaults (Base and the project) and any
   temporary ones, with their status, a filter and pages. **Grant** gives temporary access to
@@ -67,7 +67,8 @@ calls the core, and the React interface in `desktop/src` shows what comes back.
   are refused, and every change is written to `Logs/permissions-events.log`.
 - **Configuration** — the workspace configuration (`Config/workspace.toml`): the folder in
   use and why, the configuration file, the default model, the project file name and the
-  folders new projects get. **Workspace folder** saves another folder in
+  folders new projects get, and how Ollama is run (the installed command or a Podman
+  container, ADR-0016). **Workspace folder** saves another folder in
   `~/.config/ai-workspace/config.toml` (an open chat session is ended first). If
   `AI_WORKSPACE_HOME` is set it still takes precedence; the app says so and offers
   **Switch now**, which ignores the variable until the app restarts. When the

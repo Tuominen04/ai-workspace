@@ -79,6 +79,7 @@ export const FIXTURE = {
     root_source: "user config file /home/me/.config/ai-workspace/config.toml",
     config_file: "/home/me/AI/Config/workspace.toml",
     default_model: "qwen3.6:latest",
+    runtime: "the installed ollama command",
     project_metadata_file: "project.toml",
     default_project_directories: ["Knowledge", "Specs", "Resources", "Session"],
     recorded_root: "/home/me/AI",
@@ -254,9 +255,24 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
           // Streamed in a few pieces, as Ollama does; slower for "slowly" so a check can watch.
           const size = Math.ceil(text.length / 4);
           const pieces = [0, 1, 2, 3].map((n) => text.slice(n * size, (n + 1) * size)).filter(Boolean);
-          return stream(onPiece, pieces, message.includes("slowly") ? 300 : 30);
+          // "long chat" stands for a conversation that outgrew the model's window.
+          if (message.includes("long chat")) window.__leftOut = (window.__leftOut ?? 0) + 2;
+          return stream(onPiece, pieces, message.includes("slowly") ? 300 : 30).then((reply) => ({
+            text: reply,
+            left_out_exchanges: window.__leftOut ?? 0,
+          }));
         },
         chat_close: () => ({ project: fixture.session.project, revoked: 1 }),
+        // Tauri's event listener, and the window close the shell would do.
+        "plugin:event|listen": ({ event, handler }) => {
+          (window.__listeners[event] ??= []).push(handler);
+          return handler;
+        },
+        "plugin:event|unlisten": () => null,
+        app_quit: () => {
+          window.__quit = true;
+          return null;
+        },
         chat_draft_note: () => "# Router hardening\n- Discussed SSH exposure\n- Next: review the guest VLAN",
         note_save: ({ project, text }) =>
           text.trim() === ""
@@ -277,6 +293,11 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
             resolve(pieces.join(""));
           }, gap * (pieces.length + 1));
         });
+      // What the shell's close request would deliver: listeners by event name.
+      window.__listeners = {};
+      window.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener: () => {} };
+      window.__emit = (event, payload) =>
+        (window.__listeners[event] ?? []).forEach((id) => callbacks.get(id)?.({ event, id, payload }));
       window.__TAURI_INTERNALS__ = {
         invoke: async (command, args) => {
           window.__calls.push({ command, args });

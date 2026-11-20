@@ -5,7 +5,9 @@
 // interface imports `invoke`, so the whole surface is one file to read.
 
 import { Channel, invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
+import type { ChatReply } from "./bindings/ChatReply";
 import type { CommandError } from "./bindings/CommandError";
 import type { Fix } from "./bindings/Fix";
 import type { FixAction } from "./bindings/FixAction";
@@ -33,6 +35,7 @@ import type { WorkspaceSettings } from "./bindings/WorkspaceSettings";
 import type { WorkspaceStatus } from "./bindings/WorkspaceStatus";
 
 export type {
+  ChatReply,
   CommandError,
   Fix,
   FixAction,
@@ -153,6 +156,16 @@ export const engine = {
     grant: (project: string, path: string) => call<GrantDone>("permission_grant", { project, path }),
     revoke: (project: string, path: string) => call<RevokeDone>("permission_revoke", { project, path }),
   },
+  app: {
+    /**
+     * Called when the window is being closed with an answered chat open; the shell has held
+     * the close and passes the chat's project. Returns the function that stops listening.
+     */
+    onCloseRequested: (handler: (project: string) => void): Promise<UnlistenFn> =>
+      listen<string>("close-requested", (event) => handler(event.payload)),
+    /** Closes the window once the save-on-close question is answered. */
+    quit: () => call<null>("app_quit"),
+  },
   chat: {
     /** Opens a session in a project, closing any open one first. May take a while: it can start Ollama. */
     open: (project: string) => call<SessionInfo>("chat_open", { project }),
@@ -162,7 +175,7 @@ export const engine = {
      */
     send: (message: string, onPiece: (piece: string) => void = () => {}) => {
       const pieces = new Channel<string>(onPiece);
-      return call<string>("chat_send", { message, onPiece: pieces });
+      return call<ChatReply>("chat_send", { message, onPiece: pieces });
     },
     close: () => call<SessionClosed | null>("chat_close"),
     /** The model's draft of a note about the open session; nothing is saved. */

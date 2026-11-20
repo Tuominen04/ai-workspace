@@ -54,6 +54,7 @@ fn configuration_is_read_and_a_missing_file_is_reported() {
         ["Knowledge", "Specs", "Resources", "Session"]
     );
     assert!(settings.config_file.ends_with("workspace.toml"));
+    assert_eq!(settings.runtime, "the installed ollama command");
 
     std::fs::remove_file(engine.paths().workspace_config_file())
         .expect("test should remove the workspace config");
@@ -331,4 +332,22 @@ fn rename_returns_the_project_under_its_new_name() {
     assert_eq!(refused.kind, "InvalidProjectName");
 
     let _ = std::fs::remove_dir_all(&engine.paths().root);
+}
+
+#[test]
+fn closing_asks_first_only_about_an_answered_chat() {
+    use std::sync::atomic::Ordering;
+    let open = OpenSession::default();
+    let allowed = commands::QuitAllowed::default();
+    assert_eq!(
+        commands::needs_save_prompt(&open, &allowed),
+        None,
+        "no chat open: close at once"
+    );
+    allowed.0.store(true, Ordering::SeqCst);
+    assert_eq!(
+        commands::needs_save_prompt(&open, &allowed),
+        None,
+        "answered already: close"
+    );
 }

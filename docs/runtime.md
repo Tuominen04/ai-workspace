@@ -6,6 +6,21 @@ Miten Ollama käynnistetään?
 Miten tarkistetaan, onko se jo käynnissä?
 Miten vaihdetaan myöhemmin toiseen runtimeen?
 
+## Starting Ollama (ADR-0016)
+
+`runtime` in `Config/workspace.toml` says how Ollama is started when nothing answers on
+`127.0.0.1:11434`; whatever already answers there is always used instead.
+
+- `"ollama"` (the default): `ollama serve`, stopped again when the session ends.
+- `"podman"`: the Ollama image as the container `ai-workspace-ollama`, with
+  `podman run --detach --rm --pull=never --publish 127.0.0.1:11434:11434
+  --volume ai-workspace-ollama:/root/.ollama <image>`, plus `--device nvidia.com/gpu=all`
+  for `gpu = "nvidia"` or `--device /dev/kfd --device /dev/dri` (and the `rocm` image) for
+  `gpu = "amd"`. A missing image is reported with its `podman pull` command; the app never
+  pulls. A container the app started is stopped (and so removed) when the session ends; a
+  leftover stopped container of that name is removed first; any other container is never
+  touched. The volume keeps the models.
+
 ## A model's own instructions (ADR-0012)
 
 When a session opens, the runtime asks Ollama about the session's model
