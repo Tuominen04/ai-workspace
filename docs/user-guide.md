@@ -179,6 +179,9 @@ On a project's **Chat**, **Start session**. AI Workspace starts Ollama if it is 
 - **End session:** after at least one answer, you can **Draft a note**. The model writes a
   short summary, you edit it, and **Save note and end** saves it in the project's `Session`
   folder, where the next chat reads it. **End without a note** saves nothing.
+- **Closing the app** with a chat that has answers asks the same question first, since the
+  conversation itself is not kept: **Draft a note** (then **Save note and close**), **Close
+  without a note**, or **Keep chatting**.
 
 Ending a chat also ends any temporary permissions you gave during it.
 
@@ -196,6 +199,11 @@ skipped by mistake.
 
 How much fits depends on the model's context window. The most relevant notes for your question
 come first; a note that does not fit whole is cut and marked.
+
+The conversation itself is sent with every message too. When a long chat no longer fits, the
+model gets the latest messages and the oldest ones are left out; the chat says so when that
+happens. For a fresh start with what matters kept, end the session with a note and start a new
+one.
 
 ## Permissions
 

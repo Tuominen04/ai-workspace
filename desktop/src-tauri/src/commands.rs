@@ -9,9 +9,9 @@
 //! Ollama, and a reply can take as long as the model needs, and neither may freeze the window.
 
 use crate::dto::{
-    CommandError, GrantDone, InitDone, NoteSaved, PermissionPage, ProjectDeleted, ProjectDetails,
-    ProjectMoved, ProjectRenamed, RevokeDone, RootSaved, SearchResults, SessionClosed, SessionInfo,
-    SwitchDone, Validation, WorkspaceSettings, WorkspaceStatus,
+    ChatReply, CommandError, GrantDone, InitDone, NoteSaved, PermissionPage, ProjectDeleted,
+    ProjectDetails, ProjectMoved, ProjectRenamed, RevokeDone, RootSaved, SearchResults,
+    SessionClosed, SessionInfo, SwitchDone, Validation, WorkspaceSettings, WorkspaceStatus,
 };
 use ai_workspace_core::workspace::{Deleted, PermissionViewOptions};
 use ai_workspace_core::{Engine, Session};
@@ -57,6 +57,24 @@ pub fn source_text(choice: &RootChoice, described: String) -> String {
 /// The one open session, if any. Opening another closes it; so does quitting the app.
 #[derive(Default)]
 pub struct OpenSession(pub Mutex<Option<Session>>);
+
+/// Set once the person has answered the save-on-close question, so the next close request
+/// really closes the window.
+#[derive(Default)]
+pub struct QuitAllowed(pub std::sync::atomic::AtomicBool);
+
+/// Whether closing the window should first ask about saving the open chat: the project of a
+/// session that has at least one answer, unless the person already answered. A session with
+/// nothing answered has nothing to save, so it simply ends with the app.
+pub fn needs_save_prompt(open: &OpenSession, allowed: &QuitAllowed) -> Option<String> {
+    if allowed.0.load(Ordering::SeqCst) {
+        return None;
+    }
+    let slot = open.0.lock().ok()?;
+    slot.as_ref()
+        .filter(|session| session.exchanges() > 0)
+        .map(|session| session.summary().project.name.clone())
+}
 
 pub fn status(engine: &Engine) -> Outcome<WorkspaceStatus> {
     let projects = engine.projects()?;
@@ -323,12 +341,16 @@ pub fn session_send(
     open: &OpenSession,
     message: &str,
     on_piece: &mut dyn FnMut(&str),
-) -> Outcome<String> {
+) -> Outcome<ChatReply> {
     let mut slot = lock(open)?;
     let session = slot
         .as_mut()
         .ok_or_else(|| CommandError::shell("no session is open"))?;
-    Ok(session.send_streaming(message, on_piece)?)
+    let text = session.send_streaming(message, on_piece)?;
+    Ok(ChatReply {
+        text,
+        left_out_exchanges: u32::try_from(session.left_out_exchanges()).unwrap_or(u32::MAX),
+    })
 }
 
 /// Asks the open session's model to draft a note about the session. Nothing is saved.
@@ -545,7 +567,7 @@ pub async fn chat_send(
     open: tauri::State<'_, OpenSession>,
     message: String,
     on_piece: tauri::ipc::Channel<String>,
-) -> Outcome<String> {
+) -> Outcome<ChatReply> {
     // A piece the window can no longer receive (it was closed) is simply dropped; the whole
     // reply is still returned and kept in the history.
     session_send(&open, &message, &mut |piece| {
@@ -561,6 +583,19 @@ pub async fn chat_draft_note(open: tauri::State<'_, OpenSession>) -> Outcome<Str
 #[tauri::command]
 pub async fn note_save(choice: Choice<'_>, project: String, text: String) -> Outcome<NoteSaved> {
     save_note(&resolve(&choice)?, &project, &text)
+}
+
+/// Closes the window after the save-on-close question was answered (the note saved, or
+/// declined). The chat session is closed on exit, as always.
+#[tauri::command]
+pub async fn app_quit(
+    window: tauri::Window,
+    allowed: tauri::State<'_, QuitAllowed>,
+) -> Outcome<()> {
+    allowed.0.store(true, Ordering::SeqCst);
+    window
+        .close()
+        .map_err(|error| CommandError::shell(format!("could not close the window: {error}")))
 }
 
 #[tauri::command]
