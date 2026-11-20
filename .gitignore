@@ -17,3 +17,6 @@ release/
 Thumbs.db
 *.tmp
 *.swp
+
+# The 1.0 workspace fixture includes its permission event log (ADR-0016).
+!crates/ai-workspace-core/tests/fixtures/**/*.log

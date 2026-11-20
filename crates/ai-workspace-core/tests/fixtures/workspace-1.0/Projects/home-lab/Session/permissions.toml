@@ -1,0 +1,34 @@
+session_id = "home-lab-1795111673"
+workspace_id = "home-lab"
+artifact_path = "/home/me/AI/Projects/home-lab/Session/permissions.toml"
+created_at = "1795111673"
+
+[[default_grants]]
+grant_id = "default-1795111673"
+session_id = "home-lab-1795111673"
+canonical_path = "/home/me/AI/Base"
+display_path = "/home/me/AI/Base"
+category = "default"
+status = "active"
+granted_at = "1795111673"
+source = "system-default"
+
+[[default_grants]]
+grant_id = "default-1795111673"
+session_id = "home-lab-1795111673"
+canonical_path = "/home/me/AI/Projects/home-lab"
+display_path = "/home/me/AI/Projects/home-lab"
+category = "default"
+status = "active"
+granted_at = "1795111673"
+source = "system-default"
+
+[[temporary_grants]]
+grant_id = "grant-1795111673"
+session_id = "home-lab-1795111673"
+canonical_path = "/home/me/granted"
+display_path = "/home/me/granted"
+category = "temporary"
+status = "active"
+granted_at = "1795111673"
+source = "user-grant"
