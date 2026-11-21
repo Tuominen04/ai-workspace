@@ -114,6 +114,12 @@ impl WorkspacePaths {
         &self.base
     }
 
+    /// Whether this folder holds a workspace: its `Config/workspace.toml` exists. Only
+    /// `Engine::init` creates one (issue #55).
+    pub fn has_workspace(&self) -> bool {
+        self.workspace_config_file().is_file()
+    }
+
     pub fn workspace_config_file(&self) -> PathBuf {
         self.config.join("workspace.toml")
     }

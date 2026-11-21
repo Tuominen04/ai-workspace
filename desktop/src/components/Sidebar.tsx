@@ -118,9 +118,13 @@ export function Sidebar({
                 {project.name === sessionProject && <span className="dot" aria-label="session open" />}
               </button>
             ))}
-            {status.value.projects.length === 0 && <p className="muted small">No projects yet.</p>}
+            {status.value.projects.length === 0 && (
+              <p className="muted small">
+                {status.value.initialized ? "No projects yet." : "No workspace in this folder yet."}
+              </p>
+            )}
           </nav>
-          <NewProject onCreated={onCreated} />
+          {status.value.initialized && <NewProject onCreated={onCreated} />}
         </>
       )}
       {status.state === "ready" && showArchived && (

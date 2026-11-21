@@ -234,6 +234,7 @@ function Workspace() {
                   setDeleting({ name, archived: isArchived })
                 }
                 onRename={setRenaming}
+                onInitialized={refresh}
               />
             ) : status.state === "failed" ? (
               <section className="panel">

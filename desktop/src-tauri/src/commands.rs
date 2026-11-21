@@ -102,6 +102,13 @@ pub fn needs_save_prompt(open: &OpenSession, allowed: &QuitAllowed) -> Option<St
 }
 
 pub fn status(engine: &Engine) -> Outcome<WorkspaceStatus> {
+    // A folder without a workspace is described, not created (issue #55).
+    if !engine.is_initialized() {
+        return Ok(WorkspaceStatus::uninitialized(
+            engine.paths(),
+            engine.root_source(),
+        ));
+    }
     let projects = engine.projects()?;
     let archived = engine.archived_projects()?;
     Ok(WorkspaceStatus::new(
