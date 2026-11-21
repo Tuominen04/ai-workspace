@@ -52,8 +52,10 @@ Ollama installed and running as its service, as its installer sets it up
 - [ ] Ask about the distinctive word: the reply streams in and uses the note. Formatting
   (a list or a table) renders; a link in the reply is shown as text.
 - [ ] Switch to another tab and to Whole workspace and back: the chat is still there.
-- [ ] **Permissions**: grant a folder outside the workspace holding a `.md` note; the next
-  message lists it under Granted and can use it. **Revoke** removes it.
+- [ ] **Permissions**: grant a folder outside the workspace holding a `.md` note, and ask
+  about something only that note says: the next reply uses it, without restarting the session.
+  **Revoke** it and ask again: the model no longer has it. (The context list at the top shows
+  what the session started with; a grant appears under Granted in the next session.)
 - [ ] **Search** finds the distinctive word.
 - [ ] Stop the service mid-reply (`sudo systemctl stop ollama`): the failure is shown with
   **Retry**.
