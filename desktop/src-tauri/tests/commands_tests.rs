@@ -126,6 +126,8 @@ fn chat_commands_without_a_session_answer_plainly() {
     let open = OpenSession::default();
     let sent = commands::session_send(&open, "hello", &mut |_| {}).expect_err("nothing to send to");
     assert_eq!(sent.kind, "Shell");
+    let context = commands::session_context(&open, None).expect_err("no context to refresh");
+    assert_eq!(context.kind, "Shell");
     let closed = commands::session_close(&open).expect("closing nothing is fine");
     assert!(closed.is_none());
 }

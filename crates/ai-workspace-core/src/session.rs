@@ -30,7 +30,12 @@ pub struct Session {
     model: String,
     agent: AgentInstructions,
     budget: ContextBudget,
-    initial_context: ContextSnapshot,
+    /// The context the model was given most recently: built when the session opens, then
+    /// rebuilt for each message (with the grants active at that moment).
+    context: ContextSnapshot,
+    /// What the first context was built for (the project's description), for a refresh before
+    /// any message.
+    initial_query: String,
     runtime_status: RuntimeStatus,
     /// How Ollama is started for this workspace, so a missing model's download command fits.
     runtime_kind: Runtime,
@@ -43,11 +48,12 @@ pub struct Session {
     runtime: RuntimeManager,
 }
 
-/// What a front end shows when a session starts.
+/// What a front end shows about a session: when it starts, and again after each message.
 #[derive(Debug, Clone, Copy)]
 pub struct SessionSummary<'a> {
     pub project: &'a Project,
-    /// The context built for the start of the session, before any message.
+    /// The context the model was given most recently: the one built for the start of the
+    /// session until a message is sent, then the one built for the latest message.
     pub context: &'a ContextSnapshot,
     pub runtime: &'a RuntimeStatus,
     /// The model the session talks to.
@@ -146,7 +152,8 @@ impl Session {
             budget,
             paths,
             project: project.clone(),
-            initial_context,
+            context: initial_context,
+            initial_query,
             runtime_status,
             runtime_kind: config.runtime,
             history,
@@ -156,10 +163,33 @@ impl Session {
         })
     }
 
+    /// Builds the context again now, with the grants active at this moment, so a front end can
+    /// show a grant or revoke straight away. It is built for `query` (the message about to be
+    /// sent), else the last message sent, else the project's description, like the context the
+    /// next message gets. On a failure the previous context is kept.
+    pub fn refresh_context(&mut self, query: Option<&str>) -> Result<()> {
+        let last_message = self
+            .history
+            .iter()
+            .rev()
+            .find(|m| m.role == "user")
+            .map(|m| m.content.as_str());
+        let query = query.or(last_message).unwrap_or(&self.initial_query);
+        let context = build_context_snapshot_within(
+            &self.paths,
+            Some(&self.project),
+            Some(query),
+            self.budget,
+        )?;
+        self.history[0] = ChatMessage::system(context.as_system_prompt_for(self.agent.text()));
+        self.context = context;
+        Ok(())
+    }
+
     pub fn summary(&self) -> SessionSummary<'_> {
         SessionSummary {
             project: &self.project,
-            context: &self.initial_context,
+            context: &self.context,
             runtime: &self.runtime_status,
             model: &self.model,
             agent: &self.agent,
@@ -252,6 +282,7 @@ impl Session {
             self.budget,
         ) {
             self.history[0] = ChatMessage::system(context.as_system_prompt_for(self.agent.text()));
+            self.context = context;
         }
 
         self.history.push(ChatMessage::user(message.to_string()));

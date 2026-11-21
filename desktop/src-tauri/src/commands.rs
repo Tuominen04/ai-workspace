@@ -375,7 +375,19 @@ pub fn session_send(
     Ok(ChatReply {
         text,
         left_out_exchanges: u32::try_from(session.left_out_exchanges()).unwrap_or(u32::MAX),
+        session: SessionInfo::new(&session.summary()),
     })
+}
+
+/// The open session with its context built again now, for `message` when one is about to be
+/// sent: a grant or revoke, or the message, shows in the context list at once.
+pub fn session_context(open: &OpenSession, message: Option<&str>) -> Outcome<SessionInfo> {
+    let mut slot = lock(open)?;
+    let session = slot
+        .as_mut()
+        .ok_or_else(|| CommandError::shell("no session is open"))?;
+    session.refresh_context(message)?;
+    Ok(SessionInfo::new(&session.summary()))
 }
 
 /// Asks the open session's model to draft a note about the session. Nothing is saved.
@@ -599,6 +611,14 @@ pub async fn chat_send(
     session_send(&open, &message, &mut |piece| {
         let _ = on_piece.send(piece.to_string());
     })
+}
+
+#[tauri::command]
+pub async fn chat_context(
+    open: tauri::State<'_, OpenSession>,
+    message: Option<String>,
+) -> Outcome<SessionInfo> {
+    session_context(&open, message.as_deref())
 }
 
 #[tauri::command]

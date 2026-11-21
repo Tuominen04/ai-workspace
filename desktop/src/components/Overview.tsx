@@ -247,6 +247,7 @@ function ModelSetting({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(model ?? "");
   const [installed, setInstalled] = useState<string[]>([]);
+  const [whereModels, setWhereModels] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<FailureInfo | null>(null);
 
@@ -324,8 +325,55 @@ function ModelSetting({
           ? `Installed in Ollama: ${installed.join(", ")}.`
           : "Ollama did not list any models (is it running?). You can still type a name."}{" "}
         A model with its own instructions keeps them in every chat.
+        {installed.length === 0 && (
+          <button
+            type="button"
+            className="help-button"
+            aria-label="Where are my models?"
+            aria-expanded={whereModels}
+            title="Where are my models?"
+            onClick={() => setWhereModels((open) => !open)}
+          >
+            ?
+          </button>
+        )}
       </p>
+      {installed.length === 0 && whereModels && <WhereModels />}
       {failure && <Failure message={failure.message} kind={failure.kind} />}
     </form>
+  );
+}
+
+/**
+ * Why the list of models can be empty: each Ollama keeps its own models, and only the one
+ * running now is asked.
+ */
+function WhereModels() {
+  return (
+    <div className="help-text" role="note" aria-label="Where your models are">
+      <p>
+        Each Ollama keeps its own models, and this list shows only those of the Ollama running
+        now. Nothing runs until a chat session starts one, unless Ollama runs as a service.
+      </p>
+      <ul>
+        <li>
+          Ollama&apos;s installer runs it as a <strong>system service</strong>, with models in{" "}
+          <code>/usr/share/ollama/.ollama/models</code>.
+        </li>
+        <li>
+          When nothing is running, AI Workspace <strong>starts Ollama as you</strong>, with
+          models in <code>~/.ollama/models</code>.
+        </li>
+        <li>
+          <strong>Ollama in Podman</strong> keeps its own, in the{" "}
+          <code>ai-workspace-ollama</code> volume.
+        </li>
+      </ul>
+      <p>
+        To use the models you downloaded through the service, start it (
+        <code>sudo systemctl start ollama</code>) and start the chat session again. Or download a
+        model into the Ollama that runs: <code>ollama pull &lt;model&gt;</code>.
+      </p>
+    </div>
   );
 }

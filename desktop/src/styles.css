@@ -848,6 +848,8 @@ button.quiet.danger {
 
 .context-menu button.danger-item {
   color: var(--bad);
+}
+
 /* A refused action's message that can be dismissed. */
 .failure.dismissible {
   position: relative;
@@ -865,4 +867,30 @@ button.quiet.danger {
   padding: 2px 6px;
   font-size: 16px;
   line-height: 1;
+}
+
+/* A small "?" that opens an explanation right below it. */
+.help-button {
+  margin-left: 6px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  vertical-align: middle;
+}
+
+.help-text {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.help-text p,
+.help-text ul {
+  margin: 4px 0;
 }
