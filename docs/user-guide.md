@@ -169,9 +169,10 @@ which you pull instead with `podman pull docker.io/ollama/ollama:rocm`. Ollama's
 
 On a project's **Chat**, **Start session**. AI Workspace starts Ollama if it is not running.
 
-- **The context list** above the conversation shows which notes the model was given, which
-  were left out because their names look like secrets, and any note cut short to fit (the model
-  sees that it was cut).
+- **The context list** above the conversation shows which notes the model was given with the
+  latest message (it updates when you send a message, after each reply, and when you grant or
+  revoke on **Permissions**), which were left out because their names look
+  like secrets, and any note cut short to fit (the model sees that it was cut).
 - **Replies** appear as they are written and are formatted (headings, lists, tables, code).
   Links and images in a reply are shown as text and never opened, so nothing reaches the
   internet.
@@ -219,7 +220,9 @@ one.
 Beyond `Base` and the project, the model reads only what you grant. On a project's
 **Permissions**, paste the path of a file or folder and **Grant**. Markdown in it joins the
 chat from the next message (a folder's notes up to two levels deep). **Revoke** takes a grant
-away, and ending the chat removes all temporary grants. Every change is recorded in
+away from the next message on, and ending the chat removes all temporary grants. What the model
+already said about a revoked note stays in the conversation, and it can repeat that; end the
+session to start without it. Every change is recorded in
 `Logs/permissions-events.log`.
 
 ## Search

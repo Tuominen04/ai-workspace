@@ -106,6 +106,17 @@ function Workspace() {
         ? WORKSPACE_TABS
         : PROJECT_TABS;
 
+  /** After a grant or revoke, an open chat in that project shows its context again. */
+  function refreshChatContext() {
+    if (session === null || session.project !== project) return;
+    engine.chat
+      .context()
+      .then(setSession)
+      .catch(() => {
+        // The list catches up with the next message anyway.
+      });
+  }
+
   function select(next: string | null) {
     setNotice(null);
     setArchived(null);
@@ -247,7 +258,7 @@ function Workspace() {
             />
           </div>
           {tab === "Permissions" && project !== null && (
-            <PermissionsPanel project={project} />
+            <PermissionsPanel project={project} onChanged={refreshChatContext} />
           )}
           {tab === "Configuration" && (
             <ConfigPanel
