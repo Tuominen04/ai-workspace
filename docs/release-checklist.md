@@ -59,8 +59,9 @@ Ollama installed and running as its service, as its installer sets it up
   **Retry**.
 - [ ] With the service still stopped, **End session** and **Start session**: the app starts
   its own Ollama ("Started Ollama for this session"). It runs as you and keeps models in
-  `~/.ollama/models`, not the service's, so the **?** next to the runtime line says it has no
-  models. Run `ollama pull <model>` while the session is open: **Retry** now works.
+  `~/.ollama/models`, not the service's: **Overview** → **Change** lists no models, and the
+  **?** at the end of its hint explains why. Run `ollama pull <model>` while the session is
+  open: **Retry** now works.
 - [ ] **End session** → **Draft a note** → edit → **Save note and end**: a
   `session-note-…md` appears in `Session/`. A new session lists it in its context.
 - [ ] Close the app: no `ollama serve` the app started is left running (`pgrep -a ollama`).
