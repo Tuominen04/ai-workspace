@@ -110,6 +110,27 @@ fn the_gpu_setting_adds_its_devices() {
 }
 
 #[test]
+fn selinux_labelling_is_turned_off_only_for_a_gpu() {
+    // Fedora's SELinux otherwise keeps Ollama in the container from using the card, and it
+    // quietly runs on the CPU (issue #53).
+    let label = "--security-opt=label=disable";
+    for gpu in [Gpu::Nvidia, Gpu::Amd] {
+        let args = podman_run_args(&PodmanSettings { image: None, gpu });
+        assert_eq!(
+            args.iter().filter(|a| *a == label).count(),
+            1,
+            "{gpu:?}: {args:?}"
+        );
+    }
+    assert!(
+        !podman_run_args(&PodmanSettings::default())
+            .iter()
+            .any(|a| a.starts_with("--security-opt")),
+        "without a GPU the container keeps its SELinux separation"
+    );
+}
+
+#[test]
 fn a_missing_image_is_explained_with_the_pull_command() {
     assert_eq!(
         podman_pull_command(&PodmanSettings::default()),

@@ -16,7 +16,10 @@ Miten vaihdetaan myöhemmin toiseen runtimeen?
   `podman run --detach --rm --pull=never --publish 127.0.0.1:11434:11434
   --volume ai-workspace-ollama:/root/.ollama <image>`, plus `--device nvidia.com/gpu=all`
   for `gpu = "nvidia"` or `--device /dev/kfd --device /dev/dri` (and the `rocm` image) for
-  `gpu = "amd"`. A missing image is reported with its `podman pull` command; the app never
+  `gpu = "amd"`. With either, also `--security-opt=label=disable`: Fedora's SELinux
+  labelling otherwise keeps Ollama in the container from using the card, and it runs on the
+  CPU without saying so. Only this container, only with a GPU; it still sees nothing of the
+  computer but its model volume. A missing image is reported with its `podman pull` command; the app never
   pulls. A container the app started is stopped (and so removed) when the session ends; a
   leftover stopped container of that name is removed first; any other container is never
   touched. The volume keeps the models.
