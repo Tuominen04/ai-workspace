@@ -20,7 +20,8 @@ Everything AI Workspace does, for the person using it. To install it, see the
 
 ## The workspace
 
-Everything lives in one folder, `~/AI` unless you choose another:
+Everything lives in one folder, `~/AI` unless you choose another. The app creates it only when
+you press **Initialize the workspace** (it offers that the first time):
 
 ```text
 ~/AI/
@@ -160,10 +161,15 @@ download it and fails with "file does not exist". Check with
 gpu = "nvidia"   # or "amd"
 ```
 
-NVIDIA needs the NVIDIA Container Toolkit set up for Podman; AMD uses Ollama's ROCm image,
+NVIDIA needs the NVIDIA Container Toolkit set up for Podman (install `nvidia-container-toolkit`
+and run `sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml`; `nvidia-ctk cdi list`
+then shows `nvidia.com/gpu=all`); AMD uses Ollama's ROCm image,
 which you pull instead with `podman pull docker.io/ollama/ollama:rocm`. Ollama's
 [container page](https://docs.ollama.com/docker) describes both. To use another image, set
-`image = "…"` in the same table.
+`image = "…"` in the same table. With a graphics card set, the app turns SELinux labelling off
+for its container (Fedora's SELinux otherwise keeps Ollama from using the card); the container
+still sees nothing of your computer but its model volume. `podman exec ai-workspace-ollama
+ollama ps` shows `GPU` under PROCESSOR when a model runs on the card.
 
 ## Chat
 
@@ -268,8 +274,9 @@ workspace_root = "/home/you/ai-local/workspaces"
 
 If the `AI_WORKSPACE_HOME` environment variable is set, it decides instead; Configuration says
 so and offers **Switch now** to use your saved folder until the app restarts. Delete the config
-file to go back to `~/AI`. If the folder has no workspace yet, **Initialize** creates the
-standard folders.
+file to go back to `~/AI`. If the folder has no workspace yet, the app creates nothing in it:
+**Whole workspace** → **Overview** says so, and **Initialize the workspace** creates the
+standard folders and `Config/workspace.toml`.
 
 ## When something goes wrong
 

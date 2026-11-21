@@ -5,6 +5,7 @@ import { failureOf, type FailureInfo } from "../lib/failure";
 import { useLoad } from "../lib/useLoad";
 import { counted, dateText } from "../lib/words";
 import { Failure } from "./Failure";
+import { InitButton } from "./InitButton";
 
 type Props = {
   status: WorkspaceStatus;
@@ -16,6 +17,8 @@ type Props = {
   onCloned: (clone: ProjectDetails) => void;
   onDelete: (name: string, archived: boolean) => void;
   onRename: (name: string) => void;
+  /** After Initialize turned the folder into a workspace. */
+  onInitialized?: () => void;
 };
 
 /** The selected project's details, an archived project, or the workspace's folders. */
@@ -28,6 +31,7 @@ export function Overview({
   onCloned,
   onDelete,
   onRename,
+  onInitialized = () => {},
 }: Props) {
   if (archived !== null) {
     const summary = status.archived.find((p) => p.name === archived);
@@ -39,6 +43,30 @@ export function Overview({
         onRestored={onRestored}
         onDelete={() => onDelete(archived, true)}
       />
+    );
+  }
+  if (project === null && !status.initialized) {
+    // Issue #55: the app creates nothing until the person asks.
+    return (
+      <section className="panel">
+        <h2>Workspace</h2>
+        <dl className="facts">
+          <dt>Folder</dt>
+          <dd className="path">{status.root}</dd>
+          <dt>Chosen by</dt>
+          <dd>{status.root_source}</dd>
+        </dl>
+        <div className="notice" role="status" aria-label="No workspace">
+          <p>
+            There is no workspace in this folder yet, and nothing has been created in it.
+            Initialize creates the standard folders (Base, Projects, Cache, Logs, Config) and
+            the configuration file. Or choose another folder under Configuration.
+          </p>
+          <div>
+            <InitButton onDone={onInitialized} />
+          </div>
+        </div>
+      </section>
     );
   }
   if (project === null) {

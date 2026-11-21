@@ -353,3 +353,23 @@ fn closing_asks_first_only_about_an_answered_chat() {
         "answered already: close"
     );
 }
+
+#[test]
+fn status_of_a_folder_without_a_workspace_creates_nothing() {
+    // Issue #55: the window opening must not turn the folder into a workspace.
+    let engine = test_engine("no-auto-init");
+    std::fs::create_dir_all(&engine.paths().root).expect("an empty folder");
+    let status = commands::status(&engine).expect("status describes the folder");
+    assert!(!status.initialized);
+    assert_eq!(status.root, engine.paths().root.display().to_string());
+    assert!(status.projects.is_empty());
+    let left: Vec<_> = std::fs::read_dir(&engine.paths().root)
+        .expect("readable")
+        .collect();
+    assert!(left.is_empty(), "nothing was created: {left:?}");
+
+    commands::init(&engine).expect("init creates it");
+    assert!(commands::status(&engine).expect("status").initialized);
+
+    let _ = std::fs::remove_dir_all(&engine.paths().root);
+}

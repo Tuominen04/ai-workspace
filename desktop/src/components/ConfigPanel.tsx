@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 
-import { engine, type RootSaved, type SwitchDone } from "../lib/engine";
+import { engine, type RootSaved, type SwitchDone, type SwitchOffer } from "../lib/engine";
 import { failureOf, type FailureInfo } from "../lib/failure";
 import { useLoad } from "../lib/useLoad";
 import { Failure } from "./Failure";
@@ -20,6 +20,8 @@ type Props = {
  */
 export function ConfigPanel({ onChanged }: Props) {
   const [settings, reload] = useLoad(() => engine.workspace.config(), "config");
+  // Saving a folder changes what Switch now would use: read the offer again.
+  const [offerKey, setOfferKey] = useState(0);
   const changed = (change: WorkspaceChange) => {
     reload();
     onChanged(change);
@@ -33,6 +35,8 @@ export function ConfigPanel({ onChanged }: Props) {
           Reload
         </button>
       </header>
+
+      <SwitchNow key={offerKey} onSwitched={changed} />
 
       {settings.state === "loading" && <p className="muted">Reading the configuration…</p>}
       {settings.state === "failed" && (
@@ -91,8 +95,71 @@ export function ConfigPanel({ onChanged }: Props) {
           </dl>
         </>
       )}
-      <WorkspaceFolder onSaved={changed} />
+      <WorkspaceFolder
+        onSaved={(change) => {
+          setOfferKey((key) => key + 1);
+          changed(change);
+        }}
+      />
     </section>
+  );
+}
+
+/**
+ * While AI_WORKSPACE_HOME decides the folder, Switch now is offered straight away: it uses the
+ * saved folder (else ~/AI) until the app restarts.
+ */
+function SwitchNow({ onSwitched }: { onSwitched: (change: WorkspaceChange) => void }) {
+  const [offer, reload] = useLoad(() => engine.workspace.switchOffer(), "switch offer");
+  const [busy, setBusy] = useState(false);
+  const [switched, setSwitched] = useState<SwitchDone | null>(null);
+  const [failure, setFailure] = useState<FailureInfo | null>(null);
+
+  async function switchNow() {
+    setBusy(true);
+    setFailure(null);
+    try {
+      const result = await engine.workspace.switchToSaved();
+      setSwitched(result);
+      reload();
+      onSwitched({ folder: true, sessionClosed: result.session_closed !== null });
+    } catch (thrown) {
+      setFailure(failureOf(thrown));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (switched) {
+    return (
+      <div className="notice" role="status" aria-label="Switched">
+        <p>Now using {switched.root}.</p>
+        <p className="small">Chosen by {switched.root_source}.</p>
+        {switched.session_closed && (
+          <p>The chat session in {switched.session_closed.project} was ended.</p>
+        )}
+      </div>
+    );
+  }
+  if (offer.state !== "ready" || offer.value === null) return null;
+  const choice: SwitchOffer = offer.value;
+  return (
+    <div className="notice" role="status" aria-label="Variable decides">
+      <p>
+        AI_WORKSPACE_HOME is set to {choice.variable_root} and decides the folder. Your saved
+        folder is {choice.saved_root} ({choice.saved_source}).
+      </p>
+      <p className="small">
+        Switch now uses the saved folder until the app restarts; an open chat is ended first. To
+        use it every time, start the app without the variable.
+      </p>
+      <div>
+        <button type="button" onClick={switchNow} disabled={busy}>
+          {busy ? "Switching…" : "Switch now"}
+        </button>
+      </div>
+      {failure && <Failure message={failure.message} kind={failure.kind} />}
+    </div>
   );
 }
 
@@ -101,7 +168,6 @@ function WorkspaceFolder({ onSaved }: { onSaved: (change: WorkspaceChange) => vo
   const [path, setPath] = useState("");
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState<RootSaved | null>(null);
-  const [switched, setSwitched] = useState<SwitchDone | null>(null);
   const [failure, setFailure] = useState<FailureInfo | null>(null);
 
   async function save(event: FormEvent) {
@@ -110,25 +176,10 @@ function WorkspaceFolder({ onSaved }: { onSaved: (change: WorkspaceChange) => vo
     setBusy(true);
     setFailure(null);
     setSaved(null);
-    setSwitched(null);
     try {
       const result = await engine.workspace.setRoot(path);
       setSaved(result);
       setPath("");
-      onSaved({ folder: true, sessionClosed: result.session_closed !== null });
-    } catch (thrown) {
-      setFailure(failureOf(thrown));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function switchNow() {
-    setBusy(true);
-    setFailure(null);
-    try {
-      const result = await engine.workspace.switchToSaved();
-      setSwitched(result);
       onSaved({ folder: true, sessionClosed: result.session_closed !== null });
     } catch (thrown) {
       setFailure(failureOf(thrown));
@@ -162,28 +213,12 @@ function WorkspaceFolder({ onSaved }: { onSaved: (change: WorkspaceChange) => vo
           {saved.session_closed && (
             <p>The chat session in {saved.session_closed.project} was ended.</p>
           )}
-          {saved.env_override && !switched && (
-            <>
-              <p>
-                AI_WORKSPACE_HOME is set to {saved.env_override} and still decides the folder.
-                Switch now to use the saved folder until the app restarts, or unset the
-                variable before starting the app to use it every time.
-              </p>
-              <div>
-                <button type="button" onClick={switchNow} disabled={busy}>
-                  {busy ? "Switching…" : "Switch now"}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-      {switched && (
-        <div className="notice" role="status" aria-label="Switched">
-          <p>Now using {switched.root}.</p>
-          <p className="small">Chosen by {switched.root_source}.</p>
-          {switched.session_closed && (
-            <p>The chat session in {switched.session_closed.project} was ended.</p>
+          {saved.env_override && (
+            <p>
+              AI_WORKSPACE_HOME is set to {saved.env_override} and still decides the folder: use
+              Switch now above to use the saved folder until the app restarts, or start the app
+              without the variable to use it every time.
+            </p>
           )}
         </div>
       )}

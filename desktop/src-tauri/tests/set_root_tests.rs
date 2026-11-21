@@ -53,5 +53,30 @@ fn saving_a_folder_writes_the_settings_and_reports_an_override() {
         "the variable still decides, and says so"
     );
 
+    // While the variable decides, Switch now is offered straight away, naming both folders.
+    let offer = commands::switch_offer(&choice)
+        .expect("offer")
+        .expect("the variable decides, so Switch now is offered");
+    assert_eq!(
+        offer.variable_root,
+        base.join("elsewhere").display().to_string()
+    );
+    assert_eq!(offer.saved_root, canonical.display().to_string());
+    assert!(
+        offer.saved_source.contains("config file"),
+        "{}",
+        offer.saved_source
+    );
+
+    // After switching, or without the variable, there is nothing to offer.
+    commands::switch_to_saved(&choice, &open).expect("switch");
+    assert!(commands::switch_offer(&choice).expect("offer").is_none());
+    // SAFETY: as above.
+    unsafe {
+        std::env::remove_var("AI_WORKSPACE_HOME");
+    }
+    let fresh = RootChoice::default();
+    assert!(commands::switch_offer(&fresh).expect("offer").is_none());
+
     let _ = std::fs::remove_dir_all(&base);
 }

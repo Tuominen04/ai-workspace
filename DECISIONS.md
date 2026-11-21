@@ -619,7 +619,10 @@ What 1.0 means (spec `specs/009-stable-release/`). Decided with the maintainer.
    the named volume `ai-workspace-ollama`, started with `--pull=never`. Whatever already
    answers on that port is used instead, whatever the setting. The app never downloads the
    image or models: a missing image is reported with the `podman pull` command. CPU by
-   default; `nvidia` adds the CDI device, `amd` the ROCm image and its devices. A container
+   default; `nvidia` adds the CDI device, `amd` the ROCm image and its devices, and either
+   turns SELinux labelling off for that container (`--security-opt=label=disable`, as NVIDIA
+   documents for Podman; amended after the 1.0 test pass found that Fedora's SELinux keeps
+   Ollama from using the card otherwise, and it runs on the CPU without saying so). A container
    the app started is stopped (and removed) with the session or the app, as `ollama serve`
    is today; a container the person started is never touched. This is still Ollama, started
    differently; several runtimes remain v1.1.

@@ -17,6 +17,7 @@ export function launch() {
 /** A fixed, believable workspace for the stub to answer from. */
 export const FIXTURE = {
   status: {
+    initialized: true,
     root: "/home/me/AI",
     root_source: "user config file /home/me/.config/ai-workspace/config.toml",
     base: "/home/me/AI/Base",
@@ -131,7 +132,13 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
         granted_files: grants.filter((g) => g.category === "temporary" && g.status === "active").map((g) => g.path),
       });
       const answers = {
-        workspace_status: () => ({ ...fixture.status, projects: [...projects], archived: [...archived] }),
+        // A folder without a workspace (fixture.status.initialized false) becomes one on init.
+        workspace_status: () => ({
+          ...fixture.status,
+          initialized: window.__initialized ?? fixture.status.initialized,
+          projects: [...projects],
+          archived: [...archived],
+        }),
         // Archive and restore move a project between the two lists; a taken name is refused.
         project_archive: ({ name }) => {
           if (archived.some((p) => p.name === name))
@@ -190,21 +197,38 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
           fixture.details[name] ??= { ...fixture.details.security, name, display_name: name, path };
           return { name, path, session_closed: null };
         },
-        workspace_init: () => ({ root: fixture.status.root, config_file: fixture.config.config_file, config_created: true }),
-        workspace_set_root: ({ path }) =>
-          path.includes("nope")
+        workspace_init: () => {
+          window.__initialized = true;
+          return { root: fixture.status.root, config_file: fixture.config.config_file, config_created: true };
+        },
+        workspace_set_root: ({ path }) => {
+          if (!path.includes("nope")) window.__savedRoot = path;
+          return path.includes("nope")
             ? Promise.reject({ kind: "InvalidWorkspaceRoot", message: `cannot use '${path}' as the workspace folder: it does not exist` })
             : {
                 root: path,
                 config_file: "/home/me/.config/ai-workspace/config.toml",
                 env_override: fixture.envOverride ?? null,
                 session_closed: null,
-              },
-        workspace_switch_to_saved: () => ({
-          root: "/home/me/ai-local/workspaces",
+              };
+        },
+        // While the variable decides (fixture.envOverride) and nobody switched: Switch now.
+        workspace_switch_offer: () =>
+          fixture.envOverride && !window.__switched
+            ? {
+                variable_root: fixture.envOverride,
+                saved_root: window.__savedRoot ?? "/home/me/ai-local/workspaces",
+                saved_source: "user config file /home/me/.config/ai-workspace/config.toml",
+              }
+            : null,
+        workspace_switch_to_saved: () => {
+          window.__switched = true;
+          return {
+          root: window.__savedRoot ?? "/home/me/ai-local/workspaces",
           root_source: "user config file /home/me/.config/ai-workspace/config.toml (AI_WORKSPACE_HOME ignored until the app restarts)",
           session_closed: null,
-        }),
+          };
+        },
         project_create: ({ name, description }) => {
           if (name === "Config")
             return Promise.reject({ kind: "InvalidProjectName", message: "invalid project name 'Config'" });

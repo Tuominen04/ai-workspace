@@ -11,8 +11,10 @@
 use crate::dto::{
     ChatReply, CommandError, GrantDone, InitDone, NoteSaved, PermissionPage, ProjectDeleted,
     ProjectDetails, ProjectMoved, ProjectRenamed, RevokeDone, RootSaved, SearchResults,
-    SessionClosed, SessionInfo, SwitchDone, Validation, WorkspaceSettings, WorkspaceStatus,
+    SessionClosed, SessionInfo, SwitchDone, SwitchOffer, Validation, WorkspaceSettings,
+    WorkspaceStatus,
 };
+use ai_workspace_core::paths::RootSource;
 use ai_workspace_core::workspace::{Deleted, PermissionViewOptions};
 use ai_workspace_core::{Engine, Session};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -100,6 +102,13 @@ pub fn needs_save_prompt(open: &OpenSession, allowed: &QuitAllowed) -> Option<St
 }
 
 pub fn status(engine: &Engine) -> Outcome<WorkspaceStatus> {
+    // A folder without a workspace is described, not created (issue #55).
+    if !engine.is_initialized() {
+        return Ok(WorkspaceStatus::uninitialized(
+            engine.paths(),
+            engine.root_source(),
+        ));
+    }
     let projects = engine.projects()?;
     let archived = engine.archived_projects()?;
     Ok(WorkspaceStatus::new(
@@ -325,6 +334,28 @@ fn close_session_in(open: &OpenSession, project: &str) -> Outcome<Option<Session
 /// **Switch now**: from here until the app restarts, use the saved folder (else `~/AI`) even
 /// though `AI_WORKSPACE_HOME` is set. An open chat session belongs to the old folder, so it is
 /// ended first.
+/// While `AI_WORKSPACE_HOME` decides the folder and the person has not switched yet: that folder
+/// and the one **Switch now** would use, so Configuration can offer it straight away. `None`
+/// otherwise, or when both are the same folder.
+pub fn switch_offer(choice: &RootChoice) -> Outcome<Option<SwitchOffer>> {
+    if choice.ignoring_env() {
+        return Ok(None);
+    }
+    let current = Engine::open()?;
+    if !matches!(current.root_source(), RootSource::Environment) {
+        return Ok(None);
+    }
+    let saved = Engine::open_saved()?;
+    if saved.paths().root == current.paths().root {
+        return Ok(None);
+    }
+    Ok(Some(SwitchOffer {
+        variable_root: current.paths().root.display().to_string(),
+        saved_root: saved.paths().root.display().to_string(),
+        saved_source: saved.root_source().describe(),
+    }))
+}
+
 pub fn switch_to_saved(choice: &RootChoice, open: &OpenSession) -> Outcome<SwitchDone> {
     let session_closed = session_close(open)?;
     choice.0.store(true, Ordering::SeqCst);
@@ -482,6 +513,11 @@ pub async fn workspace_set_root(
     path: String,
 ) -> Outcome<RootSaved> {
     set_root(&choice, &open, &path)
+}
+
+#[tauri::command]
+pub async fn workspace_switch_offer(choice: Choice<'_>) -> Outcome<Option<SwitchOffer>> {
+    switch_offer(&choice)
 }
 
 #[tauri::command]

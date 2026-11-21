@@ -184,10 +184,15 @@ pub fn render_chat_error(message: &str) {
     outln!("You can try again, or type 'exit' to close the workspace.");
 }
 
-pub fn render_status(paths: &WorkspacePaths, source: &RootSource, projects: &[Project]) {
+/// `projects` is `None` when the folder holds no workspace yet.
+pub fn render_status(paths: &WorkspacePaths, source: &RootSource, projects: Option<&[Project]>) {
     outln!("AI Workspace status");
     outln!("Root: {}", paths.root.display());
     outln!("Root chosen by: {}", source.describe());
+    let Some(projects) = projects else {
+        outln!("No workspace in this folder yet; run `{COMMAND_NAME} init` to create it.");
+        return;
+    };
     outln!("Base: {}", paths.base.display());
     outln!("Projects: {}", paths.projects.display());
     outln!("Discovered workspaces: {}", projects.len());

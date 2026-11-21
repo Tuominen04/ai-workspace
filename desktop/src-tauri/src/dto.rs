@@ -104,6 +104,9 @@ pub struct WorkspaceStatus {
     pub projects: Vec<ProjectSummary>,
     /// The archived projects, in `Projects/Archive/` (ADR-0015).
     pub archived: Vec<ProjectSummary>,
+    /// `false` when the folder holds no workspace yet: nothing was created, and Initialize
+    /// creates it (issue #55).
+    pub initialized: bool,
 }
 
 impl WorkspaceStatus {
@@ -120,6 +123,15 @@ impl WorkspaceStatus {
             projects_dir: path_text(&paths.projects),
             projects: projects.iter().map(ProjectSummary::from).collect(),
             archived: archived.iter().map(ProjectSummary::from).collect(),
+            initialized: true,
+        }
+    }
+
+    /// A folder without a workspace: where it is, and that it is not one yet.
+    pub fn uninitialized(paths: &WorkspacePaths, source: &RootSource) -> Self {
+        Self {
+            initialized: false,
+            ..Self::new(paths, source, &[], &[])
         }
     }
 }
@@ -578,6 +590,18 @@ pub struct RootSaved {
     pub env_override: Option<String>,
     /// The chat session that was ended because it belonged to the previous folder.
     pub session_closed: Option<SessionClosed>,
+}
+
+/// Offered while `AI_WORKSPACE_HOME` decides the folder: what **Switch now** would change.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct SwitchOffer {
+    /// The folder the variable names, in use now.
+    pub variable_root: String,
+    /// The folder Switch now would use: the saved one, else `~/AI`.
+    pub saved_root: String,
+    /// Where that folder comes from, in words.
+    pub saved_source: String,
 }
 
 /// What **Switch now** did: the folder now in use, and why.
