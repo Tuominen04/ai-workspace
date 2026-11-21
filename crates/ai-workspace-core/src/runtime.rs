@@ -463,6 +463,11 @@ impl Drop for RuntimeManager {
 /// command that downloads it (a session using Podman puts in the `podman exec` form).
 fn request_failed(model: &str, error: ureq::Error) -> AppError {
     match error {
+        ureq::Error::Transport(transport)
+            if transport.kind() == ureq::ErrorKind::ConnectionFailed =>
+        {
+            AppError::RuntimeNotAnswering
+        }
         ureq::Error::Status(404, _) => AppError::ModelNotInstalled {
             model: model.to_string(),
             pull_command: format!("ollama pull {model}"),

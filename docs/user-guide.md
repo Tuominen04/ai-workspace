@@ -281,6 +281,7 @@ standard folders.
 | "The model '…' is not installed in Ollama" | Run the download command it shows (`ollama pull …`, or `podman exec ai-workspace-ollama ollama pull …` with Ollama in Podman), or choose an installed model on the project's Overview. |
 | Replies are very slow | Use a smaller model, or set Ollama up to use your graphics card (Ollama's [GPU page](https://docs.ollama.com/gpu)). |
 | A reply stopped halfway | **Retry**. |
+| "Ollama stopped answering" | Ollama was stopped during the chat. **End session** and **Start session** (the app starts Ollama again when nothing runs), then **Retry**. |
 | A note is missing from the context list | It may not be `.md`, its name may look like a secret, or it did not fit: ask about it by name, or use a model with a larger context window. |
 | "…validation has blocking issues" | Open **Validation** on Whole workspace and fix what it lists. |
 | "Already exists" | Pick another name, or rename or archive the other project first. |

@@ -306,3 +306,26 @@ fn an_ollama_that_answers_is_ready() {
     let base_url = spawn_mock_server(ok_json(r#"{"version":"0.12.0"}"#));
     assert!(ollama_answers_at(&base_url));
 }
+
+#[test]
+fn an_ollama_that_was_stopped_is_said_plainly() {
+    // A port nothing listens on any more, as after stopping Ollama during a session.
+    let closed = {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+        listener.local_addr().expect("addr")
+    };
+    let messages = vec![ChatMessage::user("hi".to_string())];
+    let result =
+        RuntimeManager::new().send_chat_message(&format!("http://{closed}"), "sec", &messages);
+    match result {
+        Err(error @ AppError::RuntimeNotAnswering) => {
+            let text = error.to_string();
+            assert!(
+                text.starts_with("Ollama stopped answering") && text.contains("start it again"),
+                "{text}"
+            );
+            assert!(!text.contains("os error"), "{text}");
+        }
+        other => panic!("expected RuntimeNotAnswering, got {other:?}"),
+    }
+}
