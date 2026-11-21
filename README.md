@@ -52,10 +52,13 @@ answer better but need more memory. To use a graphics card, see Ollama's
 
 ### 3. First chat
 
-1. **New project** in the sidebar: give it a name, for example "Home Lab".
-2. Put some Markdown notes (`.md` files) in its folder, `~/AI/Projects/home-lab/`.
-3. On the project's **Overview**, **Change** the model to the one you downloaded.
-4. Open **Chat**, **Start session**, and ask about your notes.
+1. The first time, the app says there is no workspace yet: **Initialize the workspace**
+   creates `~/AI` with its folders. (To use another folder, choose it first under
+   **Configuration**.)
+2. **New project** in the sidebar: give it a name, for example "Home Lab".
+3. Put some Markdown notes (`.md` files) in its folder, `~/AI/Projects/home-lab/`.
+4. On the project's **Overview**, **Change** the model to the one you downloaded.
+5. Open **Chat**, **Start session**, and ask about your notes.
 
 AI Workspace starts Ollama for you if it is not running.
 
