@@ -273,6 +273,7 @@ standard folders.
 | "No local runtime is running" | Install Ollama (see the [README](../README.md#quick-start)), or set up [Ollama in Podman](#running-ollama-in-podman), and start the session again. |
 | "The Ollama image … is not downloaded" | Run the `podman pull` command it shows, then start the session again. |
 | The chat uses an Ollama you did not expect | Something already answers on `127.0.0.1:11434` (an installed Ollama, or a container you started); stop it, then start the session again. |
+| Your downloaded models are missing (`ollama list` is empty, and **Overview** → **Change** lists none) | Each Ollama keeps its own models. Ollama's installer runs it as a system service, with models in `/usr/share/ollama/.ollama/models`; when that service is stopped, AI Workspace starts Ollama as you, with models in `~/.ollama/models`, and Ollama in Podman has its own. Start the service (`sudo systemctl start ollama`) and start the session again, or download the model into the Ollama that runs. |
 | "The model '…' is not installed in Ollama" | Run the download command it shows (`ollama pull …`, or `podman exec ai-workspace-ollama ollama pull …` with Ollama in Podman), or choose an installed model on the project's Overview. |
 | Replies are very slow | Use a smaller model, or set Ollama up to use your graphics card (Ollama's [GPU page](https://docs.ollama.com/gpu)). |
 | A reply stopped halfway | **Retry**. |

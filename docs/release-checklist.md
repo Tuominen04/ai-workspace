@@ -38,22 +38,25 @@ Use a scratch workspace so your real notes are not touched, and write down:
 
 ## 2. With the installed Ollama
 
-Ollama installed, the model pulled (`ollama pull <model>`), and Ollama **not** running **yet**
-(`systemctl stop ollama` if it runs as a service).
+Ollama installed and running as its service, as its installer sets it up
+(`systemctl status ollama` shows it active), and the model pulled (`ollama pull <model>`).
 
 - [X] **New project** "Release Test" with a description. It opens on **Chat**.
 - [X] Put two `.md` notes in `Projects/release-test/Knowledge/`, one with a distinctive word.
   Add a file named `wifi-password.md` too.
-- [X] **Start session**: the app starts Ollama ("Started Ollama for this session").
-- [X] **Overview** → **Change** the model: installed models are suggested; pick yours (the workspace default may be a model you have not pulled). List shows the notes, lists `wifi-password.md` under Skipped, and shows the budget.
+- [X] **Overview** → **Change** the model: installed models are suggested; pick yours (the
+  workspace default may be a model you have not pulled).
+- [X] **Start session**: the app uses the running service ("Ollama is already running on 127.0.0.1:11434"). The context list shows the notes, lists `wifi-password.md` under
+  Skipped, and shows the budget.
 - [X] Ask about the distinctive word: the reply streams in and uses the note. Formatting (a list or a table) renders; a link in the reply is shown as text.
 - [X] Switch to another tab and to Whole workspace and back: the chat is still there.
-- [X] **Permissions**: grant a folder outside the workspace holding a `.md` note; the next message lists it under Granted and can use it. **Revoke** removes it.
+- [X] **Permissions**: grant a folder outside the workspace holding a `.md` note with two facts in it. Ask about the first: the next reply uses it, without restarting the session, and the context list shows the note under Granted. **Revoke** it, then ask about the second fact, one the model has not said yet: it no longer knows it, and the list leaves the note out. (What the model already said stays in the conversation, so it can repeat the first fact.)
 - [X] **Search** finds the distinctive word.
-- [X] Stop Ollama mid-reply (`pkill ollama`): the failure is shown with **Retry**. Start the session again and **Retry** works.
+- [X] Stop the service mid-reply (`sudo systemctl stop ollama`): the failure is shown with **Retry**.
+- [X] With the service still stopped, **End session** and **Start session**: the app starts its own Ollama ("Started Ollama for this session"). It runs as you and keeps models in `~/.ollama/models`, not the service's: **Overview** → **Change** lists no models, and the **?** at the end of its hint explains why. Run `ollama pull <model>` while the session is open: **Retry** now works.
 - [X] **End session** → **Draft a note** → edit → **Save note and end**: a
   `session-note-…md` appears in `Session/`. A new session lists it in its context.
-- [X] Close the app: no `ollama serve` the app started is left running (`pgrep -a ollama`).
+- [X] Close the app: no `ollama serve` the app started is left running (`pgrep -a ollama`). Start the service again (`sudo systemctl start ollama`).
 
 ## 3. With Ollama in Podman
 
