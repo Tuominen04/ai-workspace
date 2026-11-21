@@ -189,6 +189,13 @@ pub fn podman_run_args(settings: &PodmanSettings) -> Vec<String> {
     .iter()
     .map(|arg| arg.to_string())
     .collect();
+    // With a graphics card, SELinux labelling (on by default on Fedora) keeps the process in
+    // the container from using the device, and Ollama falls back to the CPU without saying so;
+    // NVIDIA documents turning labelling off for such a container (ADR-0016). Only this
+    // container, only with a GPU: it still sees nothing of the computer but its model volume.
+    if settings.gpu != Gpu::None {
+        args.push("--security-opt=label=disable".into());
+    }
     match settings.gpu {
         Gpu::None => {}
         Gpu::Nvidia => args.extend(["--device".into(), "nvidia.com/gpu=all".into()]),
