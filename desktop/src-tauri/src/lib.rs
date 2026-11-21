@@ -37,6 +37,7 @@ pub fn run() {
             commands::workspace_search,
             commands::workspace_init,
             commands::workspace_set_root,
+            commands::workspace_switch_offer,
             commands::workspace_switch_to_saved,
             commands::project_create,
             commands::project_archive,

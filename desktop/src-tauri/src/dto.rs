@@ -580,6 +580,18 @@ pub struct RootSaved {
     pub session_closed: Option<SessionClosed>,
 }
 
+/// Offered while `AI_WORKSPACE_HOME` decides the folder: what **Switch now** would change.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct SwitchOffer {
+    /// The folder the variable names, in use now.
+    pub variable_root: String,
+    /// The folder Switch now would use: the saved one, else `~/AI`.
+    pub saved_root: String,
+    /// Where that folder comes from, in words.
+    pub saved_source: String,
+}
+
 /// What **Switch now** did: the folder now in use, and why.
 #[derive(Debug, Clone, Serialize, TS)]
 #[ts(export, export_to = "../../src/lib/bindings/")]
