@@ -55,7 +55,7 @@ Podman installed, and no other Ollama answering on the port: stop the service
 an Ollama already running on 127.0.0.1:11434, not the app's Podman container").
 
 - [X] Add `runtime = "podman"` near the top of `Config/workspace.toml`. **Configuration** shows "Runs Ollama with: Podman container (docker.io/ollama/ollama:latest, CPU)".
-- [X] Without the image (remove it first: **End session**, then `podman rmi docker.io/ollama/ollama:latest`; the models stay in the volume): **Start session** says the image is not downloaded and shows the
+- [X] Without the image (remove it first: **End session**, then `podman rmi docker.io/ollama/ollama:latest`; the models stay in the volume): **Start session** says the image is not downloaded and shows the app pulled nothing.
 - [X] Run the shown `podman pull docker.io/ollama/ollama:latest` command, then **Start session**: "Started Ollama in the ai-workspace-ollama container". `podman ps` shows it, published on `127.0.0.1:11434` only.
 - [X] Pull the model into it: `podman exec ai-workspace-ollama ollama pull <model>`. It is suggested on the project's Overview; a chat with it works.
 - [X] **End session**: `podman ps -a` no longer shows the container. `podman volume ls` still shows `ai-workspace-ollama`; a new session finds the model without pulling again.
