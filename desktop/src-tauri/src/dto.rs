@@ -56,6 +56,7 @@ impl From<AppError> for CommandError {
             AppError::MissingProjectContext => "MissingProjectContext",
             AppError::RuntimeRequestFailed(_) => "RuntimeRequestFailed",
             AppError::ModelNotInstalled { .. } => "ModelNotInstalled",
+            AppError::RuntimeNotAnswering => "RuntimeNotAnswering",
             AppError::InvalidWorkspaceRoot { .. } => "InvalidWorkspaceRoot",
         };
         Self {

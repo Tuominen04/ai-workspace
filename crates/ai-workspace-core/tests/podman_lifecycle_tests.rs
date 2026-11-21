@@ -55,6 +55,29 @@ fn set_path(dir: &Path) {
     unsafe { std::env::set_var("PATH", dir) };
 }
 
+/// Stands in for Ollama on its port: answers every request with 200, as `/api/version` does,
+/// until `until` (or the end of the test binary).
+fn serve_like_ollama(listener: TcpListener, until: Option<std::time::Instant>) {
+    use std::io::{Read, Write};
+    listener.set_nonblocking(true).expect("nonblocking");
+    loop {
+        if until.is_some_and(|end| std::time::Instant::now() >= end) {
+            return;
+        }
+        match listener.accept() {
+            Ok((mut stream, _)) => {
+                let _ = stream.set_nonblocking(false);
+                let mut buffer = [0u8; 1024];
+                let _ = stream.read(&mut buffer);
+                let _ = stream.write_all(
+                    b"HTTP/1.1 200 OK\r\nContent-Length: 17\r\nConnection: close\r\n\r\n{\"version\":\"0\"}\n",
+                );
+            }
+            Err(_) => std::thread::sleep(std::time::Duration::from_millis(10)),
+        }
+    }
+}
+
 #[test]
 fn the_launcher_starts_and_stops_only_its_own_container_and_never_pulls() {
     if TcpStream::connect_timeout(
@@ -113,10 +136,9 @@ fn the_launcher_starts_and_stops_only_its_own_container_and_never_pulls() {
         while !marker.exists() && Instant::now() < deadline {
             thread::sleep(Duration::from_millis(20));
         }
-        // Stand in for Ollama inside the container.
+        // Stand in for Ollama inside the container: answers like Ollama for a few seconds.
         let socket = TcpListener::bind("127.0.0.1:11434").expect("listen like the container");
-        thread::sleep(Duration::from_secs(3));
-        drop(socket);
+        serve_like_ollama(socket, Some(Instant::now() + Duration::from_secs(3)));
     });
     {
         let mut manager = RuntimeManager::new();
