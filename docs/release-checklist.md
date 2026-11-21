@@ -60,15 +60,15 @@ an Ollama already running on 127.0.0.1:11434, not the app's Podman container").
 - [X] Pull the model into it: `podman exec ai-workspace-ollama ollama pull <model>`. It is suggested on the project's Overview; a chat with it works.
 - [X] **End session**: `podman ps -a` no longer shows the container. `podman volume ls` still shows `ai-workspace-ollama`; a new session finds the model without pulling again.
 - [X] Start a container yourself (`podman run -d --name my-ollama -p 127.0.0.1:11434:11434 -v ai-workspace-ollama:/root/.ollama docker.io/ollama/ollama:latest`), then start and end a session: the app uses it and leaves it running. Remove it afterwards.
-- [ ] If you have a graphics card: set `[podman]` `gpu = "nvidia"` or `"amd"` (and pull the `:rocm` image for AMD); replies come noticeably faster and `podman exec ai-workspace-ollama ollama ps` shows the GPU in use.
+- [X] If you have a graphics card: set `[podman]` `gpu = "nvidia"` or `"amd"` (and pull the `:rocm` image for AMD); replies come noticeably faster and `podman exec ai-workspace-ollama ollama ps` shows the GPU in use.
 
 ## 4. Project management
 
-- [ ] **Clone** "Release Test": "Release Test (Clone)" opens, with the notes and the session note, and no temporary grants.
-- [ ] **Rename…** the clone to "Release Copy": the dialog shows `Projects/release-copy`; after saving, the folder and name both changed.
-- [ ] Rename it to "Release Test": refused with "Already exists"; the message can be dismissed.
-- [ ] **Archive** it from the right-click menu: it moves to **Archived (1)** and to `Projects/Archive/`. **Restore** brings it back.
-- [ ] **Delete…** it → **Move to Trash**: it is in the Files app's Trash and can be restored from there.
+- [X] **Clone** "Release Test": "Release Test (Clone)" opens, with the notes and the session note, and no temporary grants.
+- [X] **Rename…** the clone to "Release Copy": the dialog shows `Projects/release-copy`; after saving, the folder and name both changed.
+- [X] Rename it to "Release Test": refused with "Already exists"; the message can be dismissed.
+- [X] **Archive** it from the right-click menu: it moves to **Archived (1)** and to `Projects/Archive/`. **Restore** brings it back.
+- [X] **Delete…** it → **Move to Trash**: it is in the Files app's Trash and can be restored from there.
 
 ## 5. Workspace and app
 
