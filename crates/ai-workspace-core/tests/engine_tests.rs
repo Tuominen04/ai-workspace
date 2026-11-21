@@ -117,3 +117,37 @@ fn a_projects_model_is_set_cleared_and_checked() {
 
     let _ = std::fs::remove_dir_all(&engine.paths().root);
 }
+
+#[test]
+fn reading_a_folder_without_a_workspace_creates_nothing() {
+    // Issue #55: only init turns a folder into a workspace.
+    let engine = test_engine("no-auto-init");
+    let root = engine.paths().root.clone();
+    std::fs::create_dir_all(&root).expect("an empty folder");
+    assert!(!engine.is_initialized());
+
+    assert!(matches!(engine.projects(), Err(AppError::ConfigMissing(_))));
+    assert!(matches!(
+        engine.archived_projects(),
+        Err(AppError::ConfigMissing(_))
+    ));
+    assert!(matches!(engine.config(), Err(AppError::ConfigMissing(_))));
+    assert!(matches!(
+        engine.search("firewall", None, 5),
+        Err(AppError::ConfigMissing(_))
+    ));
+    assert!(matches!(
+        engine.create_project("Router", None),
+        Err(AppError::ConfigMissing(_))
+    ));
+    let validation = engine.validate().expect("validate never refuses");
+    assert!(!validation.valid, "a missing workspace is reported");
+    let left: Vec<_> = std::fs::read_dir(&root).expect("readable").collect();
+    assert!(left.is_empty(), "nothing was created: {left:?}");
+
+    engine.init().expect("init creates it");
+    assert!(engine.is_initialized());
+    assert!(engine.projects().expect("now readable").is_empty());
+
+    let _ = std::fs::remove_dir_all(&root);
+}

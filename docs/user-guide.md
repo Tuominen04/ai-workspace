@@ -20,7 +20,8 @@ Everything AI Workspace does, for the person using it. To install it, see the
 
 ## The workspace
 
-Everything lives in one folder, `~/AI` unless you choose another:
+Everything lives in one folder, `~/AI` unless you choose another. The app creates it only when
+you press **Initialize the workspace** (it offers that the first time):
 
 ```text
 ~/AI/
@@ -273,8 +274,9 @@ workspace_root = "/home/you/ai-local/workspaces"
 
 If the `AI_WORKSPACE_HOME` environment variable is set, it decides instead; Configuration says
 so and offers **Switch now** to use your saved folder until the app restarts. Delete the config
-file to go back to `~/AI`. If the folder has no workspace yet, **Initialize** creates the
-standard folders.
+file to go back to `~/AI`. If the folder has no workspace yet, the app creates nothing in it:
+**Whole workspace** → **Overview** says so, and **Initialize the workspace** creates the
+standard folders and `Config/workspace.toml`.
 
 ## When something goes wrong
 

@@ -90,29 +90,33 @@ impl Engine {
         })
     }
 
-    /// The workspace's projects. Creates the standard layout and default
-    /// configuration first if they are missing, as every interactive entry
-    /// point does.
+    /// Whether the folder holds a workspace yet. Only [`Engine::init`] creates one; every other
+    /// method refuses a folder without it ([`AppError::ConfigMissing`]).
+    pub fn is_initialized(&self) -> bool {
+        self.paths.has_workspace()
+    }
+
+    /// The workspace's projects. A folder without a workspace is refused
+    /// ([`AppError::ConfigMissing`]); reading never creates one (issue #55).
     pub fn projects(&self) -> Result<Vec<Project>> {
-        self.paths.ensure_layout()?;
-        let _ = ensure_default_workspace_config(&self.paths, false)?;
+        self.require_workspace()?;
         discover_projects(&self.paths)
     }
 
     /// The workspace configuration (`Config/workspace.toml`).
     pub fn config(&self) -> Result<WorkspaceConfig> {
-        self.paths.ensure_layout()?;
+        self.require_workspace()?;
         load_workspace_config(&self.paths)
     }
 
     /// Validates the workspace. Never refuses: the result says whether it is
     /// valid.
     pub fn validate(&self) -> Result<ValidationResult> {
-        self.paths.ensure_layout()?;
         validate_workspace(&self.paths)
     }
 
     pub fn create_project(&self, name: &str, description: Option<&str>) -> Result<CreatedProject> {
+        self.require_workspace()?;
         self.paths.ensure_layout()?;
         self.enforce_validation_gate(GatedOperation::ProjectCreate)?;
         let config = load_workspace_config(&self.paths)?;
@@ -120,7 +124,7 @@ impl Engine {
     }
 
     pub fn project_details(&self, name: &str) -> Result<(Project, ProjectMetadata)> {
-        self.paths.ensure_layout()?;
+        self.require_workspace()?;
         self.enforce_validation_gate(GatedOperation::ProjectShow)?;
         let config = load_workspace_config(&self.paths)?;
         inspect_project(&self.paths, &config, name)
@@ -132,6 +136,7 @@ impl Engine {
         name: &str,
         model: Option<&str>,
     ) -> Result<(Project, ProjectMetadata)> {
+        self.require_workspace()?;
         self.paths.ensure_layout()?;
         self.enforce_validation_gate(GatedOperation::ProjectSetModel)?;
         let config = load_workspace_config(&self.paths)?;
@@ -140,7 +145,7 @@ impl Engine {
 
     /// The archived projects, in `Projects/Archive/` (ADR-0015).
     pub fn archived_projects(&self) -> Result<Vec<Project>> {
-        self.paths.ensure_layout()?;
+        self.require_workspace()?;
         discover_archived_projects(&self.paths)
     }
 
@@ -148,6 +153,7 @@ impl Engine {
     /// moves the folder without reading it, so a project with broken metadata can still be put
     /// away (ADR-0015). Ending an open session in the project is the front end's job.
     pub fn archive_project(&self, name: &str) -> Result<PathBuf> {
+        self.require_workspace()?;
         self.paths.ensure_layout()?;
         archive_project(&self.paths, name)
     }
@@ -155,6 +161,7 @@ impl Engine {
     /// Clones a project into `<folder>-clone` (ADR-0015). Gated: it reads and writes
     /// `project.toml`.
     pub fn clone_project(&self, name: &str) -> Result<(Project, ProjectMetadata)> {
+        self.require_workspace()?;
         self.paths.ensure_layout()?;
         self.enforce_validation_gate(GatedOperation::ProjectClone)?;
         let config = load_workspace_config(&self.paths)?;
@@ -171,6 +178,7 @@ impl Engine {
         archived: bool,
         erase_without_trash: bool,
     ) -> Result<(PathBuf, Deleted)> {
+        self.require_workspace()?;
         self.paths.ensure_layout()?;
         delete_project(&self.paths, name, archived, erase_without_trash)
     }
@@ -179,6 +187,7 @@ impl Engine {
     /// writes `project.toml`. Ending an open chat session in the project is the front end's
     /// job; the project's permission state is ended here.
     pub fn rename_project(&self, name: &str, new_name: &str) -> Result<(Project, ProjectMetadata)> {
+        self.require_workspace()?;
         self.paths.ensure_layout()?;
         self.enforce_validation_gate(GatedOperation::ProjectRename)?;
         let config = load_workspace_config(&self.paths)?;
@@ -187,6 +196,7 @@ impl Engine {
 
     /// Restores an archived project into `Projects/`. Not gated, like archiving.
     pub fn restore_project(&self, name: &str) -> Result<PathBuf> {
+        self.require_workspace()?;
         self.paths.ensure_layout()?;
         restore_project(&self.paths, name)
     }
@@ -195,6 +205,7 @@ impl Engine {
     /// validation: it writes only into the project's own Session folder, at the person's
     /// explicit request, and a blocked workspace should not cost the record of a session.
     pub fn save_session_note(&self, name: &str, text: &str) -> Result<PathBuf> {
+        self.require_workspace()?;
         self.paths.ensure_layout()?;
         let config = load_workspace_config(&self.paths)?;
         save_session_note(&self.paths, &config, name, text, now_unix())
@@ -207,6 +218,7 @@ impl Engine {
         project: Option<&str>,
         path: &str,
     ) -> Result<(Project, PermissionGrantResult)> {
+        self.require_workspace()?;
         self.paths.ensure_layout()?;
         self.enforce_validation_gate(GatedOperation::PermissionGrant)?;
         let project = self.resolve_permission_project(project)?;
@@ -221,6 +233,7 @@ impl Engine {
         project: Option<&str>,
         path: &str,
     ) -> Result<(Project, PermissionRevokeResult)> {
+        self.require_workspace()?;
         self.paths.ensure_layout()?;
         self.enforce_validation_gate(GatedOperation::PermissionRevoke)?;
         let project = self.resolve_permission_project(project)?;
@@ -235,7 +248,7 @@ impl Engine {
         project: Option<&str>,
         options: PermissionViewOptions,
     ) -> Result<(Project, PermissionViewSnapshot)> {
-        self.paths.ensure_layout()?;
+        self.require_workspace()?;
         self.enforce_validation_gate(GatedOperation::PermissionView)?;
         let project = self.resolve_permission_project(project)?;
         let snapshot = view_permissions(&self.paths, &project, &options)?;
@@ -250,7 +263,7 @@ impl Engine {
         project: Option<&str>,
         limit: usize,
     ) -> Result<SearchOutcome> {
-        self.paths.ensure_layout()?;
+        self.require_workspace()?;
         self.enforce_validation_gate(GatedOperation::Search)?;
 
         let project = match project {
@@ -268,6 +281,17 @@ impl Engine {
     }
 
     /// Refuses to continue while blocking validation issues exist.
+    /// Refuses when the folder holds no workspace yet (no `Config/workspace.toml`), so that
+    /// only [`Engine::init`] turns a folder into one (issue #55). Writes call
+    /// `ensure_layout` after this, restoring a standard folder an existing workspace lost.
+    fn require_workspace(&self) -> Result<()> {
+        if self.paths.has_workspace() {
+            Ok(())
+        } else {
+            Err(AppError::ConfigMissing(self.paths.workspace_config_file()))
+        }
+    }
+
     fn enforce_validation_gate(&self, operation: GatedOperation) -> Result<()> {
         let result = validate_workspace(&self.paths)?;
         if result.valid {

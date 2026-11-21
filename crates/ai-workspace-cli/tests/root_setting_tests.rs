@@ -244,3 +244,36 @@ fn write_config(path: &Path, text: &str) {
         .expect("config folder should be created");
     fs::write(path, text).expect("config file should be written");
 }
+
+#[test]
+fn a_folder_without_a_workspace_is_described_not_created() {
+    // Issue #55: status describes the folder; other commands say to run init.
+    let sandbox = Sandbox::new("no-auto-init");
+    let empty = sandbox.folder("empty");
+
+    let status = stdout_of(
+        sandbox
+            .command()
+            .env("AI_WORKSPACE_HOME", &empty)
+            .arg("status"),
+    );
+    assert_eq!(root_line(&status), empty.display().to_string());
+    assert!(
+        status.contains("No workspace in this folder yet; run `ai-workspace init`"),
+        "{status}"
+    );
+
+    sandbox
+        .command()
+        .env("AI_WORKSPACE_HOME", &empty)
+        .args(["project", "create", "--name", "Router"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(format!(
+            "no workspace in {} yet; run `ai-workspace init` to create it",
+            empty.display()
+        )));
+
+    let left: Vec<_> = fs::read_dir(&empty).expect("readable").collect();
+    assert!(left.is_empty(), "nothing was created: {left:?}");
+}

@@ -12,4 +12,9 @@ root_source: string, base: string, projects_dir: string, projects: Array<Project
 /**
  * The archived projects, in `Projects/Archive/` (ADR-0015).
  */
-archived: Array<ProjectSummary>, };
+archived: Array<ProjectSummary>, 
+/**
+ * `false` when the folder holds no workspace yet: nothing was created, and Initialize
+ * creates it (issue #55).
+ */
+initialized: boolean, };

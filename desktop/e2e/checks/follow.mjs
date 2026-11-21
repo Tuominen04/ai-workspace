@@ -21,7 +21,22 @@ const position = () =>
     top: box.scrollTop,
     fromEnd: box.scrollHeight - box.scrollTop - box.clientHeight,
   }));
-const atEnd = async () => (await position()).fromEnd <= 24;
+// At the end, allowing the browser a moment to scroll after a reply lands.
+const atEnd = async () => {
+  try {
+    await page.waitForFunction(
+      () => {
+        const box = document.querySelector(".transcript");
+        return box.scrollHeight - box.scrollTop - box.clientHeight <= 24;
+      },
+      null,
+      { timeout: 2000 },
+    );
+    return true;
+  } catch {
+    return false;
+  }
+};
 // A person scrolling with the mouse wheel over the conversation.
 const wheel = async (deltaY) => {
   const box = await page.locator(".transcript").boundingBox();
@@ -45,6 +60,8 @@ await wheel(-600);
 const reading = await position();
 check("scrolling up stops following", reading.fromEnd > 24, JSON.stringify(reading));
 await replies.nth(4).waitFor();
+// Give a jump the same moment to happen before measuring.
+await page.waitForTimeout(500);
 const after = await position();
 check(
   "the finished reply does not jump the view to the end",

@@ -34,6 +34,14 @@ fn error_message(error: &AppError) -> String {
             gated_command(*operation)
         ),
         AppError::MissingProjectContext => "permission command requires a project context; use --project PROJECT or keep only one project".to_string(),
+        AppError::ConfigMissing(path) => {
+            // `<root>/Config/workspace.toml`: the folder has no workspace yet.
+            let root = path.parent().and_then(|config| config.parent()).unwrap_or(path);
+            format!(
+                "no workspace in {} yet; run `{COMMAND_NAME} init` to create it",
+                root.display()
+            )
+        }
         other => other.to_string(),
     }
 }
@@ -92,8 +100,13 @@ fn run_workspace_command(command: Command) -> Result<()> {
             Ok(())
         }
         Command::Status => {
-            let projects = engine.projects()?;
-            ui::render_status(engine.paths(), engine.root_source(), &projects);
+            // A folder without a workspace is described, not created (issue #55).
+            let projects = if engine.is_initialized() {
+                Some(engine.projects()?)
+            } else {
+                None
+            };
+            ui::render_status(engine.paths(), engine.root_source(), projects.as_deref());
             Ok(())
         }
         Command::ConfigShow => {
