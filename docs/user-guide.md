@@ -77,7 +77,9 @@ ollama pull qwen3:8b
 
 - **A project's model:** on the project's **Overview**, **Change** and type or pick a model;
   the models Ollama has installed are suggested. **Use default** goes back to the workspace
-  default. It is saved in the project's `project.toml`.
+  default. It is saved in the project's `project.toml`. If no models are listed, the **?** at
+  the end of the hint explains why: each Ollama keeps its own models, and only the one running
+  now is asked.
 - **The workspace default:** shown in **Configuration**, set as `default_model` in
   `Config/workspace.toml`.
 
