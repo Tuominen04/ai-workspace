@@ -40,6 +40,29 @@ fn detail(runtime: Runtime) -> String {
     status.detail
 }
 
+/// Stands in for Ollama on its port: answers every request with 200, as `/api/version` does,
+/// until `until` (or the end of the test binary).
+fn serve_like_ollama(listener: TcpListener, until: Option<std::time::Instant>) {
+    use std::io::{Read, Write};
+    listener.set_nonblocking(true).expect("nonblocking");
+    loop {
+        if until.is_some_and(|end| std::time::Instant::now() >= end) {
+            return;
+        }
+        match listener.accept() {
+            Ok((mut stream, _)) => {
+                let _ = stream.set_nonblocking(false);
+                let mut buffer = [0u8; 1024];
+                let _ = stream.read(&mut buffer);
+                let _ = stream.write_all(
+                    b"HTTP/1.1 200 OK\r\nContent-Length: 17\r\nConnection: close\r\n\r\n{\"version\":\"0\"}\n",
+                );
+            }
+            Err(_) => std::thread::sleep(std::time::Duration::from_millis(10)),
+        }
+    }
+}
+
 #[test]
 fn an_ollama_already_running_is_named() {
     if TcpStream::connect_timeout(
@@ -51,7 +74,8 @@ fn an_ollama_already_running_is_named() {
         eprintln!("skipped: something already answers on 127.0.0.1:11434");
         return;
     }
-    let _ollama = TcpListener::bind("127.0.0.1:11434").expect("stand in for an Ollama");
+    let ollama = TcpListener::bind("127.0.0.1:11434").expect("stand in for an Ollama");
+    std::thread::spawn(move || serve_like_ollama(ollama, None));
 
     // The app's container answers (started by hand, or left from before).
     let ours = dir("ours");

@@ -21,6 +21,13 @@ Miten vaihdetaan myöhemmin toiseen runtimeen?
   leftover stopped container of that name is removed first; any other container is never
   touched. The volume keeps the models.
 
+Either way the app then waits until Ollama answers an HTTP request (`GET /api/version`), up
+to 30 seconds for the container and 10 for `ollama serve`, before the session asks it
+anything. An open port is not enough: rootless Podman opens the published port as soon as the
+container starts, before Ollama inside listens, and a request then is reset. Something that
+already holds the port gets the same wait, so a container still starting up is used once it
+answers.
+
 ## A model's own instructions (ADR-0012)
 
 When a session opens, the runtime asks Ollama about the session's model

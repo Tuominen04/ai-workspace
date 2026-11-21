@@ -79,6 +79,8 @@ pub enum AppError {
         input: String,
         reason: String,
     },
+    /// Nothing answers on Ollama's port any more (it was stopped during the session).
+    RuntimeNotAnswering,
 }
 
 impl fmt::Display for AppError {
@@ -132,6 +134,9 @@ impl fmt::Display for AppError {
             }
             Self::MissingProjectContext => f.write_str(
                 "this needs a project; name one, or keep only one project in the workspace",
+            ),
+            Self::RuntimeNotAnswering => f.write_str(
+                "Ollama stopped answering on 127.0.0.1:11434 (it may have been stopped); end the session and start it again, which starts Ollama when needed",
             ),
             Self::ModelNotInstalled {
                 model,

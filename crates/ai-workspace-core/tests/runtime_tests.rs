@@ -1,5 +1,5 @@
 use ai_workspace_core::error::AppError;
-use ai_workspace_core::runtime::{ChatMessage, RuntimeManager};
+use ai_workspace_core::runtime::{ChatMessage, RuntimeManager, ollama_answers_at};
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::thread;
@@ -285,4 +285,47 @@ fn a_missing_model_is_said_plainly_with_the_download_command() {
             && !message.contains("404"),
         "{message}"
     );
+}
+
+#[test]
+fn a_port_that_only_accepts_is_not_a_ready_ollama() {
+    // What rootless Podman's published port does before Ollama inside listens: the connection
+    // is accepted, then reset without an answer.
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+    let addr = listener.local_addr().expect("addr");
+    thread::spawn(move || {
+        for stream in listener.incoming().take(3) {
+            drop(stream);
+        }
+    });
+    assert!(!ollama_answers_at(&format!("http://{addr}")));
+}
+
+#[test]
+fn an_ollama_that_answers_is_ready() {
+    let base_url = spawn_mock_server(ok_json(r#"{"version":"0.12.0"}"#));
+    assert!(ollama_answers_at(&base_url));
+}
+
+#[test]
+fn an_ollama_that_was_stopped_is_said_plainly() {
+    // A port nothing listens on any more, as after stopping Ollama during a session.
+    let closed = {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+        listener.local_addr().expect("addr")
+    };
+    let messages = vec![ChatMessage::user("hi".to_string())];
+    let result =
+        RuntimeManager::new().send_chat_message(&format!("http://{closed}"), "sec", &messages);
+    match result {
+        Err(error @ AppError::RuntimeNotAnswering) => {
+            let text = error.to_string();
+            assert!(
+                text.starts_with("Ollama stopped answering") && text.contains("start it again"),
+                "{text}"
+            );
+            assert!(!text.contains("os error"), "{text}");
+        }
+        other => panic!("expected RuntimeNotAnswering, got {other:?}"),
+    }
 }
