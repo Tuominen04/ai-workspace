@@ -22,7 +22,17 @@ Use a scratch workspace so your real notes are not touched, and write down:
   cd desktop && npm ci && npm run tauri build -- --ci -- --locked
   ```
 
-- [ ] Install it: `sudo dnf install ./target/release/bundle/rpm/*.rpm` (from the repository root).
+- [ ] Install it, from the repository root:
+
+  ```bash
+  sudo dnf reinstall ./target/release/bundle/rpm/*.rpm
+  ```
+
+  Use `reinstall` while the candidate has the same version as the installed release (the
+  version is only bumped in the release pull request, after this checklist): `dnf install`
+  skips a package of a version that is already installed and leaves the old build in place.
+  Use `sudo dnf install` instead if AI Workspace is not installed at all.
+- [ ] The candidate is what runs: `rpm -qi ai-workspace` shows today's **Build Date**.
 - [ ] **AI Workspace** is in the applications menu, and `ai-workspace` opens it.
 - [ ] Choose a scratch folder under **Configuration** → **Workspace folder** (create it first),
   then **Initialize** it. The Overview shows it and "Chosen by user config file".
@@ -35,7 +45,8 @@ Ollama installed, the model pulled (`ollama pull <model>`), and Ollama **not** r
 - [ ] **New project** "Release Test" with a description. It opens on **Chat**.
 - [ ] Put two `.md` notes in `Projects/release-test/Knowledge/`, one with a distinctive word.
   Add a file named `wifi-password.md` too.
-- [ ] **Overview** → **Change** the model: installed models are suggested; pick yours.
+- [ ] **Overview** → **Change** the model: installed models are suggested; pick yours (the
+  workspace default may be a model you have not pulled).
 - [ ] **Start session**: the app starts Ollama ("Started Ollama for this session"). The context
   list shows the notes, lists `wifi-password.md` under Skipped, and shows the budget.
 - [ ] Ask about the distinctive word: the reply streams in and uses the note. Formatting
