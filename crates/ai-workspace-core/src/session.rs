@@ -30,7 +30,9 @@ pub struct Session {
     model: String,
     agent: AgentInstructions,
     budget: ContextBudget,
-    initial_context: ContextSnapshot,
+    /// The context the model was given most recently: built when the session opens, then
+    /// rebuilt for each message (with the grants active at that moment).
+    context: ContextSnapshot,
     runtime_status: RuntimeStatus,
     /// How Ollama is started for this workspace, so a missing model's download command fits.
     runtime_kind: Runtime,
@@ -43,11 +45,12 @@ pub struct Session {
     runtime: RuntimeManager,
 }
 
-/// What a front end shows when a session starts.
+/// What a front end shows about a session: when it starts, and again after each message.
 #[derive(Debug, Clone, Copy)]
 pub struct SessionSummary<'a> {
     pub project: &'a Project,
-    /// The context built for the start of the session, before any message.
+    /// The context the model was given most recently: the one built for the start of the
+    /// session until a message is sent, then the one built for the latest message.
     pub context: &'a ContextSnapshot,
     pub runtime: &'a RuntimeStatus,
     /// The model the session talks to.
@@ -146,7 +149,7 @@ impl Session {
             budget,
             paths,
             project: project.clone(),
-            initial_context,
+            context: initial_context,
             runtime_status,
             runtime_kind: config.runtime,
             history,
@@ -159,7 +162,7 @@ impl Session {
     pub fn summary(&self) -> SessionSummary<'_> {
         SessionSummary {
             project: &self.project,
-            context: &self.initial_context,
+            context: &self.context,
             runtime: &self.runtime_status,
             model: &self.model,
             agent: &self.agent,
@@ -252,6 +255,7 @@ impl Session {
             self.budget,
         ) {
             self.history[0] = ChatMessage::system(context.as_system_prompt_for(self.agent.text()));
+            self.context = context;
         }
 
         self.history.push(ChatMessage::user(message.to_string()));

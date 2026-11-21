@@ -403,6 +403,9 @@ pub struct ChatReply {
     pub text: String,
     /// Earlier exchanges the model no longer sees because the conversation outgrew its window.
     pub left_out_exchanges: u32,
+    /// The session as it is now: its context list is the one the model was given with this
+    /// message, so a grant made during the session shows up.
+    pub session: SessionInfo,
 }
 
 /// What closing a session did.

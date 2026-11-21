@@ -193,6 +193,8 @@ export function ChatPanel({
         setStreaming((sofar) => (sofar ?? "") + piece),
       );
       setLines((all) => [...all, { who: "ai", text: reply.text }]);
+      // The context list shows what the model was given with this message (a new grant too).
+      onSession(reply.session);
       // Say so once each time the model's view of the conversation shrinks.
       if (reply.left_out_exchanges > leftOut) {
         setLines((all) => [

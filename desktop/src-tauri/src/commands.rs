@@ -375,6 +375,7 @@ pub fn session_send(
     Ok(ChatReply {
         text,
         left_out_exchanges: u32::try_from(session.left_out_exchanges()).unwrap_or(u32::MAX),
+        session: SessionInfo::new(&session.summary()),
     })
 }
 

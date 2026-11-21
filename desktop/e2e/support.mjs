@@ -257,9 +257,15 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
           const pieces = [0, 1, 2, 3].map((n) => text.slice(n * size, (n + 1) * size)).filter(Boolean);
           // "long chat" stands for a conversation that outgrew the model's window.
           if (message.includes("long chat")) window.__leftOut = (window.__leftOut ?? 0) + 2;
+          // The session as the shell returns it with each reply: active grants are listed.
+          const granted = grants
+            .filter((g) => g.category === "temporary" && g.status === "active")
+            .map((g) => g.path);
+          const session = { ...fixture.session, project: window.__session ?? fixture.session.project, granted_files: granted };
           return stream(onPiece, pieces, message.includes("slowly") ? 300 : 30).then((reply) => ({
             text: reply,
             left_out_exchanges: window.__leftOut ?? 0,
+            session,
           }));
         },
         chat_close: () => ({ project: fixture.session.project, revoked: 1 }),
