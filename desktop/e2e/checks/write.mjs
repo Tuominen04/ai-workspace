@@ -95,14 +95,24 @@ const browser = await launch();
   await stubEngine(page, { fixture });
   await page.goto(URL);
   await page.getByRole("tab", { name: "Configuration" }).click();
-  await page.getByLabel("New workspace folder").fill("/home/me/ai-local/workspaces");
+  const decides = page.getByRole("status", { name: "Variable decides" });
+  await decides.waitFor();
+  const offered = await decides.textContent();
+  check(
+    "while the variable decides, Switch now is offered straight away",
+    offered.includes("/tmp/ai-test") && offered.includes("/home/me/ai-local/workspaces") &&
+      (await page.getByRole("button", { name: "Switch now" }).count()) === 1,
+  );
+  await page.getByLabel("New workspace folder").fill("/home/me/ai-local/other");
   await page.getByRole("button", { name: "Use this folder" }).click();
   await page.getByText("still decides the folder").waitFor();
   check("an overriding AI_WORKSPACE_HOME is reported", true);
+  await page.waitForFunction(() => document.querySelector('[aria-label="Variable decides"]')?.textContent.includes("/home/me/ai-local/other"));
+  check("Switch now then offers the folder just saved, still once", (await page.getByRole("button", { name: "Switch now" }).count()) === 1);
   await page.getByRole("button", { name: "Switch now" }).click();
   await page.getByRole("status", { name: "Switched" }).waitFor();
   const text = await page.getByRole("status", { name: "Switched" }).textContent();
-  check("Switch now uses the saved folder and says the variable is ignored", text.includes("/home/me/ai-local/workspaces") && text.includes("ignored until the app restarts"));
+  check("Switch now uses the saved folder and says the variable is ignored", text.includes("/home/me/ai-local/other") && text.includes("ignored until the app restarts"));
   check("the Switch now button goes away once switched", (await page.getByRole("button", { name: "Switch now" }).count()) === 0);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/switch-now.png` });
   await page.close();
