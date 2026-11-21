@@ -166,6 +166,9 @@ pub struct RuntimeManager {
 pub const PODMAN_NAME: &str = "ai-workspace-ollama";
 /// How long a freshly started container gets to answer; the first start can be slow.
 const CONTAINER_READY_TIMEOUT: Duration = Duration::from_secs(30);
+/// How long an `ollama serve` the app started, or one already holding the port, may take to
+/// answer.
+const OLLAMA_READY_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// The arguments of `podman run` for the Ollama container: detached, removed when stopped,
 /// never pulling, published on 127.0.0.1 only, models in a named volume, plus the GPU's
@@ -235,8 +238,11 @@ impl RuntimeManager {
     /// Starts the Ollama container unless something already answers. Never pulls: a missing
     /// image is reported with the command that downloads it.
     pub fn ensure_podman(&mut self, settings: &PodmanSettings) -> Result<RuntimeStatus> {
+        // Something holds the port: use it once it answers (a container may still be starting).
         if is_ollama_running() {
-            return Ok(already_running(Runtime::Podman));
+            let mut status = already_running(Runtime::Podman);
+            status.running = wait_for_ollama_ready(CONTAINER_READY_TIMEOUT);
+            return Ok(status);
         }
         let not_running = |detail: String| RuntimeStatus {
             running: false,
@@ -265,9 +271,8 @@ impl RuntimeManager {
         // A container of ours already running is still starting up: wait for it, leave it.
         if podman(&["container", "exists", PODMAN_NAME])? {
             if container_running()? {
-                wait_for_ollama_ready(CONTAINER_READY_TIMEOUT);
                 return Ok(RuntimeStatus {
-                    running: is_ollama_running(),
+                    running: wait_for_ollama_ready(CONTAINER_READY_TIMEOUT),
                     started_here: false,
                     detail: format!("Using the running {PODMAN_NAME} container"),
                 });
@@ -287,9 +292,8 @@ impl RuntimeManager {
             )));
         }
         self.container_started = true;
-        wait_for_ollama_ready(CONTAINER_READY_TIMEOUT);
         Ok(RuntimeStatus {
-            running: is_ollama_running(),
+            running: wait_for_ollama_ready(CONTAINER_READY_TIMEOUT),
             started_here: true,
             detail: format!("Started Ollama in the {PODMAN_NAME} container for this session"),
         })
@@ -297,7 +301,9 @@ impl RuntimeManager {
 
     pub fn ensure_ollama(&mut self) -> Result<RuntimeStatus> {
         if is_ollama_running() {
-            return Ok(already_running(Runtime::Ollama));
+            let mut status = already_running(Runtime::Ollama);
+            status.running = wait_for_ollama_ready(OLLAMA_READY_TIMEOUT);
+            return Ok(status);
         }
 
         match Command::new("ollama")
@@ -309,9 +315,8 @@ impl RuntimeManager {
         {
             Ok(child) => {
                 self.ollama = Some(child);
-                wait_for_ollama_ready(Duration::from_secs(10));
                 Ok(RuntimeStatus {
-                    running: true,
+                    running: wait_for_ollama_ready(OLLAMA_READY_TIMEOUT),
                     started_here: true,
                     detail: "Started Ollama for this session".to_string(),
                 })
@@ -514,15 +519,29 @@ fn ollama_addr() -> SocketAddr {
     SocketAddr::from(([127, 0, 0, 1], OLLAMA_PORT))
 }
 
+/// Whether something holds Ollama's port. Not proof that Ollama answers: rootless Podman opens
+/// the published port as soon as the container starts, before Ollama inside listens.
 fn is_ollama_running() -> bool {
     TcpStream::connect_timeout(&ollama_addr(), Duration::from_millis(200)).is_ok()
 }
 
-fn wait_for_ollama_ready(timeout: Duration) {
+/// Whether an Ollama at `base_url` answers an HTTP request, the only proof it is ready.
+pub fn ollama_answers_at(base_url: &str) -> bool {
+    ureq::get(&format!("{base_url}/api/version"))
+        .timeout(Duration::from_secs(1))
+        .call()
+        .is_ok()
+}
+
+/// Waits until Ollama answers, or `timeout` passes; returns whether it answers.
+fn wait_for_ollama_ready(timeout: Duration) -> bool {
     let started = Instant::now();
-    while started.elapsed() < timeout {
-        if is_ollama_running() {
-            return;
+    loop {
+        if ollama_answers_at(OLLAMA_BASE_URL) {
+            return true;
+        }
+        if started.elapsed() >= timeout {
+            return false;
         }
         thread::sleep(Duration::from_millis(200));
     }
