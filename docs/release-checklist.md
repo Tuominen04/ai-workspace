@@ -8,35 +8,35 @@ labelled `bug` and fixed before tagging.
 
 Use a scratch workspace so your real notes are not touched, and write down:
 
-- Fedora release and desktop: ______
-- Ollama version (`ollama --version`): ______
-- Podman version (`podman --version`): ______
-- Model used: ______
+- Fedora release and desktop: Fedora Linux 45 KDE Plasma (6.8.3) Desktop Edition
+- Ollama version (`ollama --version`): 0.40.13
+- Podman version (`podman --version`): 6.2.0
+- Model used: `qwen3.6:latest`
 - Graphics card used, if any: ______
 
 ## 1. Build and install the candidate
 
-- [ ] On `main` at the commit to be tagged, build the package as the release does:
+- [X] On `main` at the commit to be tagged, build the package as the release does:
 
   ```bash
   cd desktop && npm ci && npm run tauri build -- --ci -- --locked
   ```
 
-- [ ] Install it: `sudo dnf install ./target/release/bundle/rpm/*.rpm` (from the repository root).
-- [ ] **AI Workspace** is in the applications menu, and `ai-workspace` opens it.
-- [ ] Choose a scratch folder under **Configuration** → **Workspace folder** (create it first),
+- [X] Install it: `sudo dnf install ./target/release/bundle/rpm/*.rpm` (from the repository root).
+- [X] **AI Workspace** is in the applications menu, and `ai-workspace` opens it.
+- [X] Choose a scratch folder under **Configuration** → **Workspace folder** (create it first),
   then **Initialize** it. The Overview shows it and "Chosen by user config file".
 
 ## 2. With the installed Ollama
 
-Ollama installed, the model pulled (`ollama pull <model>`), and Ollama **not** running yet
+Ollama installed, the model pulled (`ollama pull <model>`), and Ollama **not** running **yet**
 (`systemctl stop ollama` if it runs as a service).
 
-- [ ] **New project** "Release Test" with a description. It opens on **Chat**.
-- [ ] Put two `.md` notes in `Projects/release-test/Knowledge/`, one with a distinctive word.
+- [X] **New project** "Release Test" with a description. It opens on **Chat**.
+- [X] Put two `.md` notes in `Projects/release-test/Knowledge/`, one with a distinctive word.
   Add a file named `wifi-password.md` too.
-- [ ] **Overview** → **Change** the model: installed models are suggested; pick yours.
-- [ ] **Start session**: the app starts Ollama ("Started Ollama for this session"). The context
+- [X] **Overview** → **Change** the model: installed models are suggested; pick yours.
+- [X] **Start session**: the app starts Ollama ("Started Ollama for this session"). The context
   list shows the notes, lists `wifi-password.md` under Skipped, and shows the budget.
 - [ ] Ask about the distinctive word: the reply streams in and uses the note. Formatting
   (a list or a table) renders; a link in the reply is shown as text.
