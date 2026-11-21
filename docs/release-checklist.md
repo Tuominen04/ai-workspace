@@ -54,12 +54,12 @@ Podman installed, and no other Ollama answering on the port: stop the service
 `ss -tlnp | grep 11434` prints nothing. Otherwise the app uses that Ollama and says so ("Using
 an Ollama already running on 127.0.0.1:11434, not the app's Podman container").
 
-- [ ] Add `runtime = "podman"` near the top of `Config/workspace.toml`. **Configuration** shows "Runs Ollama with: Podman container (docker.io/ollama/ollama:latest, CPU)".
-- [ ] Without the image: **Start session** says the image is not downloaded and shows the `podman pull` command. `podman images` shows the app pulled nothing.
-- [ ] Run the shown `podman pull` command, then **Start session**: "Started Ollama in the ai-workspace-ollama container". `podman ps` shows it, published on `127.0.0.1:11434` only.
-- [ ] Pull the model into it: `podman exec ai-workspace-ollama ollama pull <model>`. It is suggested on the project's Overview; a chat with it works.
-- [ ] **End session**: `podman ps -a` no longer shows the container. `podman volume ls` still shows `ai-workspace-ollama`; a new session finds the model without pulling again.
-- [ ] Start a container yourself (`podman run -d --name my-ollama -p 127.0.0.1:11434:11434 -v ai-workspace-ollama:/root/.ollama docker.io/ollama/ollama:latest`), then start and end a session: the app uses it and leaves it running. Remove it afterwards.
+- [X] Add `runtime = "podman"` near the top of `Config/workspace.toml`. **Configuration** shows "Runs Ollama with: Podman container (docker.io/ollama/ollama:latest, CPU)".
+- [X] Without the image (remove it first: **End session**, then `podman rmi docker.io/ollama/ollama:latest`; the models stay in the volume): **Start session** says the image is not downloaded and shows the
+- [X] Run the shown `podman pull docker.io/ollama/ollama:latest` command, then **Start session**: "Started Ollama in the ai-workspace-ollama container". `podman ps` shows it, published on `127.0.0.1:11434` only.
+- [X] Pull the model into it: `podman exec ai-workspace-ollama ollama pull <model>`. It is suggested on the project's Overview; a chat with it works.
+- [X] **End session**: `podman ps -a` no longer shows the container. `podman volume ls` still shows `ai-workspace-ollama`; a new session finds the model without pulling again.
+- [X] Start a container yourself (`podman run -d --name my-ollama -p 127.0.0.1:11434:11434 -v ai-workspace-ollama:/root/.ollama docker.io/ollama/ollama:latest`), then start and end a session: the app uses it and leaves it running. Remove it afterwards.
 - [ ] If you have a graphics card: set `[podman]` `gpu = "nvidia"` or `"amd"` (and pull the `:rocm` image for AMD); replies come noticeably faster and `podman exec ai-workspace-ollama ollama ps` shows the GPU in use.
 
 ## 4. Project management
