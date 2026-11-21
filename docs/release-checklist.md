@@ -60,7 +60,10 @@ Ollama installed and running as its service, as its installer sets it up
 
 ## 3. With Ollama in Podman
 
-`ollama` stopped and, ideally, not installed. Podman installed.
+Podman installed, and no other Ollama answering on the port: stop the service
+(`sudo systemctl stop ollama`) and any `ollama serve` (`pkill ollama`), then check that
+`ss -tlnp | grep 11434` prints nothing. Otherwise the app uses that Ollama and says so ("Using
+an Ollama already running on 127.0.0.1:11434, not the app's Podman container").
 
 - [ ] Add `runtime = "podman"` near the top of `Config/workspace.toml`. **Configuration** shows
   "Runs Ollama with: Podman container (docker.io/ollama/ollama:latest, CPU)".
