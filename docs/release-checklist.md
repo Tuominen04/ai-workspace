@@ -44,19 +44,16 @@ Ollama installed, the model pulled (`ollama pull <model>`), and Ollama **not** r
 - [X] **New project** "Release Test" with a description. It opens on **Chat**.
 - [X] Put two `.md` notes in `Projects/release-test/Knowledge/`, one with a distinctive word.
   Add a file named `wifi-password.md` too.
-- [ ] **Start session**: the app starts Ollama ("Started Ollama for this session"). The context
-- [ ] **Overview** → **Change** the model: installed models are suggested; pick yours (the workspace default may be a model you have not pulled). List shows the notes, lists `wifi-password.md` under Skipped, and shows the budget.
-- [ ] Ask about the distinctive word: the reply streams in and uses the note. Formatting
-  (a list or a table) renders; a link in the reply is shown as text.
-- [ ] Switch to another tab and to Whole workspace and back: the chat is still there.
-- [ ] **Permissions**: grant a folder outside the workspace holding a `.md` note; the next
-  message lists it under Granted and can use it. **Revoke** removes it.
-- [ ] **Search** finds the distinctive word.
-- [ ] Stop Ollama mid-reply (`pkill ollama`): the failure is shown with **Retry**. Start the
-  session again and **Retry** works.
-- [ ] **End session** → **Draft a note** → edit → **Save note and end**: a
+- [X] **Start session**: the app starts Ollama ("Started Ollama for this session").
+- [X] **Overview** → **Change** the model: installed models are suggested; pick yours (the workspace default may be a model you have not pulled). List shows the notes, lists `wifi-password.md` under Skipped, and shows the budget.
+- [X] Ask about the distinctive word: the reply streams in and uses the note. Formatting (a list or a table) renders; a link in the reply is shown as text.
+- [X] Switch to another tab and to Whole workspace and back: the chat is still there.
+- [X] **Permissions**: grant a folder outside the workspace holding a `.md` note; the next message lists it under Granted and can use it. **Revoke** removes it.
+- [X] **Search** finds the distinctive word.
+- [X] Stop Ollama mid-reply (`pkill ollama`): the failure is shown with **Retry**. Start the session again and **Retry** works.
+- [X] **End session** → **Draft a note** → edit → **Save note and end**: a
   `session-note-…md` appears in `Session/`. A new session lists it in its context.
-- [ ] Close the app: no `ollama serve` the app started is left running (`pgrep -a ollama`).
+- [X] Close the app: no `ollama serve` the app started is left running (`pgrep -a ollama`).
 
 ## 3. With Ollama in Podman
 
