@@ -33,6 +33,9 @@ pub struct Session {
     /// The context the model was given most recently: built when the session opens, then
     /// rebuilt for each message (with the grants active at that moment).
     context: ContextSnapshot,
+    /// What the first context was built for (the project's description), for a refresh before
+    /// any message.
+    initial_query: String,
     runtime_status: RuntimeStatus,
     /// How Ollama is started for this workspace, so a missing model's download command fits.
     runtime_kind: Runtime,
@@ -150,6 +153,7 @@ impl Session {
             paths,
             project: project.clone(),
             context: initial_context,
+            initial_query,
             runtime_status,
             runtime_kind: config.runtime,
             history,
@@ -157,6 +161,29 @@ impl Session {
             closed: false,
             runtime,
         })
+    }
+
+    /// Builds the context again now, with the grants active at this moment, so a front end can
+    /// show a grant or revoke straight away. It is built for `query` (the message about to be
+    /// sent), else the last message sent, else the project's description, like the context the
+    /// next message gets. On a failure the previous context is kept.
+    pub fn refresh_context(&mut self, query: Option<&str>) -> Result<()> {
+        let last_message = self
+            .history
+            .iter()
+            .rev()
+            .find(|m| m.role == "user")
+            .map(|m| m.content.as_str());
+        let query = query.or(last_message).unwrap_or(&self.initial_query);
+        let context = build_context_snapshot_within(
+            &self.paths,
+            Some(&self.project),
+            Some(query),
+            self.budget,
+        )?;
+        self.history[0] = ChatMessage::system(context.as_system_prompt_for(self.agent.text()));
+        self.context = context;
+        Ok(())
     }
 
     pub fn summary(&self) -> SessionSummary<'_> {

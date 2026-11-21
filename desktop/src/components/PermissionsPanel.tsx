@@ -11,7 +11,14 @@ import { Failure } from "./Failure";
  * with their status. Grant a path, revoke a temporary grant. Ending a chat session in this
  * project revokes the temporary grants too.
  */
-export function PermissionsPanel({ project }: { project: string | null }) {
+export function PermissionsPanel({
+  project,
+  onChanged = () => {},
+}: {
+  project: string | null;
+  /** Called after a grant or revoke, so an open chat can show its context again. */
+  onChanged?: () => void;
+}) {
   if (project === null) {
     return (
       <section className="panel">
@@ -21,10 +28,16 @@ export function PermissionsPanel({ project }: { project: string | null }) {
     );
   }
   // Keyed so that switching projects starts from a clean filter, page and form.
-  return <ProjectPermissions key={project} project={project} />;
+  return <ProjectPermissions key={project} project={project} onChanged={onChanged} />;
 }
 
-function ProjectPermissions({ project }: { project: string }) {
+function ProjectPermissions({
+  project,
+  onChanged,
+}: {
+  project: string;
+  onChanged: () => void;
+}) {
   const [filter, setFilter] = useState("");
   const [page, setPage] = useState(1);
   const [listing, reload] = useLoad(
@@ -47,6 +60,7 @@ function ProjectPermissions({ project }: { project: string }) {
       setNotice(done.created ? `Granted ${done.path}.` : `${done.path} was already granted.`);
       setPath("");
       reload();
+      onChanged();
     } catch (thrown) {
       setFailure(failureOf(thrown));
     } finally {
@@ -62,6 +76,7 @@ function ProjectPermissions({ project }: { project: string }) {
       const done = await engine.permissions.revoke(project, grantPath);
       setNotice(`Revoked ${done.path}.`);
       reload();
+      onChanged();
     } catch (thrown) {
       setFailure(failureOf(thrown));
     } finally {

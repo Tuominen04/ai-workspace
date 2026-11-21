@@ -124,6 +124,12 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
         { path: "/home/me/AI/Base", category: "default", status: "active", granted_at: "1794690257" },
         { path: "/home/me/AI/Projects/security", category: "default", status: "active", granted_at: "1794690257" },
       ];
+      // The open session as the shell reports it now: its context lists the active grants.
+      const sessionNow = () => ({
+        ...fixture.session,
+        project: window.__session ?? fixture.session.project,
+        granted_files: grants.filter((g) => g.category === "temporary" && g.status === "active").map((g) => g.path),
+      });
       const answers = {
         workspace_status: () => ({ ...fixture.status, projects: [...projects], archived: [...archived] }),
         // Archive and restore move a project between the two lists; a taken name is refused.
@@ -240,6 +246,7 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
           window.__session = project;
           return { ...fixture.session, project };
         },
+        chat_context: () => sessionNow(),
         chat_send: ({ message, onPiece }) => {
           // "flaky" fails once, like a timeout, then works.
           if (message.includes("flaky") && !window.__flakyFailed) {
@@ -257,11 +264,7 @@ export async function stubEngine(page, { fixture = FIXTURE, failures = {} } = {}
           const pieces = [0, 1, 2, 3].map((n) => text.slice(n * size, (n + 1) * size)).filter(Boolean);
           // "long chat" stands for a conversation that outgrew the model's window.
           if (message.includes("long chat")) window.__leftOut = (window.__leftOut ?? 0) + 2;
-          // The session as the shell returns it with each reply: active grants are listed.
-          const granted = grants
-            .filter((g) => g.category === "temporary" && g.status === "active")
-            .map((g) => g.path);
-          const session = { ...fixture.session, project: window.__session ?? fixture.session.project, granted_files: granted };
+          const session = sessionNow();
           return stream(onPiece, pieces, message.includes("slowly") ? 300 : 30).then((reply) => ({
             text: reply,
             left_out_exchanges: window.__leftOut ?? 0,

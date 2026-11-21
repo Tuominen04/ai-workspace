@@ -177,6 +177,11 @@ export const engine = {
       const pieces = new Channel<string>(onPiece);
       return call<ChatReply>("chat_send", { message, onPiece: pieces });
     },
+    /**
+     * The open session with its context built again now: for `message` when it is about to be
+     * sent, else as the next message would get it. Shows a grant or revoke straight away.
+     */
+    context: (message?: string) => call<SessionInfo>("chat_context", { message: message ?? null }),
     close: () => call<SessionClosed | null>("chat_close"),
     /** The model's draft of a note about the open session; nothing is saved. */
     draftNote: () => call<string>("chat_draft_note"),

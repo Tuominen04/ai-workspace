@@ -171,6 +171,14 @@ export function ChatPanel({
     // Sending a message shows it and follows the reply again.
     following.current = true;
     setLines((all) => [...all, { who: "you", text: message }]);
+    // The context list shows what this message gets, before the reply comes. Busy already, so
+    // the message cannot be sent twice meanwhile.
+    setBusy("waiting");
+    try {
+      onSession(await engine.chat.context(message));
+    } catch {
+      // The reply brings the context too.
+    }
     await ask(message);
   }
 
