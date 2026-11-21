@@ -67,7 +67,8 @@ an Ollama already running on 127.0.0.1:11434, not the app's Podman container").
 
 - [ ] Add `runtime = "podman"` near the top of `Config/workspace.toml`. **Configuration** shows
   "Runs Ollama with: Podman container (docker.io/ollama/ollama:latest, CPU)".
-- [ ] Without the image: **Start session** says the image is not downloaded and shows the
+- [ ] Without the image (remove it first: **End session**, then
+  `podman rmi docker.io/ollama/ollama:latest`; the models stay in the volume): **Start session** says the image is not downloaded and shows the
   `podman pull` command. `podman images` shows the app pulled nothing.
 - [ ] Run the shown `podman pull` command, then **Start session**: "Started Ollama in the
   ai-workspace-ollama container". `podman ps` shows it, published on `127.0.0.1:11434` only.
