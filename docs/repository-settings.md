@@ -22,6 +22,9 @@ Menu names follow GitHub's current layout and may move.
   **Q&A** and **Ideas**: the issue forms link to them); Wiki off; Projects off unless used.
 - [ ] **Pull requests**: allow merge commits (as so far), **Automatically delete head
   branches** on, **Always suggest updating pull request branches** on.
+- [ ] **Releases**: **Enable release immutability** on: a published release's files and tag
+  cannot be changed afterwards. The release workflow also attests each package's build
+  provenance (see "Checking where it was built" in `docs/release.md`).
 
 ## Rules → Rulesets
 
