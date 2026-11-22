@@ -31,7 +31,7 @@
     "globals": "^17",
     "jsdom": "^31.0.1",
     "playwright": "^1.65.0",
-    "typescript": "^6",
+    "typescript": "^7",
     "typescript-eslint": "^8",
     "vite": "^8",
     "vitest": "^5"
