@@ -25,6 +25,20 @@ ai-workspace-<version>.x86_64.rpm: OK
 `FAILED` means the file is not the one the release process produced. Do not
 install it; download it again.
 
+### Checking where it was built
+
+From 1.0.1, each package comes with signed build provenance: a statement, signed through
+Sigstore, that the file was built by this repository's release workflow from the tag's commit.
+With the GitHub command-line tool (`sudo dnf install gh`, then `gh auth login`):
+
+```bash
+gh attestation verify ai-workspace-<version>.x86_64.rpm --repo Tuominen04/ai-workspace
+```
+
+It ends with `Verification succeeded!` for a genuine package. The same signed statement is
+attached to the release as `ai-workspace-<version>.x86_64.rpm.sigstore.json`; pass it with
+`--bundle` to check against that file instead of GitHub's copy.
+
 ## Cutting a release
 
 0. Run the [release checklist](checklist/release-checklist.md) against the commit to be tagged,
