@@ -27,10 +27,10 @@ install it; download it again.
 
 ## Cutting a release
 
-0. Run the [release checklist](release-checklist.md) against the commit to be tagged,
+0. Run the [release checklist](checklist/release-checklist.md) against the commit to be tagged,
    with real Ollama on the current Fedora. For 1.0 and later this is required (ADR-0016):
-   the filled-in checklist goes in the version bump pull request, and no issue labelled
-   `bug` may be open.
+   the filled-in copy is kept as `docs/checklist/v<version>.md` and linked from the version
+   bump pull request, and no issue labelled `bug` may be open.
 1. Set the new `version` under `[workspace.package]` in the root `Cargo.toml`,
    run `cargo build` so `Cargo.lock`
    follows, and merge that to `main`.

@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-19
 
-**Status**: Draft
+**Status**: Implemented (1.0.0)
 
 **Input**: Maintainer's answers for v1.0: Ollama can run in Podman; "stable" means the workspace format is frozen, a real-Ollama test pass is done and no known bugs remain; Fedora-first needs nothing beyond confirming the RPM on the current Fedora; the developer command line stays as it is. Podman details: chosen by a setting, the image is downloaded by the person (never by the app), CPU by default with an optional GPU setting, and a container the app started is stopped when the app closes. Decisions are recorded in ADR-0016.
 

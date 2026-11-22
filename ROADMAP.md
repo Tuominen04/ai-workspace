@@ -162,6 +162,11 @@ known bugs open.
 Already in place: the workspace manager, permission model, Context Builder and Fedora RPM.
 The developer command line stays unreleased.
 
+The test pass (`docs/checklist/v1.0.0.md`) also brought: long chats that keep working, a
+sidebar that stays in place, a prompt to save a note when closing the app, a context list that
+follows grants and messages, plain messages for a missing model or a stopped Ollama, a GPU that
+works under SELinux, and a workspace created only on **Initialize**.
+
 ---
 
 ## v1.1
