@@ -11,6 +11,11 @@ updates:
     groups:
       rust:
         patterns: ["*"]
+    ignore:
+      # ureq 3 has no per-read timeout, which the streamed chat relies on (ADR-0013); the move
+      # waits for its own change (issue #63).
+      - dependency-name: ureq
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /desktop
@@ -19,6 +24,11 @@ updates:
     groups:
       npm:
         patterns: ["*"]
+    ignore:
+      # typescript-eslint 8 does not support TypeScript 7 yet, so npm cannot install both;
+      # remove this once it does.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
