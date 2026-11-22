@@ -1,0 +1,11 @@
+# cargo-deny, run by .github/workflows/audit.yml on every pull request, every push to main and
+# weekly: fails on a dependency with a known security advisory (RustSec) or a yanked version,
+# and on any crate that does not come from crates.io. Licences are not checked here.
+
+[advisories]
+yanked = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or help
+    url: https://github.com/Tuominen04/ai-workspace/discussions/categories/q-a
+    about: Ask in Discussions; the user guide may already answer it.
+  - name: Security problem
+    url: https://github.com/Tuominen04/ai-workspace/security/advisories/new
+    about: Report it privately, not as a public issue.

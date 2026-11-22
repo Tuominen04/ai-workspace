@@ -1,0 +1,29 @@
+# Dependabot version updates: one weekly pull request per ecosystem, grouped so a week's
+# updates arrive together. Security updates (for known vulnerabilities) come on their own as
+# soon as an advisory is published; they are turned on in the repository settings.
+
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      rust:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /desktop
+    schedule:
+      interval: weekly
+    groups:
+      npm:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

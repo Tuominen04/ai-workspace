@@ -1,0 +1,59 @@
+name: Bug report
+description: Something in AI Workspace does not work as the user guide says.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please do not paste notes, keys or anything private: describe the
+        problem with a made-up example instead. Security problems go to a
+        [private report](https://github.com/Tuominen04/ai-workspace/security/advisories/new),
+        not here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+      placeholder: |
+        1. Opened the project "Home Lab" and pressed Start session
+        2. Asked a question
+        3. Expected a reply; got "…"
+    validations:
+      required: true
+  - type: textarea
+    id: message
+    attributes:
+      label: Error message
+      description: The exact text of any message the app showed, if there was one.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: AI Workspace version
+      description: "`rpm -q ai-workspace`"
+      placeholder: ai-workspace-1.0.0-1.x86_64
+    validations:
+      required: true
+  - type: input
+    id: fedora
+    attributes:
+      label: Fedora version and desktop
+      placeholder: Fedora 45, GNOME
+    validations:
+      required: true
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: How Ollama runs
+      options:
+        - Installed Ollama
+        - Ollama in Podman
+        - Not relevant
+    validations:
+      required: true
+  - type: input
+    id: ollama
+    attributes:
+      label: Ollama version and model
+      description: "`ollama --version`, and the model the project uses"
+      placeholder: 0.40.13, qwen3:8b
