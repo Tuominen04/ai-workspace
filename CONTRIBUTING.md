@@ -1,5 +1,10 @@
 # Contribution Rules
 
+Found a bug or have an idea? Open an issue with the **Bug report** or **Feature request** form.
+Questions go to [Discussions](https://github.com/Tuominen04/ai-workspace/discussions), and
+security problems to a private report (see `SECURITY.md`). Pull requests are welcome; every one
+is reviewed and merged by the maintainer, and the checks must pass first.
+
 - All new features start with a spec or clear written intent.
 - Documentation comes before implementation.
 - Keep pull requests focused on one meaningful feature.

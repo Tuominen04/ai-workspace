@@ -1,0 +1,26 @@
+name: Feature request
+description: An idea for something AI Workspace could do.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        AI Workspace stays local-first: no cloud services, no telemetry, and it writes files
+        only when you ask. Ideas that fit that are welcome. To talk an idea through first, start
+        a [discussion](https://github.com/Tuominen04/ai-workspace/discussions/categories/ideas).
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you want to do
+      description: The situation and what is missing or hard today.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How it could work
+      description: What you would like the app to do. Screenshots or sketches help.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do instead today
