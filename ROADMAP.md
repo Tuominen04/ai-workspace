@@ -171,6 +171,16 @@ works under SELinux, and a workspace created only on **Initialize**.
 
 ## v1.1
 
+Linux packages (ADR-0017, `specs/010-linux-packages/`)
+
+A `.deb` for Ubuntu, Debian and Linux Mint, and an AppImage for other distributions, next to
+the Fedora `.rpm`. Tested on Ubuntu 24.04, Debian 13 and openSUSE Tumbleweed. Windows and macOS
+follow later, each with its own spec.
+
+---
+
+## v1.2
+
 Runtime abstraction
 
 Support multiple runtimes. Moved after the stable release (ADR-0015): Ollama is the
