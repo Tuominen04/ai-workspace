@@ -115,14 +115,25 @@ jobs:
             echo "::endgroup::"
           done
 
-      # The AppImage carries its own libraries: in a Debian without WebKitGTK or GTK, the
-      # extracted binary must find everything it needs inside the AppImage.
+      # The AppImage carries WebKitGTK, GTK and the rest itself, but on purpose not the
+      # graphics and font libraries every desktop has (X11, Wayland, GL, fontconfig, ...),
+      # which must match the host's drivers. In a Debian with only those and no WebKitGTK or
+      # GTK, the extracted binary must find everything else inside the AppImage.
       - name: Smoke test the AppImage
         run: |
           docker run --rm \
             --volume "$PWD/target/release/bundle/appimage:/pkg:ro" \
             debian:13 \
             bash -euc '
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update -qq
+              apt-get install -y -qq --no-install-recommends \
+                libx11-6 libx11-xcb1 libxcb1 libwayland-client0 libgl1 libegl1 libgbm1 libdrm2 \
+                libfontconfig1 libfreetype6 libharfbuzz0b libfribidi0 libexpat1 \
+                libgpg-error0 libcom-err2 >/dev/null
+              if dpkg -l "libwebkit2gtk*" "libgtk-3-0*" 2>/dev/null | grep -q "^ii"; then
+                echo "::error::the test system has WebKitGTK or GTK installed"; exit 1
+              fi
               cd /tmp
               cp /pkg/*.AppImage app.AppImage
               chmod +x app.AppImage
