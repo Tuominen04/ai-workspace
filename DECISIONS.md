@@ -646,3 +646,42 @@ local-first and no-background-service rules.
 Status
 
 Accepted
+
+---
+
+## ADR-0017
+
+Linux packages beyond Fedora (spec `specs/010-linux-packages/`). Decided with the maintainer:
+start with Linux; Windows and macOS follow with their own decisions.
+
+1. **Three Linux files per release.** Besides the Fedora `.rpm` (ADR-0010), each release has a
+   `.deb` (`ai-workspace_<version>_amd64.deb`) for Ubuntu, Debian and their derivatives, and an
+   AppImage (`ai-workspace-<version>-x86_64.AppImage`) for other x86_64 distributions. All three
+   come from one build of one tag by Tauri's bundler, with the same package name, command and
+   menu entry. `SHA256SUMS` and the signed build provenance cover each file.
+2. **Supported systems.** Built on `ubuntu-24.04`, so glibc 2.39 is the floor: Fedora (current),
+   Ubuntu 24.04 LTS and later, Debian 13 and later, Linux Mint 22 and later; the AppImage on
+   other distributions with glibc 2.39 and FUSE 2. x86_64 only.
+3. **No Flatpak, Snap or distribution repositories.** Their sandboxes would keep the app from
+   reading granted folders, starting `ollama` or `podman`, and using the host's Trash; a
+   repository would mean hosting and signing keys. Releases stay files on the release page.
+4. **One app.** No code path depends on the distribution; the packages differ only in how they
+   install.
+5. **Release gate per package.** The release workflow smoke-tests each file (the `.deb` in
+   Ubuntu 24.04 and Debian 13 containers, the AppImage extracted); every release's checklist
+   adds a short section run on three virtual machines (Ubuntu 24.04, Debian 13 with Ollama in
+   Podman, openSUSE Tumbleweed with the AppImage), next to the full checklist on Fedora.
+
+ADR-0010's "only the desktop app is released" stands; its "one Fedora `.rpm`" becomes these
+three Linux files.
+
+Reason
+
+The app's code is already distribution-neutral (Tauri, freedesktop Trash, Ollama on
+localhost); only the packaging was Fedora-only. Native `.deb` packages reach the largest group
+of Linux desktop users, and the AppImage covers the rest with one file, without new hosting or
+a sandbox that would break the permission model.
+
+Status
+
+Proposed
