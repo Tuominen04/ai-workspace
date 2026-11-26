@@ -1,6 +1,6 @@
 # AI Workspace
 
-A local AI workspace for Fedora. You keep your notes in project folders; AI Workspace
+A local AI workspace for Linux. You keep your notes in project folders; AI Workspace
 hands them to a model running on your own computer, so you can ask about your own work.
 Nothing leaves your machine: the model runs in [Ollama](https://ollama.com), the files stay
 in a folder you choose, and the app connects to nothing but Ollama on `127.0.0.1`.
@@ -19,7 +19,15 @@ Your files are never changed behind your back: the app only writes when you ask 
 
 ## Quick start
 
-You need Fedora on x86_64.
+You need Linux on x86_64 (a 64-bit Intel or AMD computer):
+
+| System | Download |
+|---|---|
+| Fedora (current release) | `ai-workspace-<version>.x86_64.rpm` |
+| Ubuntu 24.04 LTS or later, Debian 13 or later, Linux Mint 22 or later | `ai-workspace_<version>_amd64.deb` |
+| Any other distribution with glibc 2.39 or later (openSUSE, Arch, …) | `ai-workspace-<version>-x86_64.AppImage` |
+
+Older systems (Ubuntu 22.04, Debian 12) are not supported: their libraries are too old.
 
 ### 1. Install Ollama and a model
 
@@ -40,15 +48,32 @@ answer better but need more memory. To use a graphics card, see Ollama's
 
 ### 2. Install AI Workspace
 
-1. Download `ai-workspace-<version>.x86_64.rpm` from the latest
-   [release](https://github.com/Tuominen04/ai-workspace/releases).
-2. Install it:
+Download the file for your system from the latest
+[release](https://github.com/Tuominen04/ai-workspace/releases), then:
 
-   ```bash
-   sudo dnf install ./ai-workspace-<version>.x86_64.rpm
-   ```
+- **Fedora:**
 
-3. Open **AI Workspace** from the applications menu, or run `ai-workspace`.
+  ```bash
+  sudo dnf install ./ai-workspace-<version>.x86_64.rpm
+  ```
+
+- **Ubuntu, Debian, Linux Mint:**
+
+  ```bash
+  sudo apt install ./ai-workspace_<version>_amd64.deb
+  ```
+
+- **AppImage:** make it executable and run it; nothing is installed system-wide.
+
+  ```bash
+  chmod +x ai-workspace-<version>-x86_64.AppImage
+  ./ai-workspace-<version>-x86_64.AppImage
+  ```
+
+  An AppImage needs FUSE 2. If it says FUSE is missing, install it (`libfuse2` on openSUSE,
+  `fuse2` on Arch, `libfuse2t64` on Ubuntu 24.04 and Debian 13) and run it again.
+
+Open **AI Workspace** from the applications menu (or run `ai-workspace`), or start the AppImage.
 
 ### 3. First chat
 
@@ -73,8 +98,15 @@ AI Workspace starts Ollama for you if it is not running.
 ## Install
 
 The steps above are all there is. To check a download first, see
-[verifying a download](docs/release.md#verifying-a-download). Removing the app
-(`sudo dnf remove ai-workspace`) leaves your workspace folder and notes untouched.
+[verifying a download](docs/release.md#verifying-a-download).
+
+- **Update:** install the new release's file the same way (`dnf install` or `apt install`
+  replaces the older version); for the AppImage, download the new one and delete the old.
+  The app never updates itself.
+- **Remove:** `sudo dnf remove ai-workspace` on Fedora, `sudo apt remove ai-workspace` on
+  Ubuntu, Debian and Mint, or delete the AppImage file.
+
+Updating or removing leaves your workspace folder and notes untouched.
 
 ## License
 

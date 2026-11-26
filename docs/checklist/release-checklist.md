@@ -1,6 +1,6 @@
 # Release checklist
 
-Run before tagging a release, on real hardware: the current Fedora release, real Ollama and a real model. The automated checks use a stub engine and a stand-in Podman; this is where the real ones are tried. Required for 1.0 (ADR-0016): copy this file into the release pull request, tick each step, and note anything that failed. A failure is filed as an issue labelled `bug` and fixed before tagging.
+Run before tagging a release, on real hardware: the current Fedora release, real Ollama and a real model; section 7 on the other Linux test machines. The automated checks use a stub engine and a stand-in Podman; this is where the real ones are tried. Required for 1.0 (ADR-0016): copy this file into the release pull request, tick each step, and note anything that failed. A failure is filed as an issue labelled `bug` and fixed before tagging.
 
 Use a scratch workspace so your real notes are not touched, and write down:
 
@@ -82,6 +82,22 @@ an Ollama already running on 127.0.0.1:11434, not the app's Podman container").
 
 - [ ] Installing over the previous release (`sudo dnf install ./…rpm`) upgrades it; the workspace and its settings are untouched.
 - [ ] `sudo dnf remove ai-workspace` removes the app and leaves the workspace and `~/.config/ai-workspace/` untouched.
+
+## 7. Other Linux systems
+
+On the test machines (spec 010, "Test machines"): virtual machines with about 4 CPUs, 8 GB of memory and a small model such as `qwen3:1.7b`. Copy this section once per machine.
+
+- Machine: ______ (VM 1: Ubuntu 24.04 LTS, `.deb` with installed Ollama, then the AppImage; VM 2: Debian 13, `.deb` with Ollama in Podman; VM 3: openSUSE, AppImage with installed Ollama)
+- Package tried: ______
+
+- [ ] Install the `.deb` (`sudo apt install ./ai-workspace_<version>_amd64.deb`) or make the AppImage executable and run it; **AI Workspace** opens from the menu (`.deb`) or from the file (AppImage).
+- [ ] The app says there is no workspace; **Initialize the workspace** creates it.
+- [ ] **New project**, add a `.md` note, set the model on **Overview**, **Start session**, ask about the note: the reply uses it.
+- [ ] Grant a folder on **Permissions**; the context list shows it.
+- [ ] **Delete…** a test project: it lands in the desktop's Trash.
+- [ ] Close the app with an answered chat: it asks about a session note.
+- [ ] Remove the package (`sudo apt remove ai-workspace`) or delete the AppImage: the workspace folder stays.
+- [ ] VM 2 only: with `runtime = "podman"`, the container starts with the session and stops when the app closes.
 
 ## Result
 
