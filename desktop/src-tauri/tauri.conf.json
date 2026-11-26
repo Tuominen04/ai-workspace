@@ -28,14 +28,16 @@
   "bundle": {
     "active": true,
     "targets": [
-      "rpm"
+      "rpm",
+      "deb",
+      "appimage"
     ],
     "icon": [
       "icons/icon.png"
     ],
     "category": "Utility",
     "license": "MIT OR Apache-2.0",
-    "shortDescription": "Local-first AI workspace manager for Fedora",
+    "shortDescription": "Local-first AI workspace manager for Linux",
     "longDescription": "AI Workspace opens a window onto your workspace: projects, validation, search and chat with a local Ollama model. Your files stay in your workspace folder; nothing leaves the computer.",
     "linux": {
       "rpm": {
@@ -44,6 +46,15 @@
           "/usr/share/licenses/ai-workspace/LICENSE-MIT": "../../LICENSE-MIT",
           "/usr/share/licenses/ai-workspace/LICENSE-APACHE": "../../LICENSE-APACHE"
         }
+      },
+      "deb": {
+        "files": {
+          "/usr/share/doc/ai-workspace/LICENSE-MIT": "../../LICENSE-MIT",
+          "/usr/share/doc/ai-workspace/LICENSE-APACHE": "../../LICENSE-APACHE"
+        }
+      },
+      "appimage": {
+        "bundleMediaFramework": false
       }
     }
   }

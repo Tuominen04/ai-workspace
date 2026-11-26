@@ -36,8 +36,10 @@ gh attestation verify ai-workspace-<version>.x86_64.rpm --repo Tuominen04/ai-wor
 ```
 
 It ends with `Verification succeeded!` for a genuine package. The same signed statement is
-attached to the release as `ai-workspace-<version>.x86_64.rpm.sigstore.json`; pass it with
-`--bundle` to check against that file instead of GitHub's copy.
+attached to the release: as `ai-workspace-<version>.x86_64.rpm.sigstore.json` up to 1.0.1, and
+from 1.1 as `ai-workspace-<version>.sigstore.json`, one statement covering the `.rpm`, the
+`.deb` and the AppImage. Pass it with `--bundle` to check against that file instead of
+GitHub's copy.
 
 ## Cutting a release
 

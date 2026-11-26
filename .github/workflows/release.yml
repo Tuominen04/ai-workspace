@@ -1,6 +1,6 @@
 name: Release
 
-# Pushing a version tag builds the Fedora package (the desktop app, installed as the
+# Pushing a version tag builds the Linux packages (the desktop app, installed as the
 # `ai-workspace` command; ADR-0010) and opens a draft release with it. Nothing
 # is published until the maintainer reads the draft and presses Publish.
 #
@@ -17,7 +17,9 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  # A release is cut from main and names the version it ships; checked before anything is
+  # built.
+  checks:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -37,8 +39,6 @@ jobs:
             exit 1
           fi
 
-      # A release is cut from main and names the version it ships. Either mismatch is a
-      # mistake caught here, before anything is built.
       - name: Tag is on main
         run: |
           git merge-base --is-ancestor "$GITHUB_SHA" origin/main \
@@ -52,75 +52,13 @@ jobs:
           [ "$found" = "$version" ] \
             || { echo "::error::Cargo.toml says $found, the tag says $version"; exit 1; }
 
-      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
-        with:
-          toolchain: stable
-
-      - name: Tauri's Linux dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: desktop/package-lock.json
-
-      # The lock is committed; a release contains exactly the dependency versions in it.
-      - name: Test
-        run: cargo test --locked --workspace
-
-      # The released app (ADR-0010): the desktop app, installed as the `ai-workspace`
-      # command and package. Tauri's bundler builds the interface, the binary and the rpm;
-      # the package name comes from productName in tauri.conf.json, the binary name from
-      # mainBinaryName, and the version from the workspace. The CLI crate is tested above
-      # but not packaged.
-      - name: Package
-        working-directory: desktop
-        run: |
-          npm ci
-          npm run tauri build -- --ci -- --locked
-
-      # Install it on Fedora: it must resolve its libraries (WebKitGTK, GTK) from the
-      # distribution, be the `ai-workspace` command, and put its launcher in the
-      # applications menu. A window cannot be opened here, so this checks the binary links
-      # rather than that it draws.
-      - name: Smoke test on Fedora
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          docker run --rm \
-            --volume "$PWD/target/release/bundle/rpm:/pkg:ro" \
-            --env VERSION="$version" \
-            registry.fedoraproject.org/fedora:44 \
-            bash -euc '
-              dnf install -y /pkg/*.rpm
-              got=$(rpm -q --queryformat "%{NAME} %{VERSION}" ai-workspace)
-              [ "$got" = "ai-workspace $VERSION" ] \
-                || { echo "::error::installed package is \"$got\", expected \"ai-workspace $VERSION\""; exit 1; }
-              [ "$(command -v ai-workspace)" = /usr/bin/ai-workspace ]
-              ls /usr/share/applications/*.desktop | grep -q "AI Workspace"
-              if ldd /usr/bin/ai-workspace | grep "not found"; then
-                echo "::error::ai-workspace is missing libraries on Fedora"; exit 1
-              fi
-            '
-
-      # Tauri names the file after the product, a space included; rename it to what the
-      # install guide tells people to look for.
-      - name: Collect and checksum
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          mkdir dist-release
-          cp target/release/bundle/rpm/*.rpm "dist-release/ai-workspace-$version.x86_64.rpm"
-          cd dist-release
-          sha256sum -- * > SHA256SUMS
-          cat SHA256SUMS
-
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: packages
-          path: dist-release/
-          if-no-files-found: error
+  # The same build and smoke tests that pull requests touching the packaging run
+  # (packages.yml): the .rpm, the .deb and the AppImage, uploaded as the `packages` artifact.
+  build:
+    needs: checks
+    permissions:
+      contents: read
+    uses: ./.github/workflows/packages.yml
 
   # Separate from the build, so the only job that can write to the repository checks out
   # nothing and runs no project or dependency code.
@@ -148,21 +86,24 @@ jobs:
             exit 1
           fi
 
-      # States, signed, that this package was built by this workflow from this tag's commit.
+      # States, signed, that these packages were built by this workflow from this tag's commit.
       # Anyone can check it with `gh attestation verify` (docs/release.md); the signed bundle
       # is also attached to the release.
-      - name: Attest the package
+      - name: Attest the packages
         id: attest
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: dist-release/*.rpm
+          subject-path: |
+            dist-release/*.rpm
+            dist-release/*.deb
+            dist-release/*.AppImage
 
       - name: Attach the signed provenance
         env:
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
         run: |
           version="${GITHUB_REF_NAME#v}"
-          cp "$BUNDLE" "dist-release/ai-workspace-$version.x86_64.rpm.sigstore.json"
+          cp "$BUNDLE" "dist-release/ai-workspace-$version.sigstore.json"
 
       - name: Draft the release
         env:

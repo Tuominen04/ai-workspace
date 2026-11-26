@@ -1,0 +1,168 @@
+name: Packages
+
+# Builds the Linux packages (the desktop app, installed as the `ai-workspace` command;
+# ADR-0010, ADR-0017) and smoke-tests each one: the .rpm on Fedora, the .deb on Ubuntu
+# 24.04 and Debian 13, the AppImage extracted in a bare Debian. The release workflow calls
+# this for a tag; on its own it runs for pull requests that touch the packaging, so the
+# packages can be downloaded from the run and tried before a release. Read-only.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - desktop/src-tauri/tauri.conf.json
+      - .github/workflows/packages.yml
+      - .github/workflows/release.yml
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The version lives once, under [workspace.package] in the root Cargo.toml; for a tag,
+      # the release workflow has already checked that the two match.
+      - name: Version
+        id: version
+        run: echo "version=$(sed -nE 's/^version = "(.*)"/\1/p' Cargo.toml | head -1)" >> "$GITHUB_OUTPUT"
+
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+
+      - name: Tauri's Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      # The lock is committed; a release contains exactly the dependency versions in it.
+      - name: Test
+        run: cargo test --locked --workspace
+
+      # Tauri's bundler builds the interface, the binary and the three packages from the
+      # bundle section of tauri.conf.json: the package name from productName, the binary name
+      # from mainBinaryName, and the version from the workspace. The CLI crate is tested above
+      # but not packaged. The AppImage tools run without FUSE, which the runner lacks.
+      - name: Package
+        working-directory: desktop
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          npm ci
+          npm run tauri build -- --ci -- --locked
+
+      # A window cannot be opened here, so these check that each package installs, is the
+      # `ai-workspace` command with its launcher in the applications menu, and resolves its
+      # libraries (WebKitGTK, GTK) on that distribution.
+      - name: Smoke test the .rpm on Fedora
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          docker run --rm \
+            --volume "$PWD/target/release/bundle/rpm:/pkg:ro" \
+            --env VERSION \
+            registry.fedoraproject.org/fedora:44 \
+            bash -euc '
+              dnf install -y /pkg/*.rpm
+              got=$(rpm -q --queryformat "%{NAME} %{VERSION}" ai-workspace)
+              [ "$got" = "ai-workspace $VERSION" ] \
+                || { echo "::error::installed package is \"$got\", expected \"ai-workspace $VERSION\""; exit 1; }
+              [ "$(command -v ai-workspace)" = /usr/bin/ai-workspace ]
+              ls /usr/share/applications/*.desktop | grep -q "AI Workspace"
+              if ldd /usr/bin/ai-workspace | grep "not found"; then
+                echo "::error::ai-workspace is missing libraries on Fedora"; exit 1
+              fi
+            '
+
+      - name: Smoke test the .deb on Ubuntu 24.04 and Debian 13
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          for image in ubuntu:24.04 debian:13; do
+            echo "::group::$image"
+            docker run --rm \
+              --volume "$PWD/target/release/bundle/deb:/pkg:ro" \
+              --env VERSION --env IMAGE="$image" \
+              "$image" \
+              bash -euc '
+                export DEBIAN_FRONTEND=noninteractive
+                apt-get update -qq
+                apt-get install -y -qq /pkg/*.deb >/dev/null
+                got=$(dpkg-query -W -f "\${Package} \${Version}" ai-workspace)
+                [ "$got" = "ai-workspace $VERSION" ] \
+                  || { echo "::error::installed package on $IMAGE is \"$got\", expected \"ai-workspace $VERSION\""; exit 1; }
+                [ "$(command -v ai-workspace)" = /usr/bin/ai-workspace ]
+                ls /usr/share/applications/*.desktop | grep -q "AI Workspace"
+                if ldd /usr/bin/ai-workspace | grep "not found"; then
+                  echo "::error::ai-workspace is missing libraries on $IMAGE"; exit 1
+                fi
+              '
+            echo "::endgroup::"
+          done
+
+      # The AppImage carries WebKitGTK, GTK and the rest itself, but on purpose not the
+      # graphics and font libraries every desktop has (X11, Wayland, GL, fontconfig, ...),
+      # which must match the host's drivers. In a Debian with only those and no WebKitGTK or
+      # GTK, the extracted binary must find everything else inside the AppImage.
+      - name: Smoke test the AppImage
+        run: |
+          docker run --rm \
+            --volume "$PWD/target/release/bundle/appimage:/pkg:ro" \
+            debian:13 \
+            bash -euc '
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update -qq
+              apt-get install -y -qq --no-install-recommends \
+                libx11-6 libx11-xcb1 libxcb1 libwayland-client0 libgl1 libegl1 libgbm1 libdrm2 \
+                libfontconfig1 libfreetype6 libharfbuzz0b libfribidi0 libexpat1 \
+                libgpg-error0 libcom-err2 >/dev/null
+              if dpkg -l "libwebkit2gtk*" "libgtk-3-0*" 2>/dev/null | grep -q "^ii"; then
+                echo "::error::the test system has WebKitGTK or GTK installed"; exit 1
+              fi
+              cd /tmp
+              cp /pkg/*.AppImage app.AppImage
+              chmod +x app.AppImage
+              ./app.AppImage --appimage-extract >/dev/null
+              bin=squashfs-root/usr/bin/ai-workspace
+              [ -x "$bin" ] || { echo "::error::the AppImage has no usr/bin/ai-workspace"; exit 1; }
+              ls squashfs-root/*.desktop | grep -q "AI Workspace"
+              libs=$(find squashfs-root -name "*.so*" -printf "%h\n" | sort -u | paste -sd:)
+              if LD_LIBRARY_PATH="$libs" ldd "$bin" | grep "not found"; then
+                echo "::error::the AppImage is missing libraries"; exit 1
+              fi
+            '
+
+      # Tauri names the files after the product, a space included; rename them to what the
+      # install guide tells people to look for.
+      - name: Collect and checksum
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir dist-release
+          cp target/release/bundle/rpm/*.rpm "dist-release/ai-workspace-$VERSION.x86_64.rpm"
+          cp target/release/bundle/deb/*.deb "dist-release/ai-workspace_${VERSION}_amd64.deb"
+          cp target/release/bundle/appimage/*.AppImage "dist-release/ai-workspace-$VERSION-x86_64.AppImage"
+          cd dist-release
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: packages
+          path: dist-release/
+          if-no-files-found: error
