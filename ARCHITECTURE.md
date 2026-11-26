@@ -103,7 +103,7 @@ Possible implementations
 The UI should never contain business logic.
 
 Implemented by `desktop/` (a Tauri desktop app, ADR-0009; the released app, installed as the
-`ai-workspace` command, ADR-0010) and `crates/ai-workspace-cli` (the command line, kept and
+`ai-workspace` command from a `.rpm`, a `.deb` or an AppImage, ADR-0010 and ADR-0017) and `crates/ai-workspace-cli` (the command line, kept and
 tested but run from source). Both depend on the core and neither holds engine logic.
 
 ---
@@ -524,7 +524,8 @@ Knowledge
 
 Platform
 
-* Fedora Workstation
+* Linux on x86_64: Fedora, Ubuntu 24.04+, Debian 13+, Linux Mint 22+, and other
+  distributions through the AppImage (ADR-0017)
 
 Future technology choices should support—not redefine—the architecture.
 

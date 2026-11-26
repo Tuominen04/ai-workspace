@@ -1,6 +1,7 @@
 # User guide
 
-Everything AI Workspace does, for the person using it. To install it, see the
+Everything AI Workspace does, for the person using it. To install, update or remove it
+(Fedora `.rpm`, Ubuntu/Debian/Mint `.deb`, or the AppImage for other distributions), see the
 [README](../README.md#quick-start).
 
 - [The workspace](#the-workspace)
@@ -95,7 +96,8 @@ Instead of installing Ollama, you can run it in a Podman container; AI Workspace
 the container when a chat needs it and stops it when the app closes. The app never downloads
 anything itself, so you fetch the image once:
 
-1. Get the image (Podman comes with Fedora Workstation):
+1. Get the image (Podman comes with Fedora Workstation; on Ubuntu or Debian,
+   `sudo apt install podman` first):
 
    ```bash
    podman pull docker.io/ollama/ollama:latest
@@ -167,7 +169,8 @@ then shows `nvidia.com/gpu=all`); AMD uses Ollama's ROCm image,
 which you pull instead with `podman pull docker.io/ollama/ollama:rocm`. Ollama's
 [container page](https://docs.ollama.com/docker) describes both. To use another image, set
 `image = "…"` in the same table. With a graphics card set, the app turns SELinux labelling off
-for its container (Fedora's SELinux otherwise keeps Ollama from using the card); the container
+for its container (Fedora's SELinux otherwise keeps Ollama from using the card; on systems
+without SELinux, such as Ubuntu and Debian, the setting does nothing); the container
 still sees nothing of your computer but its model volume. `podman exec ai-workspace-ollama
 ollama ps` shows `GPU` under PROCESSOR when a model runs on the card.
 
@@ -282,6 +285,7 @@ standard folders and `Config/workspace.toml`.
 
 | What you see | What to do |
 |---|---|
+| The AppImage does not start and mentions FUSE | Install FUSE 2 (`libfuse2` on openSUSE, `fuse2` on Arch, `libfuse2t64` on Ubuntu 24.04 and Debian 13) and start it again. |
 | "No local runtime is running" | Install Ollama (see the [README](../README.md#quick-start)), or set up [Ollama in Podman](#running-ollama-in-podman), and start the session again. |
 | "The Ollama image … is not downloaded" | Run the `podman pull` command it shows, then start the session again. |
 | The chat uses an Ollama you did not expect | Something already answers on `127.0.0.1:11434` (an installed Ollama, or a container you started); stop it, then start the session again. |
@@ -298,5 +302,6 @@ standard folders and `Config/workspace.toml`.
 
 AI Workspace connects only to Ollama on your own computer (`127.0.0.1:11434`). It sends no
 telemetry, needs no account, and changes files only when you ask: creating, saving a note,
-granting, archiving, cloning, renaming or deleting. Removing the app
-(`sudo dnf remove ai-workspace`) leaves your workspace untouched.
+granting, archiving, cloning, renaming or deleting. Removing the app (`sudo dnf remove
+ai-workspace`, `sudo apt remove ai-workspace`, or deleting the AppImage) leaves your workspace
+untouched.
