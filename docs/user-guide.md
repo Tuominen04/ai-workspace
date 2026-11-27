@@ -290,6 +290,7 @@ standard folders and `Config/workspace.toml`.
 | Replies are very slow | Use a smaller model, or set Ollama up to use your graphics card (Ollama's [GPU page](https://docs.ollama.com/gpu)). |
 | A reply stopped halfway | **Retry**. |
 | "Ollama stopped answering" | Ollama was stopped during the chat. **End session** and **Start session** (the app starts Ollama again when nothing runs), then **Retry**. |
+| After you grant a file mid-chat, the model still says it cannot see it, although the context list shows it | The model is repeating its own earlier answers from this chat (small models do this most). **End session**, **Start session**, grant the file again on **Permissions** (grants last for one session), and ask again before anything else. |
 | A note is missing from the context list | It may not be `.md`, its name may look like a secret, or it did not fit: ask about it by name, or use a model with a larger context window. |
 | "…validation has blocking issues" | Open **Validation** on Whole workspace and fix what it lists. |
 | "Already exists" | Pick another name, or rename or archive the other project first. |
